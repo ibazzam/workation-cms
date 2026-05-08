@@ -406,13 +406,13 @@ Route::get('/', function (Request $request) {
     };
 
     $homeBrowseCards = collect([
-        ['title' => 'Stay Options', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
-        ['title' => 'Marine Transport', 'subtitle' => 'Speedboat, ferry, water transfer', 'url' => '/catalog/marine-transport'],
+        ['title' => 'Accommodation', 'subtitle' => 'Hotels, villas, guesthouses', 'url' => '/catalog/accommodation'],
+        ['title' => 'Sea Transport', 'subtitle' => 'Speedboat, ferry, water transfer', 'url' => '/catalog/sea-transport'],
         ['title' => 'Land Transport', 'subtitle' => 'Car, van, and island transfers', 'url' => '/catalog/land-transport'],
-        ['title' => 'Experiences', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
-        ['title' => 'Work-Friendly', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
+        ['title' => 'Excursion', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
+        ['title' => 'Remote Workspace', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
         ['title' => 'Conference Rooms', 'subtitle' => 'Meeting and event-ready spaces', 'url' => '/catalog/conference_room'],
-        ['title' => 'Deals Zone', 'subtitle' => 'Promotions and last-minute value', 'url' => '/catalog/accommodation?sort=price_low_high'],
+        ['title' => 'Live Aboard', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
     ]);
 
     $homeTrendingCards = collect([
@@ -1024,13 +1024,13 @@ Route::get('/', function (Request $request) {
 
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categoryCounts) {
                 $categoryHint = match ($card['title']) {
-                    'Stay Options' => 'accommodation',
+                    'Accommodation' => 'accommodation',
                     'Sea Transport' => 'sea_transport',
-                    'Marine Transport' => 'sea_transport',
                     'Land Transport' => 'land_transport',
-                    'Experiences' => 'excursion',
-                    'Work-Friendly' => 'remote_workspace',
+                    'Excursion' => 'excursion',
+                    'Remote Workspace' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
+                    'Live Aboard' => 'liveaboard',
                     default => null,
                 };
 
@@ -1048,14 +1048,13 @@ Route::get('/', function (Request $request) {
 
             $homeBrowseCards = $homeBrowseCards->map(function (array $card) use ($categorySamples, $categoryMinPriceRows, $globalMinPriceRow, $resolvePropertyImage, $resolvePropertyFallbackImage, $propertyLocationLabel, $displayPriceForVisitor) {
                 $categoryHint = match ($card['title']) {
-                    'Stay Options' => 'accommodation',
+                    'Accommodation' => 'accommodation',
                     'Sea Transport' => 'sea_transport',
-                    'Marine Transport' => 'sea_transport',
                     'Land Transport' => 'land_transport',
-                    'Experiences' => 'excursion',
-                    'Work-Friendly' => 'remote_workspace',
+                    'Excursion' => 'excursion',
+                    'Remote Workspace' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
-                    'Deals Zone' => 'accommodation',
+                    'Live Aboard' => 'liveaboard',
                     default => null,
                 };
 
@@ -1079,7 +1078,7 @@ Route::get('/', function (Request $request) {
                 unset($card['price_label']);
 
                 $priceSource = null;
-                if ($categoryHint === 'accommodation' && ($card['title'] ?? '') === 'Deals Zone' && is_array($globalMinPriceRow)) {
+                if ($categoryHint === 'accommodation' && is_array($globalMinPriceRow)) {
                     $priceSource = $globalMinPriceRow;
                 } elseif (is_array($categoryMinPriceRows->get($categoryHint))) {
                     $priceSource = $categoryMinPriceRows->get($categoryHint);

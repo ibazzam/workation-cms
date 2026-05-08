@@ -42,7 +42,7 @@
             max-width: none;
         }
 
-        .header-bar {
+        .header-bar:not([data-uniform-header]) {
             min-height: 84px;
             display: flex;
             flex-wrap: nowrap;
@@ -65,7 +65,7 @@
             backdrop-filter: blur(2px);
         }
 
-        .page.is-header-hidden .header-bar {
+        .page.is-header-hidden .header-bar:not([data-uniform-header]) {
             transform: translateY(-110%);
             opacity: 0;
             pointer-events: none;
@@ -142,7 +142,7 @@
             white-space: nowrap;
         }
 
-        .header-bar .header-search-mini {
+        .header-bar:not([data-uniform-header]) .header-search-mini {
             display: none;
             align-items: center;
             min-width: 0;
@@ -154,7 +154,7 @@
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.55);
         }
 
-        .header-bar .header-search-mini input {
+        .header-bar:not([data-uniform-header]) .header-search-mini input {
             border: 0;
             background: transparent;
             padding: 9px 12px;
@@ -164,7 +164,7 @@
             color: #244057;
         }
 
-        .header-bar .header-search-mini button {
+        .header-bar:not([data-uniform-header]) .header-search-mini button {
             border: 0;
             width: 38px;
             height: 38px;
@@ -1873,7 +1873,7 @@
                 width: calc(100% - 18px);
             }
 
-            .page.is-header-hidden .header-bar {
+            .page.is-header-hidden .header-bar:not([data-uniform-header]) {
                 transform: none;
                 opacity: 1;
                 pointer-events: auto;
@@ -1942,7 +1942,7 @@
                 grid-template-columns: 1fr;
             }
 
-            .header-bar {
+            .header-bar:not([data-uniform-header]) {
                 flex-direction: column;
                 align-items: stretch;
                 position: absolute;
@@ -2096,16 +2096,15 @@
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
             ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
+            ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Live Aboard', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
             ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
             ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'subtitle' => 'Diving, snorkelling and sea fun', 'url' => '/catalog/water_sports'],
             ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'subtitle' => 'Dining experiences', 'url' => '/catalog/restaurant'],
-            ['key' => 'marine-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/marine-transport'],
+            ['key' => 'sea-transport', 'icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats & water transfers', 'url' => '/catalog/sea-transport'],
             ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
-            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
+            ['key' => 'vehicle-rental', 'icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'subtitle' => 'Cars and local rentals', 'url' => '/catalog/vehicle_rental'],
             ['key' => 'remote-workspace', 'icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
             ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],
-            ['key' => 'sea_transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport & Ferries', 'subtitle' => 'Scheduled sea routes & ferries', 'url' => '/catalog/sea_transport'],
-            ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Liveaboard / Safari', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
             ['key' => 'blog', 'icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'subtitle' => 'Travel stories and picks', 'url' => '/blog'],
         ]);
         $catalogProperties = $catalogProperties ?? collect();
@@ -2186,7 +2185,7 @@
                     ])
                     ->values()
                     ->all(),
-                'headerActiveCategoryKey' => (string) $categoryKey,
+                'headerActiveCategoryKey' => str_replace('_', '-', (string) $categoryKey),
                 'headerContinueUrl' => (string) $customerContinueUrl,
             ])
 

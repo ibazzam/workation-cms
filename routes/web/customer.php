@@ -420,6 +420,18 @@ Route::get('/customer', function (Request $request) {
         }
     }
 
+    // ── Load submitted reviews keyed by reservation_id ───────────────────────
+    $submittedReviewsByReservation = collect();
+    if (Schema::hasTable('vendor_property_reviews') && $allBookings->isNotEmpty()) {
+        $reservationIds = $allBookings->pluck('id')->filter(static fn ($id) => (int) $id > 0)->unique()->values()->all();
+        if (!empty($reservationIds)) {
+            $submittedReviewsByReservation = DB::table('vendor_property_reviews')
+                ->whereIn('reservation_id', $reservationIds)
+                ->get(['id', 'reservation_id', 'rating', 'review_comment', 'status', 'created_at'])
+                ->keyBy(static fn ($r) => (int) ($r->reservation_id ?? 0));
+        }
+    }
+
     return view('customer-portal', [
         'summary' => $summary,
         'customerProfile' => $customerProfile,
@@ -432,6 +444,7 @@ Route::get('/customer', function (Request $request) {
         'propertyMediaByProperty' => $propertyMediaByProperty,
         'roomMediaByRoom' => $roomMediaByRoom,
         'reservationMessagesByReservation' => $reservationMessagesByReservation,
+        'submittedReviewsByReservation' => $submittedReviewsByReservation,
     ]);
 });
 
@@ -882,4 +895,90 @@ Route::post('/customer/bookings/{reservation}/messages/{message}/report', functi
     }
 
     return redirect('/customer#booking-' . $reservation)->with('portal_notice', 'Thank you for reporting. Our team will review this message.');
+});
+
+// ── Customer: submit a property review ──────────────────────────────────────
+Route::post('/customer/bookings/{reservation}/review', function (Request $request, int $reservation) {
+    if (!(bool) session('portal_customer_authenticated', false)) {
+        return redirect('/portal/customer/login')->withErrors(['customer' => 'Sign in to leave a review.']);
+    }
+
+    $customerEmail = strtolower(trim((string) session('portal_customer_email', '')));
+    if ($customerEmail === '') {
+        return redirect('/portal/customer/login')->withErrors(['customer' => 'Session expired. Please sign in again.']);
+    }
+
+    if (!Schema::hasTable('reservations') && !Schema::hasTable('vendor_reservations')) {
+        return redirect('/customer')->withErrors(['customer' => 'Booking records are not available right now.']);
+    }
+
+    $reservationTable = Schema::hasTable('reservations') ? 'reservations' : 'vendor_reservations';
+
+    // Load the reservation and verify it belongs to this customer
+    $reservationRow = DB::table($reservationTable)
+        ->where('id', $reservation)
+        ->first();
+
+    if (!$reservationRow) {
+        return redirect('/customer')->withErrors(['customer' => 'Booking not found.']);
+    }
+
+    $reservationEmail = strtolower(trim((string) ($reservationRow->customer_email ?? $reservationRow->email ?? '')));
+    if ($reservationEmail !== $customerEmail) {
+        return redirect('/customer')->withErrors(['customer' => 'You are not authorised to review this booking.']);
+    }
+
+    // Booking must have ended
+    $endAt = $reservationRow->end_at ?? $reservationRow->checkout_date ?? null;
+    if (!$endAt || !\Carbon\Carbon::parse((string) $endAt)->isPast()) {
+        return redirect('/customer#booking-' . $reservation)->withErrors(['customer' => 'You can only review a booking after the stay or service has ended.']);
+    }
+
+    // Booking must not be pending/cancelled
+    $statusLower = strtolower(trim((string) ($reservationRow->status ?? 'pending')));
+    if (in_array($statusLower, ['pending', 'cancelled', 'canceled'], true)) {
+        return redirect('/customer#booking-' . $reservation)->withErrors(['customer' => 'Only confirmed or completed bookings can be reviewed.']);
+    }
+
+    // One review per reservation
+    if (Schema::hasTable('vendor_property_reviews')) {
+        $alreadyReviewed = DB::table('vendor_property_reviews')
+            ->where('reservation_id', $reservation)
+            ->exists();
+        if ($alreadyReviewed) {
+            return redirect('/customer#booking-' . $reservation)->with('portal_notice', 'You have already submitted a review for this booking.');
+        }
+    }
+
+    // Validate input
+    $validated = $request->validate([
+        'rating'         => ['required', 'integer', 'min:1', 'max:5'],
+        'review_comment' => ['required', 'string', 'min:20', 'max:2000'],
+    ]);
+
+    $rating  = (int) $validated['rating'];
+    $comment = trim((string) $validated['review_comment']);
+
+    $propertyId     = (int) ($reservationRow->vendor_property_id ?? 0);
+    $customerUserId = (int) session('portal_customer_user_id', 0);
+    $customerName   = trim((string) session('portal_customer_user', ''));
+
+    if (Schema::hasTable('vendor_property_reviews')) {
+        DB::table('vendor_property_reviews')->insert([
+            'vendor_property_id' => $propertyId,
+            'reservation_id'     => $reservation,
+            'customer_user_id'   => $customerUserId > 0 ? $customerUserId : null,
+            'customer_name'      => mb_substr($customerName, 0, 120),
+            'rating'             => $rating,
+            'review_comment'     => $comment,
+            'status'             => 'approved',
+            'created_at'         => now(),
+            'updated_at'         => now(),
+        ]);
+
+        // Bust cached reviews for this property
+        Cache::forget('property_profile:guest_reviews:v1:' . $propertyId);
+    }
+
+    return redirect('/customer#booking-' . $reservation)->with('portal_notice', 'Thank you! Your review has been submitted.');
 });

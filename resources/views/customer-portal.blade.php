@@ -745,6 +745,119 @@
             flex-wrap: wrap;
         }
 
+        /* ── Review form ──────────────────────────────────────────── */
+        .booking-review-form-wrap {
+            padding: 10px 16px 14px;
+            border-top: 1px solid var(--line);
+        }
+
+        .booking-review-toggle {
+            font-size: 0.8rem;
+        }
+
+        .booking-review-form {
+            margin-top: 10px;
+            display: grid;
+            gap: 10px;
+        }
+
+        .booking-review-stars-input {
+            display: flex;
+            gap: 4px;
+        }
+
+        .review-star-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 2px;
+            font-size: 1.4rem;
+            color: #d1a800;
+            line-height: 1;
+        }
+
+        .review-star-btn .review-star-icon,
+        .booking-review-submitted .review-star-icon {
+            transition: opacity 0.1s;
+        }
+
+        .review-star-btn.is-active .review-star-icon,
+        .review-star-btn:hover .review-star-icon {
+            color: #f59e0b;
+        }
+
+        .booking-review-textarea {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #c9d9e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 0.84rem;
+            font-family: inherit;
+            color: #1e3448;
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .booking-review-textarea:focus {
+            outline: none;
+            border-color: #0f7a8c;
+            box-shadow: 0 0 0 3px rgba(15,122,140,0.12);
+        }
+
+        .booking-review-form-footer {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .booking-review-submitted {
+            padding: 10px 16px 14px;
+            border-top: 1px solid var(--line);
+            display: grid;
+            gap: 6px;
+        }
+
+        .booking-review-submitted-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .booking-review-stars {
+            display: flex;
+            gap: 2px;
+            font-size: 0.9rem;
+            color: #d1a800;
+        }
+
+        .booking-review-status-badge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .badge-approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-pending {
+            background: #fef9c3;
+            color: #7a5f00;
+        }
+
+        .booking-review-text {
+            margin: 0;
+            font-size: 0.84rem;
+            color: #384d60;
+            line-height: 1.5;
+        }
+
         .btn-outline {
             border: 1px solid var(--line);
             border-radius: 6px;
@@ -973,6 +1086,7 @@
         $allBookings                = collect($allBookings ?? $customerBookingsByCategory->flatten(1)->sortByDesc('created_at')->values());
         $bookingStatusCounts        = $bookingStatusCounts ?? ['all' => 0, 'awaiting_payment' => 0, 'upcoming' => 0, 'awaiting_review' => 0];
         $customerProfile            = is_array($customerProfile ?? null) ? $customerProfile : [];
+        $submittedReviewsByReservation = collect($submittedReviewsByReservation ?? []);
         $customerLoggedIn           = (bool) session('portal_customer_authenticated', false);
         $customerName               = trim((string) session('portal_customer_user', 'Customer'));
         $profileName                = trim((string) ($customerProfile['name'] ?? $customerName));
@@ -1362,6 +1476,57 @@
                                             <a class="btn-outline" href="/">Similar deals</a>
                                             <a class="btn-brand" href="/">Book Again</a>
                                         </div>
+
+                                        @php
+                                            $bookingId       = (int) ($booking['id'] ?? 0);
+                                            $bookingEndAt    = (string) ($booking['end_at'] ?? '-');
+                                            $bookingIsEnded  = $bookingEndAt !== '-' && \Carbon\Carbon::parse($bookingEndAt)->isPast();
+                                            $bookingCanReview = $bookingIsEnded && !in_array(strtolower((string) ($booking['status'] ?? '')), ['pending', 'cancelled', 'canceled'], true);
+                                            $existingReview  = $submittedReviewsByReservation->get($bookingId);
+                                        @endphp
+                                        @if ($bookingCanReview)
+                                            @if ($existingReview)
+                                                <div class="booking-review-submitted">
+                                                    <div class="booking-review-submitted-head">
+                                                        <i class="fa-solid fa-star" style="color:#f59e0b;"></i>
+                                                        <strong>Your review</strong>
+                                                        <span class="booking-review-stars">
+                                                            @for ($star = 1; $star <= 5; $star++)
+                                                                <i class="fa-{{ $star <= (int) ($existingReview->rating ?? 0) ? 'solid' : 'regular' }} fa-star review-star-icon"></i>
+                                                            @endfor
+                                                        </span>
+                                                        <span class="booking-review-status-badge {{ strtolower((string) ($existingReview->status ?? 'approved')) === 'approved' ? 'badge-approved' : 'badge-pending' }}">
+                                                            {{ ucfirst((string) ($existingReview->status ?? 'submitted')) }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="booking-review-text">{{ (string) ($existingReview->review_comment ?? '') }}</p>
+                                                </div>
+                                            @else
+                                                <div class="booking-review-form-wrap" id="review-wrap-{{ $bookingId }}">
+                                                    <button class="btn-outline booking-review-toggle" type="button"
+                                                        data-review-target="review-form-{{ $bookingId }}"
+                                                        data-review-wrap="review-wrap-{{ $bookingId }}">
+                                                        <i class="fa-regular fa-star"></i> Leave a Review
+                                                    </button>
+                                                    <form id="review-form-{{ $bookingId }}" class="booking-review-form" method="POST" action="/customer/bookings/{{ $bookingId }}/review" hidden>
+                                                        @csrf
+                                                        <div class="booking-review-stars-input" data-review-stars-for="{{ $bookingId }}">
+                                                            @for ($star = 1; $star <= 5; $star++)
+                                                                <button type="button" class="review-star-btn" data-star="{{ $star }}" aria-label="{{ $star }} star{{ $star > 1 ? 's' : '' }}">
+                                                                    <i class="fa-regular fa-star review-star-icon"></i>
+                                                                </button>
+                                                            @endfor
+                                                        </div>
+                                                        <input type="hidden" name="rating" class="review-rating-hidden" value="5">
+                                                        <textarea name="review_comment" class="booking-review-textarea" rows="4" minlength="20" maxlength="2000" placeholder="Share your experience (at least 20 characters)…" required></textarea>
+                                                        <div class="booking-review-form-footer">
+                                                            <button type="button" class="btn-outline booking-review-cancel" data-review-target="review-form-{{ $bookingId }}" data-review-wrap="review-wrap-{{ $bookingId }}">Cancel</button>
+                                                            <button type="submit" class="btn-brand">Submit Review</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            @endif
+                                        @endif
                                     </article>
                                 @endforeach
                             </div>
@@ -1901,6 +2066,88 @@
             applyQueryState();
             applyHash();
         })();
+
+        // ── Review star interactions ──────────────────────────────
+        document.addEventListener('click', function (e) {
+            // Toggle review form visibility
+            const toggleBtn = e.target.closest('.booking-review-toggle');
+            if (toggleBtn) {
+                const formId = toggleBtn.getAttribute('data-review-target');
+                const form = document.getElementById(formId);
+                if (form) {
+                    const isHidden = form.hasAttribute('hidden');
+                    form.toggleAttribute('hidden', !isHidden);
+                    toggleBtn.style.display = isHidden ? 'none' : '';
+                }
+                return;
+            }
+
+            // Cancel review form
+            const cancelBtn = e.target.closest('.booking-review-cancel');
+            if (cancelBtn) {
+                const formId = cancelBtn.getAttribute('data-review-target');
+                const wrapId = cancelBtn.getAttribute('data-review-wrap');
+                const form = document.getElementById(formId);
+                if (form) form.setAttribute('hidden', '');
+                const toggleBtn = document.querySelector('[data-review-target="' + formId + '"].booking-review-toggle');
+                if (toggleBtn) toggleBtn.style.display = '';
+                return;
+            }
+
+            // Star rating click
+            const starBtn = e.target.closest('.review-star-btn');
+            if (starBtn) {
+                const starsRow = starBtn.closest('.booking-review-stars-input');
+                if (!starsRow) return;
+                const selected = parseInt(starBtn.getAttribute('data-star') || '5', 10);
+                const form = starsRow.closest('form');
+                if (form) {
+                    const hidden = form.querySelector('.review-rating-hidden');
+                    if (hidden) hidden.value = selected;
+                }
+                starsRow.querySelectorAll('.review-star-btn').forEach(function (btn) {
+                    const n = parseInt(btn.getAttribute('data-star') || '0', 10);
+                    const icon = btn.querySelector('.review-star-icon');
+                    if (icon) {
+                        icon.classList.toggle('fa-solid', n <= selected);
+                        icon.classList.toggle('fa-regular', n > selected);
+                    }
+                    btn.classList.toggle('is-active', n <= selected);
+                });
+            }
+        });
+
+        // Highlight stars on hover
+        document.addEventListener('mouseover', function (e) {
+            const starBtn = e.target.closest('.review-star-btn');
+            if (!starBtn) return;
+            const starsRow = starBtn.closest('.booking-review-stars-input');
+            if (!starsRow) return;
+            const hovered = parseInt(starBtn.getAttribute('data-star') || '0', 10);
+            starsRow.querySelectorAll('.review-star-btn').forEach(function (btn) {
+                const n = parseInt(btn.getAttribute('data-star') || '0', 10);
+                const icon = btn.querySelector('.review-star-icon');
+                if (icon) {
+                    icon.classList.toggle('fa-solid', n <= hovered);
+                    icon.classList.toggle('fa-regular', n > hovered);
+                }
+            });
+        });
+
+        document.addEventListener('mouseout', function (e) {
+            const starsRow = e.target.closest('.booking-review-stars-input');
+            if (!starsRow) return;
+            const form = starsRow.closest('form');
+            const currentRating = form ? parseInt((form.querySelector('.review-rating-hidden') || {}).value || '5', 10) : 5;
+            starsRow.querySelectorAll('.review-star-btn').forEach(function (btn) {
+                const n = parseInt(btn.getAttribute('data-star') || '0', 10);
+                const icon = btn.querySelector('.review-star-icon');
+                if (icon) {
+                    icon.classList.toggle('fa-solid', n <= currentRating);
+                    icon.classList.toggle('fa-regular', n > currentRating);
+                }
+            });
+        });
     </script>
 </body>
 </html>

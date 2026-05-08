@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Support\ReservationPricingPolicy;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -970,10 +971,9 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
     Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':' . $canonicalListingCategory);
 
-    return vendorPortalListingsBackResponse('Property/service listing added.', 2, [
-        'portal_listing_mode' => 'manage',
-        'portal_listing_category' => (string) $canonicalListingCategory,
-    ]);
+    return redirect('/vendor/listings/' . $canonicalListingCategory)
+        ->with('portal_notice', 'Listing created successfully.')
+        ->with('portal_active_panel', 'listings');
 });
 
 Route::post('/portal/vendor/properties/{property}/update', function (Request $request, int $property) {
@@ -1261,6 +1261,13 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5(($canonicalListingCategory ?? '*') . ':' . $property));
     Cache::forget('vendor_property_compatibility_reader:property_by_id:' . md5('*:' . $property));
 
+    $redirectCategory = $canonicalListingCategory ?? '';
+    if ($redirectCategory !== '') {
+        return redirect('/vendor/listings/' . $redirectCategory)
+            ->with('portal_notice', 'Listing updated successfully.')
+            ->with('portal_active_panel', 'listings');
+    }
+
     return vendorPortalListingsBackResponse('Property listing updated.', 2, [
         'portal_listing_mode' => 'manage',
         'portal_listing_category' => (string) ($canonicalListingCategory ?? ''),
@@ -1426,4 +1433,3 @@ Route::post('/portal/vendor/services/create', function (Request $request) {
 
     return back()->with('portal_notice', 'Service added successfully.');
 });
-

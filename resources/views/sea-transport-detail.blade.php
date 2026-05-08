@@ -11,7 +11,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --bg: #f3f8f5;
+            --bg: #ffffff;
             --ink: #152738;
             --muted: #5f7488;
             --line: #d5e2ec;
@@ -119,7 +119,31 @@
 </head>
 <body>
 
-@include('partials.navbar')
+@php
+    $stCategoryLinks = [
+        ['key' => 'accommodation', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
+        ['key' => 'resort-day-visit', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
+        ['key' => 'liveaboard', 'title' => 'Live Aboard', 'url' => '/catalog/liveaboard'],
+        ['key' => 'excursion', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
+        ['key' => 'water-sports', 'title' => 'Water Sports', 'url' => '/catalog/water_sports'],
+        ['key' => 'restaurant', 'title' => 'Restaurants', 'url' => '/catalog/restaurant'],
+        ['key' => 'sea-transport', 'title' => 'Sea Transport', 'url' => '/catalog/sea-transport'],
+        ['key' => 'land-transport', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
+        ['key' => 'vehicle-rental', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental'],
+        ['key' => 'remote-workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
+        ['key' => 'conference-room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
+    ];
+@endphp
+@include('partials.customer-uniform-header', [
+    'injectUniformHeaderStyles'  => true,
+    'injectUniformHeaderScripts' => true,
+    'headerNeedsSpacer'          => false,
+    'headerHideOnScroll'         => true,
+    'headerShowSearch'           => false,
+    'headerCategoryLinks'        => $stCategoryLinks,
+    'headerActiveCategoryKey'    => 'sea-transport',
+    'headerContinueUrl'          => request()->fullUrl(),
+])
 
 @if($heroUrl !== '')
     <img src="{{ $heroUrl }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-hero">
@@ -236,7 +260,7 @@
             </div>
 
             <div class="st-booking-form" id="booking-form-{{ $legIdx }}">
-                <form method="POST" action="/category-booking/sea_transport/{{ $property->id }}">
+                <form method="POST" action="/category-booking/sea_transport/{{ $property->vendor_property_id ?? $property->id }}">
                     @csrf
                     <input type="hidden" name="route_code"       value="{{ $legCode }}">
                     <input type="hidden" name="boarding_point"   value="{{ $legOrigin }}">

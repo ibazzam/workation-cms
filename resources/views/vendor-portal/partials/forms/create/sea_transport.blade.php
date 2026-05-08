@@ -59,13 +59,13 @@
 
         {{-- Service Pricing (Local & Foreign) --}}
         <div class="ops-field ops-field-wide" style="border-top: 1px solid #e0e0e0; padding-top: 1rem; margin-top: 1rem;">
-            <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Service Pricing</label>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Enter the per-seat rate for local and foreign guests. Local rates use MVR. Foreign rates use USD.</p>
+            <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Step 3. Fallback Service Pricing (optional)</label>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 1rem;">Use these only as defaults. Route-leg pricing in Step 1 is primary and will override these values when provided.</p>
         </div>
         
         <div class="ops-field">
             <label for="property_local_price">Price Per Seat - Local (MVR)</label>
-            <input id="property_local_price" name="local_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('local_price') }}" placeholder="MVR 0.00" required>
+            <input id="property_local_price" name="local_price" class="ops-input" type="number" min="0" step="0.01" value="{{ old('local_price') }}" placeholder="MVR 0.00">
         </div>
         <div class="ops-field">
             <label for="property_foreign_price">Price Per Seat - Foreign (USD)</label>
@@ -130,11 +130,39 @@
             <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 1. Route Legs — Timetable &amp; Fares</p>
             <p style="font-size:0.85rem; color:#51697b; margin:0 0 0.8rem;">Add one card per bookable leg. Each leg has its own origin, destination, schedule, and per-leg pricing. Per-leg prices override the fallback prices in Step 3 below.</p>
 
+            <div style="background:#fff; border:1px solid #cfe0eb; border-radius:8px; padding:10px 12px; margin-bottom:10px;">
+                <label style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#1d4b66; margin-bottom:4px;">Master Enroute</label>
+                <p style="font-size:0.78rem; color:#6d8191; margin:0 0 8px;">Set one master route, then generate legs in order (chain or branch mode). You can still edit or remove any generated leg.</p>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:6px;">
+                    <input type="text" id="sea_master_origin" class="ops-input" placeholder="Master origin, e.g. Maafushi">
+                    <input type="text" id="sea_master_destination" class="ops-input" placeholder="Master destination, e.g. Male">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr auto; gap:6px; align-items:center;">
+                    <select id="sea_master_mode" class="ops-select">
+                        <option value="pool_roundtrip">Pool Corridor Round-Trip (forward + return)</option>
+                        <option value="branch_balanced">Branch Balanced (easy for vendors)</option>
+                        <option value="chain">Closest Chain Only (adjacent stops)</option>
+                        <option value="origin_branches">Origin to Every Stop (+ final)</option>
+                        <option value="destination_branches">Every Stop to Destination (+ direct)</option>
+                    </select>
+                    <button type="button" id="sea_apply_master_btn" class="ops-button ops-button-secondary" style="font-size:0.82rem;">Generate Legs</button>
+                </div>
+                <p id="sea_master_summary" style="margin:8px 0 0; font-size:0.77rem; color:#567287;"></p>
+            </div>
+
             {{-- Physical stop sequence --}}
             <div style="background:#fff; border:1px solid #cfe0eb; border-radius:8px; padding:10px 12px;">
                 <label for="sea_stop_sequence" style="display:block; font-size:0.75rem; font-weight:700; text-transform:uppercase; color:#1d4b66; margin-bottom:4px;">Physical Stop Order <span style="font-weight:500; color:#5f7a8e; text-transform:none;">(one stop per line, in vessel travel order)</span></label>
                 <p style="font-size:0.78rem; color:#6d8191; margin:0 0 6px;">Enter all stops in the order the vessel physically passes them. Used to calculate shared seat capacity across overlapping legs. E.g. if the vessel travels Male → Island 1 → Island 2 → Airport, a seat sold on Male→Island 2 also occupies the Island 1→Island 2 segment.</p>
                 <textarea name="stop_sequence" id="sea_stop_sequence" class="ops-textarea" rows="3" maxlength="3000" placeholder="Male Jetty No.1&#10;Island 1 Jetty&#10;Island 2 Jetty&#10;Airport (Hulhule) Jetty"></textarea>
+                <div style="margin-top:8px; display:grid; grid-template-columns:1fr auto; gap:6px; align-items:center;">
+                    <input type="text" id="sea_stop_new" class="ops-input" placeholder="Add a stop, e.g. Male Jetty">
+                    <button type="button" id="sea_stop_add_btn" class="ops-button ops-button-secondary" style="font-size:0.82rem;">Add Stop</button>
+                </div>
+                <div id="sea_stop_editor" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;"></div>
+                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" id="sea_generate_legs_btn" class="ops-button ops-button-secondary" style="font-size:0.82rem;">Generate Sequential Legs From Stops</button>
+                </div>
             </div>
         </div>
 
@@ -189,6 +217,18 @@
     const rosterContainer = document.getElementById('sea_roster_rows');
     const addBtn          = document.getElementById('sea_roster_add_btn');
     const jsonInput       = document.getElementById('sea_route_schedules_json');
+    const stopTextarea    = document.getElementById('sea_stop_sequence');
+    const stopEditor      = document.getElementById('sea_stop_editor');
+    const stopNewInput    = document.getElementById('sea_stop_new');
+    const stopAddBtn      = document.getElementById('sea_stop_add_btn');
+    const generateLegsBtn = document.getElementById('sea_generate_legs_btn');
+    const masterOriginInput = document.getElementById('sea_master_origin');
+    const masterDestinationInput = document.getElementById('sea_master_destination');
+    const masterModeInput = document.getElementById('sea_master_mode');
+    const masterApplyBtn = document.getElementById('sea_apply_master_btn');
+    const masterSummaryEl = document.getElementById('sea_master_summary');
+    const fallbackLocalInput = document.getElementById('property_local_price');
+    const fallbackForeignInput = document.getElementById('property_foreign_price');
 
     const CARD_STYLE = 'background:#fff;border:1px solid #cfe0eb;border-radius:8px;padding:12px 14px;';
     const INPUT_STYLE = 'width:100%;box-sizing:border-box;padding:5px 8px;font-size:0.83rem;border:1px solid #c8d8e8;border-radius:4px;';
@@ -313,6 +353,201 @@
         return card;
     }
 
+    function parseStopsFromTextarea() {
+        if (!stopTextarea) return [];
+        return String(stopTextarea.value || '')
+            .split(/\r?\n/)
+            .map(function (line) { return line.trim(); })
+            .filter(function (line) { return line !== ''; });
+    }
+
+    function syncStopTextarea(stops) {
+        if (!stopTextarea) return;
+        stopTextarea.value = stops.join('\n');
+    }
+
+    function makeRouteCode(fromStop, toStop, index) {
+        function tok(v) {
+            return String(v || '')
+                .split(/\s+/)
+                .map(function (part) { return part.replace(/[^A-Za-z0-9]/g, ''); })
+                .filter(function (part) { return part !== ''; })
+                .map(function (part) { return part.substring(0, 3).toUpperCase(); })
+                .join('')
+                .substring(0, 6);
+        }
+        const from = tok(fromStop) || ('STOP' + (index + 1));
+        const to = tok(toStop) || ('STOP' + (index + 2));
+        return from + '-' + to;
+    }
+
+    function normalizedStopText(value) {
+        return String(value || '').trim();
+    }
+
+    function uniquePairs(pairs) {
+        const seen = {};
+        const out = [];
+        pairs.forEach(function (pair) {
+            const origin = normalizedStopText(pair.origin);
+            const destination = normalizedStopText(pair.destination);
+            if (origin === '' || destination === '' || origin === destination) return;
+            const key = origin.toLowerCase() + '||' + destination.toLowerCase();
+            if (seen[key]) return;
+            seen[key] = true;
+            out.push({ origin: origin, destination: destination });
+        });
+        return out;
+    }
+
+    function buildMasterLegPairs(mode, origin, destination, stops) {
+        const cleanOrigin = normalizedStopText(origin);
+        const cleanDestination = normalizedStopText(destination);
+        const cleanStops = stops
+            .map(function (s) { return normalizedStopText(s); })
+            .filter(function (s) {
+                return s !== ''
+                    && s.toLowerCase() !== cleanOrigin.toLowerCase()
+                    && s.toLowerCase() !== cleanDestination.toLowerCase();
+            });
+
+        const chainPoints = [cleanOrigin].concat(cleanStops).concat([cleanDestination]);
+        const pairs = [];
+
+        if (mode === 'chain') {
+            for (let i = 0; i < chainPoints.length - 1; i += 1) {
+                pairs.push({ origin: chainPoints[i], destination: chainPoints[i + 1] });
+            }
+            return uniquePairs(pairs);
+        }
+
+        if (mode === 'origin_branches') {
+            cleanStops.forEach(function (stop) {
+                pairs.push({ origin: cleanOrigin, destination: stop });
+            });
+            pairs.push({ origin: cleanOrigin, destination: cleanDestination });
+            return uniquePairs(pairs);
+        }
+
+        if (mode === 'destination_branches') {
+            cleanStops.forEach(function (stop) {
+                pairs.push({ origin: stop, destination: cleanDestination });
+            });
+            pairs.push({ origin: cleanOrigin, destination: cleanDestination });
+            return uniquePairs(pairs);
+        }
+
+        if (mode === 'pool_roundtrip') {
+            for (let i = 0; i < chainPoints.length - 1; i += 1) {
+                pairs.push({ origin: chainPoints[i], destination: chainPoints[i + 1] });
+            }
+            for (let i = chainPoints.length - 1; i > 0; i -= 1) {
+                pairs.push({ origin: chainPoints[i], destination: chainPoints[i - 1] });
+            }
+            return uniquePairs(pairs);
+        }
+
+        // branch_balanced (default): origin->each stop, each stop->destination, plus direct origin->destination.
+        cleanStops.forEach(function (stop) {
+            pairs.push({ origin: cleanOrigin, destination: stop });
+        });
+        cleanStops.forEach(function (stop) {
+            pairs.push({ origin: stop, destination: cleanDestination });
+        });
+        pairs.push({ origin: cleanOrigin, destination: cleanDestination });
+        return uniquePairs(pairs);
+    }
+
+    function generateLegRowsFromPairs(pairs) {
+        rosterContainer.innerHTML = '';
+        pairs.forEach(function (pair, idx) {
+            addRow({
+                route_code: makeRouteCode(pair.origin, pair.destination, idx),
+                origin: pair.origin,
+                destination: pair.destination,
+                local_adult: fallbackLocalInput && fallbackLocalInput.value !== '' ? parseFloat(fallbackLocalInput.value) : null,
+                foreign_adult: fallbackForeignInput && fallbackForeignInput.value !== '' ? parseFloat(fallbackForeignInput.value) : null,
+            });
+        });
+        serializeRoster();
+    }
+
+    function renderStopEditor() {
+        if (!stopEditor) return;
+        const stops = parseStopsFromTextarea();
+        stopEditor.innerHTML = '';
+
+        if (stops.length === 0) {
+            const empty = document.createElement('p');
+            empty.textContent = 'No stops added yet.';
+            empty.style.cssText = 'margin:0; font-size:0.78rem; color:#6d8191;';
+            stopEditor.appendChild(empty);
+            return;
+        }
+
+        stops.forEach(function (stop, idx) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:grid; grid-template-columns:24px 1fr auto; gap:6px; align-items:center;';
+
+            const indexChip = document.createElement('span');
+            indexChip.textContent = String(idx + 1);
+            indexChip.style.cssText = 'display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:12px; background:#e8f4fb; color:#1d4b66; font-size:0.72rem; font-weight:700;';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = stop;
+            input.className = 'ops-input';
+            input.style.fontSize = '0.82rem';
+            input.addEventListener('input', function () {
+                const nextStops = parseStopsFromTextarea();
+                nextStops[idx] = input.value.trim();
+                syncStopTextarea(nextStops.filter(function (v) { return v !== ''; }));
+            });
+
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display:flex; gap:4px;';
+
+            function mkBtn(label, onClick) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = label;
+                btn.className = 'ops-button ops-button-secondary';
+                btn.style.cssText = 'font-size:0.72rem; padding:4px 7px;';
+                btn.addEventListener('click', onClick);
+                return btn;
+            }
+
+            actions.appendChild(mkBtn('Up', function () {
+                if (idx <= 0) return;
+                const nextStops = parseStopsFromTextarea();
+                const tmp = nextStops[idx - 1];
+                nextStops[idx - 1] = nextStops[idx];
+                nextStops[idx] = tmp;
+                syncStopTextarea(nextStops);
+                renderStopEditor();
+            }));
+            actions.appendChild(mkBtn('Down', function () {
+                const nextStops = parseStopsFromTextarea();
+                if (idx >= nextStops.length - 1) return;
+                const tmp = nextStops[idx + 1];
+                nextStops[idx + 1] = nextStops[idx];
+                nextStops[idx] = tmp;
+                syncStopTextarea(nextStops);
+                renderStopEditor();
+            }));
+            actions.appendChild(mkBtn('Remove', function () {
+                const nextStops = parseStopsFromTextarea().filter(function (_, i) { return i !== idx; });
+                syncStopTextarea(nextStops);
+                renderStopEditor();
+            }));
+
+            row.appendChild(indexChip);
+            row.appendChild(input);
+            row.appendChild(actions);
+            stopEditor.appendChild(row);
+        });
+    }
+
     function syncPrimaryDefaultsFromRoster(data) {
         if (!Array.isArray(data) || data.length === 0) return;
 
@@ -360,6 +595,71 @@
 
     addBtn.addEventListener('click', function() { addRow(); });
 
+    if (stopTextarea) {
+        stopTextarea.addEventListener('input', renderStopEditor);
+    }
+    if (stopAddBtn && stopNewInput) {
+        stopAddBtn.addEventListener('click', function () {
+            const next = stopNewInput.value.trim();
+            if (next === '') return;
+            const stops = parseStopsFromTextarea();
+            stops.push(next);
+            syncStopTextarea(stops);
+            stopNewInput.value = '';
+            renderStopEditor();
+        });
+    }
+
+    if (generateLegsBtn) {
+        generateLegsBtn.addEventListener('click', function () {
+            const stops = parseStopsFromTextarea();
+            if (stops.length < 2) {
+                alert('Add at least 2 stops to generate route legs.');
+                return;
+            }
+
+            const sequentialPairs = [];
+            for (let i = 0; i < stops.length - 1; i += 1) {
+                sequentialPairs.push({ origin: stops[i], destination: stops[i + 1] });
+            }
+            generateLegRowsFromPairs(uniquePairs(sequentialPairs));
+        });
+    }
+
+    if (masterApplyBtn) {
+        masterApplyBtn.addEventListener('click', function () {
+            const departurePointInput = document.getElementById('property_departure_point');
+            const arrivalPointInput = document.getElementById('property_arrival_point');
+            const origin = normalizedStopText((masterOriginInput && masterOriginInput.value) || (departurePointInput && departurePointInput.value) || '');
+            const destination = normalizedStopText((masterDestinationInput && masterDestinationInput.value) || (arrivalPointInput && arrivalPointInput.value) || '');
+            const mode = (masterModeInput && masterModeInput.value) ? masterModeInput.value : 'pool_roundtrip';
+
+            if (origin === '' || destination === '') {
+                alert('Provide master origin and destination before generating legs.');
+                return;
+            }
+
+            if (departurePointInput && departurePointInput.value.trim() === '') {
+                departurePointInput.value = origin;
+            }
+            if (arrivalPointInput && arrivalPointInput.value.trim() === '') {
+                arrivalPointInput.value = destination;
+            }
+
+            const stops = parseStopsFromTextarea();
+            const pairs = buildMasterLegPairs(mode, origin, destination, stops);
+            if (pairs.length === 0) {
+                alert('No legs could be generated. Add at least one stop or switch generation mode.');
+                return;
+            }
+
+            generateLegRowsFromPairs(pairs);
+            if (masterSummaryEl) {
+                masterSummaryEl.textContent = origin + ' -> ' + destination + ' (Master Route) | ' + pairs.length + ' legs generated';
+            }
+        });
+    }
+
     /* Serialize on form submit */
     const form = addBtn.closest('form');
     if (form) {
@@ -368,5 +668,21 @@
 
     /* Start with one empty row for a blank create form */
     addRow();
+    const departurePointInput = document.getElementById('property_departure_point');
+    const arrivalPointInput = document.getElementById('property_arrival_point');
+    if (masterOriginInput && departurePointInput && departurePointInput.value.trim() !== '') {
+        masterOriginInput.value = departurePointInput.value.trim();
+    }
+    if (masterDestinationInput && arrivalPointInput && arrivalPointInput.value.trim() !== '') {
+        masterDestinationInput.value = arrivalPointInput.value.trim();
+    }
+    if (masterSummaryEl && masterOriginInput && masterDestinationInput) {
+        const summaryOrigin = masterOriginInput.value.trim();
+        const summaryDestination = masterDestinationInput.value.trim();
+        if (summaryOrigin !== '' && summaryDestination !== '') {
+            masterSummaryEl.textContent = summaryOrigin + ' -> ' + summaryDestination + ' (Master Route)';
+        }
+    }
+    renderStopEditor();
 })();
 </script>

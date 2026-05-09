@@ -2501,6 +2501,126 @@ Route::post('/portal/admin/action-requests/{requestId}/approve', function (int $
         return back()->with('portal_notice', 'Vendor registration approval request processed successfully.');
     }
 
+    if ((string) $requestRow->action_type === 'vendor.category_request') {
+        if (!canApproveVendorRegistrationRequest()) {
+            abort(403);
+        }
+
+        $targetUserId = (int) ($requestRow->target_user_id ?? 0);
+        if ($targetUserId <= 0) {
+            return back()->withErrors(['request' => 'Category request target vendor is missing.']);
+        }
+
+        $targetUser = User::query()->find($targetUserId);
+        if (!$targetUser instanceof User || normalizePortalRoleValue((string) $targetUser->portal_role) !== 'VENDOR') {
+            return back()->withErrors(['request' => 'Target user is not a valid vendor account anymore.']);
+        }
+
+        $payload = [];
+        if (!empty($requestRow->payload)) {
+            $decoded = json_decode((string) $requestRow->payload, true);
+            if (is_array($decoded)) {
+                $payload = $decoded;
+            }
+        }
+
+        $requestAction = strtolower(trim((string) ($payload['request_action'] ?? 'subscribe')));
+        if (!in_array($requestAction, ['subscribe', 'open', 'release'], true)) {
+            $requestAction = 'subscribe';
+        }
+
+        $allowedCategoryKeys = array_keys(vendorPortalCategoryMap());
+        $requestedCategories = collect($payload['categories'] ?? [])
+            ->map(static function ($value) use ($allowedCategoryKeys): ?string {
+                $canonical = vendorPortalCanonicalCategory((string) $value);
+                if ($canonical === null || !in_array($canonical, $allowedCategoryKeys, true)) {
+                    return null;
+                }
+
+                return $canonical;
+            })
+            ->filter(static fn ($value) => is_string($value) && $value !== '')
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($requestedCategories === []) {
+            return back()->withErrors(['request' => 'Category request payload has no valid categories.']);
+        }
+
+        $registeredCategories = [];
+        if (Schema::hasColumn('users', 'portal_service_categories')) {
+            $registeredDecoded = json_decode((string) ($targetUser->portal_service_categories ?? '[]'), true);
+            if (is_array($registeredDecoded)) {
+                $registeredCategories = collect($registeredDecoded)
+                    ->map(static fn ($value) => vendorPortalCanonicalCategory((string) $value))
+                    ->filter(static fn ($value) => is_string($value) && $value !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        }
+
+        $approvedCategories = [];
+        if (Schema::hasColumn('users', 'vendor_approved_service_categories')) {
+            $approvedDecoded = json_decode((string) ($targetUser->vendor_approved_service_categories ?? '[]'), true);
+            if (is_array($approvedDecoded)) {
+                $approvedCategories = collect($approvedDecoded)
+                    ->map(static fn ($value) => vendorPortalCanonicalCategory((string) $value))
+                    ->filter(static fn ($value) => is_string($value) && $value !== '')
+                    ->unique()
+                    ->values()
+                    ->all();
+            }
+        }
+
+        if ($requestAction === 'release') {
+            $registeredCategories = array_values(array_diff($registeredCategories, $requestedCategories));
+            $approvedCategories = array_values(array_diff($approvedCategories, $requestedCategories));
+        } else {
+            $registeredCategories = array_values(array_unique(array_merge($registeredCategories, $requestedCategories)));
+            $approvedCategories = array_values(array_unique(array_merge($approvedCategories, $requestedCategories)));
+        }
+
+        if (Schema::hasColumn('users', 'portal_service_categories')) {
+            $targetUser->portal_service_categories = json_encode($registeredCategories);
+        }
+        if (Schema::hasColumn('users', 'vendor_approved_service_categories')) {
+            $targetUser->vendor_approved_service_categories = json_encode($approvedCategories);
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_status')) {
+            $targetUser->vendor_verification_status = 'approved';
+        }
+        if (Schema::hasColumn('users', 'vendor_verification_last_reviewed_at')) {
+            $targetUser->vendor_verification_last_reviewed_at = now();
+        }
+        if (Schema::hasColumn('users', 'vendor_verified_at')) {
+            $targetUser->vendor_verified_at = now();
+        }
+        $targetUser->save();
+
+        DB::table('portal_admin_action_requests')
+            ->where('id', $requestId)
+            ->update([
+                'status' => 'approved',
+                'approved_by_user_id' => session('portal_admin_user_id'),
+                'approved_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        portalAdminAuditLog('vendor_category_request.approved', [
+            'target_user_id' => (int) $targetUser->id,
+            'target_identifier' => (string) ($targetUser->username ?: $targetUser->email),
+            'target_role' => 'VENDOR',
+            'action_request_id' => $requestId,
+            'request_action' => $requestAction,
+            'requested_categories' => $requestedCategories,
+            'approved_categories_after' => $approvedCategories,
+        ]);
+
+        return back()->with('portal_notice', 'Vendor category request approved and applied.');
+    }
+
     return back()->withErrors(['request' => 'Unsupported action request type.']);
 });
 
@@ -2526,6 +2646,9 @@ Route::post('/portal/admin/action-requests/{requestId}/reject', function (Reques
         abort(403);
     }
     if ($actionType === 'vendor_registration_approve' && !canApproveVendorRegistrationRequest()) {
+        abort(403);
+    }
+    if ($actionType === 'vendor.category_request' && !canApproveVendorRegistrationRequest()) {
         abort(403);
     }
 

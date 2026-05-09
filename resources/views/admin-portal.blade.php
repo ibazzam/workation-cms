@@ -1993,6 +1993,82 @@
                             </div>
                         @endif
 
+                        @if ($canApproveVendorRegistrationRequest)
+                            <div class="registration-grid" style="margin-bottom:12px;">
+                                @forelse ($pendingVendorCategoryRequests as $categoryRequest)
+                                    @php
+                                        $categoryPayload = [];
+                                        if (!empty($categoryRequest->payload)) {
+                                            $decodedCategoryPayload = json_decode((string) $categoryRequest->payload, true);
+                                            if (is_array($decodedCategoryPayload)) {
+                                                $categoryPayload = $decodedCategoryPayload;
+                                            }
+                                        }
+                                        $requestAction = strtolower(trim((string) ($categoryPayload['request_action'] ?? 'subscribe')));
+                                        $requestedCategories = collect($categoryPayload['categories'] ?? [])->map(static fn ($value) => (string) $value)->filter()->values();
+                                        $requestedDocuments = collect($categoryPayload['documents'] ?? [])->filter(static fn ($value) => is_array($value))->values();
+                                        $requiredDocuments = collect($categoryPayload['required_documents'] ?? [])->map(static fn ($value) => (string) $value)->filter()->values();
+                                        $requestedCategoryLabels = $requestedCategories->map(static function (string $categoryKey) use ($vendorCategoryMap): string {
+                                            return (string) ($vendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+                                        })->values();
+                                        $requestActionLabel = match ($requestAction) {
+                                            'open' => 'Open Category',
+                                            'release' => 'Release Category',
+                                            default => 'Subscribe Category',
+                                        };
+                                    @endphp
+                                    <div class="registration-row">
+                                        <div class="registration-head">
+                                            <span class="user-name">Vendor Category Update Request</span>
+                                            <span class="role-pill">PENDING</span>
+                                            <span class="small">{{ $categoryRequest->target_username ?: $categoryRequest->target_identifier }} | {{ $categoryRequest->target_email ?: 'n/a' }}</span>
+                                        </div>
+                                        <div class="small"><strong>Requested action:</strong> {{ $requestActionLabel }}</div>
+                                        <div class="small"><strong>Requested categories:</strong> {{ $requestedCategoryLabels->isNotEmpty() ? $requestedCategoryLabels->implode(', ') : 'None provided' }}</div>
+                                        @if (!empty($categoryRequest->target_vendor_id))
+                                            <div class="small"><strong>Vendor ID:</strong> {{ $categoryRequest->target_vendor_id }}</div>
+                                        @endif
+                                        <div class="small">Requested by: {{ $categoryRequest->requested_by_name ?: 'Unknown' }}{{ $categoryRequest->requested_by_role ? ' (' . $categoryRequest->requested_by_role . ')' : '' }}</div>
+                                        @if (!empty($categoryRequest->reason))
+                                            <div class="small">Reason: {{ $categoryRequest->reason }}</div>
+                                        @endif
+                                        @if ($requiredDocuments->isNotEmpty())
+                                            <div class="small"><strong>Required docs checklist:</strong> {{ $requiredDocuments->implode(' | ') }}</div>
+                                        @endif
+                                        <div class="doc-links">
+                                            @forelse ($requestedDocuments as $documentIndex => $documentItem)
+                                                @php
+                                                    $documentName = (string) ($documentItem['name'] ?? ('Document ' . ($documentIndex + 1)));
+                                                    $documentUrl = (string) ($documentItem['url'] ?? '');
+                                                @endphp
+                                                @if ($documentUrl !== '')
+                                                    <a class="doc-link" href="{{ $documentUrl }}" target="_blank" rel="noopener">View {{ $documentName }}</a>
+                                                @endif
+                                            @empty
+                                                <span class="small">No supporting documents attached in this request payload.</span>
+                                            @endforelse
+                                        </div>
+                                        <div class="registration-actions">
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $categoryRequest->id }}/approve">
+                                                @csrf
+                                                <button class="btn-approve" type="submit">Approve Category Update</button>
+                                            </form>
+                                            <form method="POST" action="/portal/admin/action-requests/{{ $categoryRequest->id }}/reject">
+                                                @csrf
+                                                <label class="small" for="reject_category_request_{{ $categoryRequest->id }}">Rejection reason</label>
+                                                <textarea id="reject_category_request_{{ $categoryRequest->id }}" name="reason" required placeholder="Explain why this category update request is rejected"></textarea>
+                                                <button class="btn-reject" type="submit">Reject Category Update</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="user-row">
+                                        <div class="small">No pending vendor category update requests.</div>
+                                    </div>
+                                @endforelse
+                            </div>
+                        @endif
+
                         @if ($canApproveVendorDeleteRequest)
                             <div class="registration-grid" style="margin-bottom:12px;">
                                 @forelse ($pendingVendorDeleteRequests as $deleteRequest)

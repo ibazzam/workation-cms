@@ -2406,8 +2406,19 @@
 
         /* Mobile breakpoint (768px and below) */
         @media (max-width: 768px) {
+            * {
+                box-sizing: border-box;
+            }
+
             .portal-shell {
-                gap: 8px;
+                gap: 6px;
+                padding: 0;
+            }
+
+            .portal-nav {
+                padding: 8px;
+                margin: 0;
+                border-radius: 8px;
             }
 
             .ops-form-grid {
@@ -2417,7 +2428,7 @@
 
             .ops-form-grid-compact {
                 grid-template-columns: 1fr;
-                gap: 8px 8px;
+                gap: 8px;
             }
 
             .ops-metrics {
@@ -2430,33 +2441,41 @@
                 overflow-x: auto;
                 overflow-y: visible;
                 -webkit-overflow-scrolling: touch;
+                border-radius: 8px;
+                margin: 8px 0;
             }
 
             .ops-table,
             .payout-table,
             .reservation-ops-table {
-                font-size: 0.75rem;
-                min-width: max-content;
+                font-size: 0.72rem;
+                width: 100%;
+                table-layout: auto;
             }
 
             .ops-table th,
             .ops-table td,
             .payout-table th,
             .payout-table td {
-                padding: 6px 8px;
-                font-size: 0.75rem;
+                padding: 6px 6px;
+                font-size: 0.7rem;
+                word-break: break-word;
             }
 
             .ops-input,
             .ops-select,
             .ops-textarea {
-                font-size: 0.78rem;
-                padding: 6px 8px;
-                min-height: 34px;
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 8px 10px;
+                min-height: 40px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
             }
 
             .ops-textarea {
-                min-height: 64px;
+                min-height: 60px;
+                resize: vertical;
             }
 
             .summary-grid {
@@ -2465,7 +2484,7 @@
             }
 
             .summary-value {
-                font-size: 1.1rem;
+                font-size: 1.05rem;
             }
 
             .payout-grid {
@@ -2474,11 +2493,11 @@
             }
 
             .payout-metric {
-                padding: 8px;
+                padding: 10px;
             }
 
             .payout-table {
-                min-width: 100%;
+                min-width: auto;
             }
 
             .profile-grid {
@@ -2487,6 +2506,7 @@
 
             .hero-highlights {
                 grid-template-columns: 1fr;
+                gap: 8px;
             }
 
             .location-grid {
@@ -2496,38 +2516,39 @@
 
             .update-row-form.inline-table-form {
                 grid-template-columns: 1fr;
+                gap: 8px;
             }
 
             .inline-table-form {
                 grid-template-columns: 1fr;
+                gap: 8px;
             }
 
             .listing-transfer-head,
             .listing-transfer-row {
                 grid-template-columns: 1fr;
-                gap: 6px;
+                gap: 8px;
             }
 
-            /* Prevent form overflow on water sports and other listing forms */
             .ops-form {
-                padding: 8px;
+                padding: 10px;
             }
 
             .listing-form-section {
-                padding: 10px;
+                padding: 12px;
                 gap: 10px;
             }
 
             .edit-map-wrap {
-                height: 200px;
+                height: 220px;
             }
 
             #propertyMap {
-                height: 200px;
+                height: 220px;
             }
 
             .map-picker [data-edit-map-wrap] {
-                height: 200px;
+                height: 220px;
             }
 
             .guided-steps {
@@ -2537,7 +2558,7 @@
 
             .guided-step {
                 padding: 8px;
-                font-size: 0.72rem;
+                font-size: 0.7rem;
             }
 
             .wizard-progress {
@@ -2546,24 +2567,24 @@
             }
 
             .workspace-tabs {
-                margin-bottom: 8px;
+                margin: 0;
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
             }
 
             .workspace-tab {
-                padding: 8px 16px;
-                font-size: 0.78rem;
+                padding: 8px 12px;
+                font-size: 0.76rem;
             }
 
             .workspace-category-tabs {
-                gap: 3px;
+                gap: 2px;
                 padding: 2px;
             }
 
             .workspace-category-tab {
                 padding: 6px 8px;
-                font-size: 0.72rem;
+                font-size: 0.7rem;
             }
 
             .ops-category-toggle {
@@ -2571,45 +2592,82 @@
             }
 
             .ops-category-toggle .ops-title {
-                font-size: 0.88rem;
+                font-size: 0.85rem;
             }
 
-            /* Ensure form fields don't exceed container width */
             .ops-field {
                 min-width: 0;
             }
 
-            .ops-input,
-            .ops-select,
-            .ops-textarea {
-                box-sizing: border-box;
+            .ops-field label {
+                font-size: 0.65rem;
             }
 
-            /* Add padding to prevent bottom cutoff on mobile */
             .portal-content > section,
             .portal-content > div {
-                padding-bottom: 10px;
+                padding: 8px;
+                margin: 0;
             }
 
-            /* Ensure tables don't cause full-page horizontal scroll */
             .listing-management-table,
             .room-management-table {
                 table-layout: auto;
+                width: 100%;
+            }
+
+            .ops-form,
+            .ops-category-card,
+            .ops-section {
+                margin-left: 0;
+                margin-right: 0;
+                overflow: visible;
+            }
+
+            /* Ensure form containers don't overflow */
+            form {
+                overflow-x: hidden;
+            }
+
+            .wizard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .category-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .inline-actions {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .listing-management-table .inline-actions,
+            .room-management-table .inline-actions {
+                flex-direction: column;
             }
         }
 
         /* Small mobile (480px and below) */
         @media (max-width: 480px) {
+            .portal-shell {
+                gap: 4px;
+            }
+
+            .portal-nav {
+                padding: 6px;
+            }
+
             .ops-metrics {
                 grid-template-columns: 1fr;
+                gap: 6px;
             }
 
             .summary-card {
-                padding: 10px;
+                padding: 8px;
             }
 
             .summary-label {
-                font-size: 0.68rem;
+                font-size: 0.65rem;
             }
 
             .summary-value {
@@ -2620,53 +2678,80 @@
             .ops-table td,
             .payout-table th,
             .payout-table td {
-                padding: 5px 6px;
-                font-size: 0.7rem;
+                padding: 4px 4px;
+                font-size: 0.65rem;
             }
 
             .ops-input,
             .ops-select,
             .ops-textarea {
-                font-size: 0.75rem;
-                padding: 5px 6px;
-                min-height: 32px;
+                font-size: 16px;
+                padding: 6px 8px;
+                min-height: 38px;
             }
 
             .ops-textarea {
-                min-height: 56px;
+                min-height: 50px;
             }
 
             .btn {
-                font-size: 0.75rem;
+                font-size: 0.7rem;
                 padding: 6px 10px;
             }
 
             .listing-form-section {
-                padding: 8px;
+                padding: 10px;
                 gap: 8px;
             }
 
             .hero-highlights {
-                gap: 8px;
+                gap: 6px;
             }
 
             .hero-highlight {
-                padding: 8px 10px;
+                padding: 8px;
             }
 
             .hero-highlight-value {
-                font-size: 0.9rem;
+                font-size: 0.85rem;
             }
 
             .guided-steps {
                 grid-template-columns: 1fr;
+                gap: 4px;
             }
 
             .wizard-progress {
                 grid-template-columns: 1fr;
+                gap: 4px;
+            }
+
+            .ops-form {
+                padding: 8px;
+            }
+
+            .edit-map-wrap {
+                height: 180px;
+            }
+
+            #propertyMap {
+                height: 180px;
+            }
+
+            .ops-category-toggle .ops-title {
+                font-size: 0.8rem;
+            }
+
+            .workspace-tab {
+                padding: 6px 10px;
+                font-size: 0.7rem;
+            }
+
+            .workspace-category-tab {
+                padding: 4px 6px;
+                font-size: 0.65rem;
             }
         }
-    </style>
 
         .gallery-grid {
             margin-top: 6px;

@@ -3456,6 +3456,7 @@
                     if (normalized === 'transport' || normalized === 'sea_transport' || normalized === 'land_transport') return ['capacity', 'transport', 'policies', 'geo'];
                     if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'water_sports') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
+                    if (normalized === 'liveaboard') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'remote_workspace') return ['stay', 'capacity', 'workspace', 'geo'];
                     if (normalized === 'conference_room') return ['capacity', 'conference', 'policies', 'geo'];
                     if (normalized === 'resort_day_visit') return ['capacity', 'day_visit', 'policies', 'geo'];
@@ -3472,6 +3473,7 @@
                         sea_transport: ['Sea Transport & Ferries Enlisting', 'Capture water transfer details and save.', 'Save Sea Transport Listing', 'Use sea transport fields for speedboats, ferries, and vessel transfers.', 'service'],
                         land_transport: ['Land Transport Enlisting', 'Capture vehicle transfer details and save.', 'Save Land Transport Listing', 'Use land transport fields for cars, vans, and local ground transfers.', 'service'],
                         water_sports: ['Water Sports Enlisting', 'Fill required fields and save.', 'Save Water Sports Listing', 'Use excursion/service fields for diving, snorkeling, and activity packages.', 'service'],
+                        liveaboard: ['Liveaboard / Safari Enlisting', 'Fill required fields and save.', 'Save Liveaboard Listing', 'Use liveaboard/safari fields for multi-day vessel journeys with onboard stay.', 'service'],
                         excursion: ['Excursion Enlisting', 'Fill required fields and save.', 'Save Excursion Listing', 'Fill required fields and save.', 'service'],
                         remote_workspace: ['Remote Workspace Enlisting', 'Fill required fields and save.', 'Save Remote Workspace Listing', 'Fill required fields and save.', 'service'],
                         conference_room: ['Conference Room Enlisting', 'Capture venue basics, capacity, and save.', 'Save Conference Room Listing', 'Use this for meeting rooms, halls, and event spaces.', 'service'],

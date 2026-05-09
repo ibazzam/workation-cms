@@ -336,11 +336,15 @@ Route::get('/admin', function (Request $request) {
     $requestedPage = strtolower(trim((string) $request->query('page', 'overview')));
     $adminPage = $adminPageAliases[$requestedPage] ?? 'overview';
 
-    $financeScopedAdminRole = in_array($currentPortalRole, ['ADMIN_FINANCE', 'ADMIN_SUPER'], true);
-    if ($financeScopedAdminRole) {
-        // Finance/accounts-only scope on admin side for ADMIN_FINANCE and ADMIN_SUPER.
+    // ADMIN_SUPER has unrestricted access to all pages; ADMIN_FINANCE is scoped to finance only.
+    if ($currentPortalRole === 'ADMIN_SUPER') {
+        // Super admin gets full access to all admin pages.
+        $adminAllowedPages = ['overview', 'permissions', 'finance', 'media', 'content', 'catalog', 'moderation', 'listings', 'audit', 'tools'];
+    } elseif ($currentPortalRole === 'ADMIN_FINANCE') {
+        // Finance-only scope for ADMIN_FINANCE role.
         $adminAllowedPages = ['finance', 'permissions'];
     } else {
+        // All other roles get base pages + conditional pages based on their capabilities.
         $adminAllowedPages = ['overview', 'permissions', 'audit', 'tools', 'moderation'];
         if ($canModerateFinance) {
             $adminAllowedPages[] = 'finance';

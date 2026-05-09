@@ -183,7 +183,7 @@
 <div class="st-main-container">
     <div class="st-main-content">
         <div class="st-breadcrumb">
-            <a href="/catalog/sea_transport">← Sea Transport &amp; Ferries</a>
+            <a href="/catalog/sea-transport">← Sea Transport &amp; Ferries</a>
         </div>
 
         <div class="st-section" style="margin-top:0;">

@@ -559,12 +559,15 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
+            $mediaEntityTypes = in_array($dbCategoryKey, ['accommodation'], true)
+                ? ['property']
+                : ['service', 'property'];
             $mediaRows = collect(Cache::remember(
-                'catalog:property_media:v1:' . md5($propertyLookupIds->implode(',')),
+                'catalog:property_media:v2:' . md5($dbCategoryKey . ':' . implode('|', $mediaEntityTypes) . ':' . $propertyLookupIds->implode(',')),
                 now()->addMinutes(3),
-                static function () use ($propertyLookupIds) {
+                static function () use ($propertyLookupIds, $mediaEntityTypes) {
                     return DB::table('vendor_listing_media')
-                        ->where('entity_type', 'property')
+                        ->whereIn('entity_type', $mediaEntityTypes)
                         ->whereIn('entity_id', $propertyLookupIds->all())
                         ->orderByDesc('is_primary')
                         ->orderByDesc('created_at')
@@ -740,9 +743,13 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
     // Vessel gallery (primary + additional photos).
     $galleryMedia = [];
     if (Schema::hasTable('vendor_listing_media')) {
+        $mediaEntityIds = array_values(array_unique(array_filter([
+            (int) ($property->id ?? 0),
+            (int) ($property->vendor_property_id ?? 0),
+        ], static fn (int $id): bool => $id > 0)));
         $mediaRows = DB::table('vendor_listing_media')
-            ->where('entity_type', 'sea_transport')
-            ->where('entity_id', $property->id)
+            ->whereIn('entity_type', ['service', 'property', 'sea_transport'])
+            ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get();
@@ -763,6 +770,20 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
         }
     }
     $heroUrl = $galleryMedia[0] ?? '';
+    if ($heroUrl === '') {
+        $fallbackHero = trim((string) (
+            $listingDetails['image_url']
+            ?? $listingDetails['featured_image']
+            ?? $listingDetails['banner_image']
+            ?? ''
+        ));
+        if ($fallbackHero !== '') {
+            $heroUrl = function_exists('portalManagedMediaUrlFromPath')
+                ? (portalManagedMediaUrlFromPath($fallbackHero) ?? $fallbackHero)
+                : $fallbackHero;
+            $galleryMedia = [$heroUrl];
+        }
+    }
 
     // Operator / vendor.
     $vendor = DB::table('users')->where('id', $property->vendor_user_id ?? 0)->first();

@@ -1658,13 +1658,9 @@
             border-bottom: 1px solid #e8ecf0;
             border-radius: 0;
             background: #ffffff;
-            display: flex;
-            flex-direction: row;
-            align-items: stretch;
-            gap: 0;
             padding: 0;
             overflow: hidden;
-            transition: background 0.15s ease;
+            transition: background 0.15s ease, box-shadow 0.15s ease;
         }
 
         .page.category-sea-transport .card:last-child {
@@ -1673,17 +1669,26 @@
 
         .page.category-sea-transport .card:hover {
             background: #f5fbff;
+            box-shadow: inset 0 0 0 1px rgba(15, 97, 121, 0.08);
         }
 
-        .page.category-sea-transport .card > img {
-            width: 148px;
-            min-width: 148px;
-            height: 100%;
-            min-height: 106px;
+        .page.category-sea-transport .st-card-link {
+            display: grid !important;
+            grid-template-columns: 184px minmax(0, 1fr);
+            width: 100%;
+            color: inherit;
+            text-decoration: none;
+            gap: 0;
+            align-items: stretch;
+        }
+
+        .page.category-sea-transport .st-card-link > img {
+            width: 184px;
+            min-width: 184px;
+            height: 132px;
             object-fit: cover;
             display: block;
             border-radius: 0;
-            flex-shrink: 0;
             background: #d6e8f3;
         }
 
@@ -1829,9 +1834,14 @@
         }
 
         @media (max-width: 680px) {
-            .page.category-sea-transport .card > img {
-                width: 100px;
-                min-width: 100px;
+            .page.category-sea-transport .st-card-link {
+                grid-template-columns: 118px minmax(0, 1fr);
+            }
+            .page.category-sea-transport .st-card-link > img {
+                width: 118px;
+                min-width: 118px;
+                height: 100%;
+                min-height: 120px;
             }
             .page.category-sea-transport .st-card-inner {
                 flex-direction: column;
@@ -3208,7 +3218,6 @@
                                 $stAvailDays    = (array) ($propertyDetails['availability_schedule'] ?? []);
                                 $stAvailText    = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
                                 $stSeatsLimited = $stTotalSeats > 0 && $stTotalSeats <= 5;
-                                // Stop chain and from-price from leg roster.
                                 $stRouteSchedules = is_array($propertyDetails['route_schedules'] ?? null) ? $propertyDetails['route_schedules'] : [];
                                 $stStopSequence   = is_array($propertyDetails['stop_sequence'] ?? null) ? $propertyDetails['stop_sequence'] : [];
                                 $stFromLocal  = $stLocalPrice;
@@ -3226,54 +3235,56 @@
                                     $stStopChain = ($stDeparture !== '' ? $stDeparture : '?') . ' → ' . ($stArrival !== '' ? $stArrival : '?');
                                 }
                             @endphp
-                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                            <div class="st-card-inner">
-                                <div class="st-card-info">
-                                    <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
-                                    @if ($stStopChain !== '')
-                                        <span class="st-card-route" style="font-size:0.8rem; color:#1d4b66; font-weight:600;">
-                                            <i class="fa-solid fa-route" aria-hidden="true"></i>
-                                            {{ $stStopChain }}
-                                        </span>
-                                    @endif
-                                    @if ($stDepTime !== '')
-                                        <span class="st-card-departs">
-                                            <i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}
-                                        </span>
-                                    @endif
-                                    <div class="st-card-meta">
-                                        <span class="st-card-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
-                                        @if ($stVesselName !== '')
-                                            <span class="st-card-chip"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
+                            <a class="card-link st-card-link" href="/sea-transport/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                                <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                <div class="st-card-inner">
+                                    <div class="st-card-info">
+                                        <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
+                                        @if ($stStopChain !== '')
+                                            <span class="st-card-route" style="font-size:0.9rem; color:#1d4b66; font-weight:700;">
+                                                <i class="fa-solid fa-route" aria-hidden="true"></i>
+                                                {{ $stStopChain }}
+                                            </span>
                                         @endif
-                                        @if (count($stRouteSchedules) > 0)
-                                            <span class="st-card-chip"><i class="fa-solid fa-map-signs" aria-hidden="true"></i> {{ count($stRouteSchedules) }} leg{{ count($stRouteSchedules) !== 1 ? 's' : '' }}</span>
+                                        @if ($stDepTime !== '')
+                                            <span class="st-card-departs">
+                                                <i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}
+                                            </span>
                                         @endif
+                                        <div class="st-card-meta">
+                                            <span class="st-card-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
+                                            @if ($stVesselName !== '')
+                                                <span class="st-card-chip"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
+                                            @endif
+                                            @if (count($stRouteSchedules) > 0)
+                                                <span class="st-card-chip"><i class="fa-solid fa-map-signs" aria-hidden="true"></i> {{ count($stRouteSchedules) }} leg{{ count($stRouteSchedules) !== 1 ? 's' : '' }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="st-card-right">
+                                        @if ($stTotalSeats > 0)
+                                            <span class="st-card-seats {{ $stSeatsLimited ? 'is-limited' : '' }}">
+                                                <i class="fa-solid fa-chair" aria-hidden="true"></i>
+                                                {{ $stSeatsLimited ? $stTotalSeats . ' seats left' : $stTotalSeats . ' seats' }}
+                                            </span>
+                                        @endif
+                                        <div>
+                                            @if ($stFromLocal > 0)
+                                                <span class="st-price-local">from MVR {{ number_format($stFromLocal, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
+                                            @endif
+                                            @if ($stFromForeign > 0)
+                                                <span class="st-price-foreign">from USD {{ number_format($stFromForeign, 2) }}</span>
+                                            @endif
+                                            @if ($stFromLocal <= 0 && $stFromForeign <= 0)
+                                                <span class="st-price-local">Price on request</span>
+                                            @endif
+                                        </div>
+                                        <span class="st-select-btn">
+                                            View Routes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                        </span>
                                     </div>
                                 </div>
-                                <div class="st-card-right">
-                                    @if ($stTotalSeats > 0)
-                                        <span class="st-card-seats {{ $stSeatsLimited ? 'is-limited' : '' }}">
-                                            <i class="fa-solid fa-chair" aria-hidden="true"></i>
-                                            {{ $stSeatsLimited ? $stTotalSeats . ' seats left' : $stTotalSeats . ' seats' }}
-                                        </span>
-                                    @endif
-                                    <div>
-                                        @if ($stFromLocal > 0)
-                                            <span class="st-price-local">from MVR {{ number_format($stFromLocal, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
-                                        @endif
-                                        @if ($stFromForeign > 0)
-                                            <span class="st-price-foreign">from USD {{ number_format($stFromForeign, 2) }}</span>
-                                        @endif
-                                        @if ($stFromLocal <= 0 && $stFromForeign <= 0)
-                                            <span class="st-price-local">Price on request</span>
-                                        @endif
-                                    </div>
-                                    <a href="/sea-transport/{{ $propertyId }}" class="st-select-btn">
-                                        View Routes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                    </a>
-                                </div>
-                            </div>
+                            </a>
                             @elseif ($categoryKey === 'liveaboard')
                             @php
                                 $laStart     = trim((string) ($propertyDetails['start_point'] ?? ''));

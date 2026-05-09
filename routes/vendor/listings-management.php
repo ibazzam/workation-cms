@@ -708,7 +708,7 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $validated = $request->validate([
         'name' => ['required', 'string', 'max:160'],
         'listing_category' => ['required', 'string', 'max:80'],
-        'property_type' => ['nullable', Rule::in(['property', 'service'])],
+        'property_type' => ['nullable', 'string', 'max:80'],
         'location' => ['nullable', 'string', 'max:190'],
         'location_country' => ['nullable', 'string', 'max:90'],
         'location_state' => ['nullable', 'string', 'max:120'],
@@ -1082,7 +1082,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'cancellation_policy' => ['nullable', 'string', 'max:2000'],
         'early_check_in_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
         'late_check_out_fee' => ['nullable', 'numeric', 'min:0', 'max:1000000'],
-        'property_type' => ['nullable', Rule::in(['hotel', 'resort', 'guest_house', 'villa', 'apartment', 'bungalow', 'hostel'])],
+        'property_type' => ['nullable', 'string', 'max:80'],
         'star_rating' => ['nullable', 'integer', 'min:1', 'max:5'],
         'status' => ['nullable', Rule::in(['active', 'inactive'])],
     ]);

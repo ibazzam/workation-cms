@@ -755,19 +755,37 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             ->get();
 
         foreach ($mediaRows as $mediaRow) {
-            $rawPath = (string) ($mediaRow->file_path ?? '');
+            $rawPath = trim((string) ($mediaRow->file_path ?? ''));
             if ($rawPath === '') {
                 continue;
             }
 
             $resolved = function_exists('portalManagedMediaUrlFromPath')
-                ? (portalManagedMediaUrlFromPath($rawPath) ?? $rawPath)
-                : $rawPath;
+                ? portalManagedMediaUrlFromPath($rawPath)
+                : null;
 
-            if ($resolved !== '') {
-                $galleryMedia[] = $resolved;
+            if ($resolved === null || trim($resolved) === '') {
+                if (str_starts_with($rawPath, 'http://')) {
+                    $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
+                } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                    $resolved = $rawPath;
+                } elseif (str_starts_with($rawPath, '__public__/')) {
+                    $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
+                    $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
+                    $resolved = '/media/portal-public/' . $encodedPath;
+                } else {
+                    $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
+                    $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
+                    $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                }
+            }
+
+            if (is_string($resolved) && trim($resolved) !== '') {
+                $galleryMedia[] = trim($resolved);
             }
         }
+
+        $galleryMedia = array_values(array_unique(array_filter($galleryMedia, static fn ($url): bool => is_string($url) && trim($url) !== '')));
     }
     $heroUrl = $galleryMedia[0] ?? '';
     if ($heroUrl === '') {

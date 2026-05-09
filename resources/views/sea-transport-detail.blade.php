@@ -11,7 +11,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         :root {
-            --bg: #ffffff;
+            --bg: #f3f8f5;
             --ink: #152738;
             --muted: #5f7488;
             --line: #d5e2ec;
@@ -19,6 +19,7 @@
             --brand: #0f6179;
             --brand-strong: #0b4f66;
             --accent: #f3a337;
+            --property-header-offset: 74px;
         }
         * { box-sizing: border-box; }
         body { margin: 0; font-family: "Outfit","Trebuchet MS",sans-serif; color: var(--ink); background: var(--bg); }
@@ -36,13 +37,95 @@
         .st-gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .st-gallery-thumb.active { border: 2px solid var(--brand); }
 
-        .st-main-container { max-width: 1000px; margin: 0 auto; padding: 0 16px 60px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+        .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
+
+        .top-search-shell {
+            position: sticky;
+            top: var(--property-header-offset);
+            z-index: 60;
+            border: 1px solid #d4e5ef;
+            border-radius: 0;
+            background: #ffffff;
+            padding: 10px;
+            margin-bottom: 0;
+            width: 100%;
+        }
+
+        .top-search-inner {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
+        }
+
+        .top-search-form {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .top-search-field {
+            border: 1px solid #c6d7e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfdff;
+            color: #17344a;
+            display: grid;
+            gap: 2px;
+        }
+
+        .top-search-field label {
+            font-size: 0.68rem;
+            color: #5f7488;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .top-search-field input {
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 0.88rem;
+            color: #17344a;
+            padding: 0;
+            outline: none;
+        }
+
+        .top-search-btn {
+            border: 1px solid #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 4px 6px;
+            margin-bottom: 10px;
+            font-size: 0.78rem;
+            color: #5f7488;
+        }
+
+        .breadcrumb a {
+            color: #0f6179;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .breadcrumb a:hover { text-decoration: underline; }
+
+        .st-main-container { width: 100%; padding: 0 0 60px; display: grid; grid-template-columns: 1fr 340px; gap: 12px; align-items: start; }
         .st-main-content { width: 100%; }
         .st-sidebar { width: 100%; }
 
-        .st-breadcrumb { font-size: 0.78rem; color: var(--muted); margin: 20px 0 14px; }
-        .st-breadcrumb a { color: var(--brand); text-decoration: none; }
-        .st-breadcrumb a:hover { text-decoration: underline; }
+        .st-breadcrumb { display: none; }
 
         .st-header { margin-bottom: 18px; }
         .st-title { font-size: 1.65rem; font-weight: 800; color: var(--ink); margin: 0 0 6px; line-height: 1.2; }
@@ -57,7 +140,13 @@
         .st-share-btn { width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--brand); transition: all 0.2s ease; }
         .st-share-btn:hover { background: #f0f6fb; border-color: var(--brand); }
 
-        .st-section { margin: 28px 0 0; }
+        .st-section {
+            margin: 12px 0 0;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--surface);
+            padding: 12px;
+        }
         .st-section-title { font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #4a6478; margin: 0 0 12px; padding-bottom: 10px; border-bottom: 2px solid var(--line); }
 
         .st-snapshot { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 16px 0; }
@@ -82,6 +171,20 @@
             border-radius: 12px;
             overflow: hidden;
             background: #f5fafd;
+            padding: 10px;
+        }
+        .st-gallery-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 220px;
+            gap: 8px;
+            align-items: start;
+        }
+        .st-gallery-primary-wrap {
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #cfe1ec;
+            background: #eff7fb;
+            min-height: 360px;
         }
         .st-gallery-primary {
             width: 100%;
@@ -92,12 +195,13 @@
         }
         .st-gallery-thumbs {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+            grid-template-columns: 1fr;
             gap: 8px;
-            padding: 10px;
-            border-top: 1px solid var(--line);
-            background: #ffffff;
+            background: transparent;
+            padding: 0;
         }
+
+        .st-gallery-thumb { height: 80px; }
 
         .st-equipment-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 16px 0 0; }
         .st-ticket-card {
@@ -131,7 +235,7 @@
         }
         .st-submit-btn:hover { background: var(--brand-strong); }
 
-        .st-sidebar-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+        .st-sidebar-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
         .st-sidebar-title { font-size: 0.88rem; font-weight: 700; color: var(--ink); margin: 0 0 12px; }
         .st-sidebar-content { font-size: 0.82rem; color: #4a6478; line-height: 1.6; }
         .st-sidebar-list { margin: 0; padding: 0; list-style: none; }
@@ -149,6 +253,10 @@
             .st-snapshot { grid-template-columns: 1fr; }
             .st-ticket-card { grid-template-columns: 1fr; }
             .st-price-col { text-align: left; }
+            .top-search-form { grid-template-columns: 1fr; }
+            .st-gallery-layout { grid-template-columns: 1fr; }
+            .st-gallery-thumbs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .st-gallery-thumb { height: 64px; }
         }
     </style>
 </head>
@@ -168,6 +276,11 @@
         ['key' => 'remote-workspace', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
         ['key' => 'conference-room', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
     ];
+    $stImageFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='700' viewBox='0 0 1400 700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23d7ebf8'/%3E%3Cstop offset='100%25' stop-color='%23c7deef'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1400' height='700' fill='url(%23g)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23406582' font-family='Arial' font-size='34'%3ENo image%3C/text%3E%3C/svg%3E";
+    $topStart = trim((string) request()->query('checkin', request()->query('travel_date', '')));
+    $topEnd = trim((string) request()->query('checkout', request()->query('return_date', '')));
+    $topAdults = max(1, (int) request()->query('adults', 2));
+    $topChildren = max(0, (int) request()->query('children', 0));
 @endphp
 @include('partials.customer-uniform-header', [
     'injectUniformHeaderStyles'  => true,
@@ -180,42 +293,75 @@
     'headerContinueUrl'          => request()->fullUrl(),
 ])
 
+<section class="top-search-shell" aria-label="Search service options">
+    <div class="top-search-inner">
+        <form method="GET" action="" class="top-search-form" id="categoryTopSearch">
+            <div class="top-search-field">
+                <label for="topCategoryProperty">Location</label>
+                <input id="topCategoryProperty" type="text" name="property_name" value="{{ (string) ($property->name ?? '') }}" readonly>
+            </div>
+            <div class="top-search-field">
+                <label for="topCategoryCheckin">Start</label>
+                <input id="topCategoryCheckin" type="date" name="checkin" min="{{ now()->toDateString() }}" value="{{ $topStart }}">
+            </div>
+            <div class="top-search-field">
+                <label for="topCategoryCheckout">End</label>
+                <input id="topCategoryCheckout" type="date" name="checkout" min="{{ now()->toDateString() }}" value="{{ $topEnd }}">
+            </div>
+            <div class="top-search-field">
+                <label for="topCategoryGuests">Guests</label>
+                <input id="topCategoryGuests" type="text" value="{{ $topAdults }} adults, {{ $topChildren }} children" readonly>
+                <input type="hidden" name="adults" value="{{ $topAdults }}">
+                <input type="hidden" name="children" value="{{ $topChildren }}">
+            </div>
+            <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+        </form>
+    </div>
+</section>
+
+<main class="page">
+<nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a>
+    <span aria-hidden="true">›</span>
+    <a href="/catalog/sea-transport">Sea Transport</a>
+    <span aria-hidden="true">›</span>
+    <span>{{ (string) ($property->name ?? 'Sea Transport') }}</span>
+</nav>
+
 <div class="st-main-container">
     <div class="st-main-content">
-        <div class="st-breadcrumb">
-            <a href="/catalog/sea-transport">← Sea Transport &amp; Ferries</a>
-        </div>
 
         <div class="st-section" style="margin-top:0;">
             <h2 class="st-section-title">Service Gallery</h2>
             <div class="st-gallery-stage">
-                @if($heroUrl !== '')
-                    <img id="st_gallery_primary" src="{{ $heroUrl }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary">
-                @else
-                    <div class="st-hero-placeholder" style="height:360px;"><i class="fa-solid fa-ferry"></i></div>
-                @endif
-
-                <div class="st-gallery-thumbs">
-                    @php
-                        $galleryItems = [];
-                        if ($heroUrl !== '') {
-                            $galleryItems[] = $heroUrl;
-                        }
-                        if (!empty($galleryMedia) && is_array($galleryMedia)) {
-                            foreach ($galleryMedia as $galleryUrl) {
-                                if (is_string($galleryUrl) && $galleryUrl !== '' && !in_array($galleryUrl, $galleryItems, true)) {
-                                    $galleryItems[] = $galleryUrl;
-                                }
+                @php
+                    $galleryItems = [];
+                    if (is_string($heroUrl ?? '') && trim((string) $heroUrl) !== '') {
+                        $galleryItems[] = trim((string) $heroUrl);
+                    }
+                    if (!empty($galleryMedia) && is_array($galleryMedia)) {
+                        foreach ($galleryMedia as $galleryUrl) {
+                            if (is_string($galleryUrl) && trim($galleryUrl) !== '' && !in_array(trim($galleryUrl), $galleryItems, true)) {
+                                $galleryItems[] = trim($galleryUrl);
                             }
                         }
-                    @endphp
-                    @forelse($galleryItems as $galleryIndex => $galleryUrl)
-                        <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick="updateHeroImage('{{ $galleryUrl }}', this)">
-                            <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy">
-                        </div>
-                    @empty
-                        <div style="font-size:0.82rem; color:#5f7488; padding:4px 2px;">No gallery images uploaded yet.</div>
-                    @endforelse
+                    }
+                    if ($galleryItems === []) {
+                        $galleryItems[] = $stImageFallback;
+                    }
+                @endphp
+                <div class="st-gallery-layout">
+                    <div class="st-gallery-primary-wrap">
+                        <img id="st_gallery_primary" src="{{ $galleryItems[0] }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary" onerror="this.onerror=null;this.src='{{ $stImageFallback }}';">
+                    </div>
+
+                    <div class="st-gallery-thumbs">
+                        @foreach($galleryItems as $galleryIndex => $galleryUrl)
+                            <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick="updateHeroImage('{{ $galleryUrl }}', this)">
+                                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $stImageFallback }}';">
+                            </div>
+                        @endforeach
+                    </div>
                 </div>
             </div>
         </div>
@@ -519,6 +665,7 @@
         </div>
     </div>
 </div>
+</main>
 
 <script>
     function updateHeroImage(src, thumbEl) {

@@ -1004,20 +1004,28 @@
             </div>
 
             <p class="nav-group-title">Overview</p>
+            @if (in_array('overview', $adminAllowedPages))
             <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="/admin/overview">Dashboard</a>
+            @endif
+            @if (in_array('permissions', $adminAllowedPages))
             <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="/admin/permissions">Role Permissions</a>
+            @endif
+            @if (in_array('audit', $adminAllowedPages))
             <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="/admin/audit">Audit History</a>
+            @endif
 
             <p class="nav-group-title">Finance &amp; Catalog</p>
-            @if ($canModerateFinance)
+            @if (in_array('finance', $adminAllowedPages) && $canModerateFinance)
             <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="/admin/finance">Finance Moderation</a>
             @endif
-            @if ($canManageVendorUsers)
+            @if (in_array('media', $adminAllowedPages) && $canManageVendorUsers)
             <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="/admin/media">Hero Image Settings</a>
+            @endif
+            @if (in_array('catalog', $adminAllowedPages) && $canManageVendorUsers)
             <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="/admin/catalog">Listing Options</a>
             @endif
 
-            @if ($canManageContent ?? false)
+            @if (in_array('content', $adminAllowedPages) && (($canManageContent ?? false) === true))
             <p class="nav-group-title">Content &amp; Media</p>
             <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="/admin/content">Content Hub</a>
             <a href="/portal/admin/blog">Blog Manager</a>
@@ -1026,14 +1034,20 @@
             <a href="/portal/admin/announcement">Announcement Manager</a>
             @endif
 
+            @if (in_array('moderation', $adminAllowedPages) || in_array('listings', $adminAllowedPages))
             <p class="nav-group-title">Moderation &amp; Vendors</p>
+            @endif
+            @if (in_array('moderation', $adminAllowedPages))
             <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="/admin/moderation" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
-            @if ($canModerateListings)
+            @endif
+            @if (in_array('listings', $adminAllowedPages) && $canModerateListings)
             <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="/admin/listings">Listing Moderation</a>
             @endif
 
+            @if (in_array('tools', $adminAllowedPages))
             <p class="nav-group-title">Tools</p>
             <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="/admin/tools">Session + API</a>
+            @endif
         </nav>
 
         <div class="portal-content">

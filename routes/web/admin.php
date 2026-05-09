@@ -208,6 +208,7 @@ Route::get('/admin', function (Request $request) {
 
     $pendingVendorDeleteRequests = collect();
     $pendingVendorRegistrationApprovalRequests = collect();
+    $pendingVendorCategoryRequests = collect();
     if (Schema::hasTable('portal_admin_action_requests')) {
         $pendingVendorDeleteRequests = DB::table('portal_admin_action_requests as par')
             ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
@@ -253,6 +254,30 @@ Route::get('/admin', function (Request $request) {
                 'vrr.contact_name',
                 'vrr.email as registration_email',
                 'vrr.vendor_type',
+            ]);
+
+        $pendingVendorCategoryRequests = DB::table('portal_admin_action_requests as par')
+            ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
+            ->leftJoin('users as target_user', 'target_user.id', '=', 'par.target_user_id')
+            ->where('par.status', 'pending')
+            ->where('par.action_type', 'vendor.category_request')
+            ->orderBy('par.created_at')
+            ->limit(120)
+            ->get([
+                'par.id',
+                'par.action_type',
+                'par.reason',
+                'par.target_user_id',
+                'par.target_identifier',
+                'par.payload',
+                'par.created_at',
+                'requested_by.name as requested_by_name',
+                'requested_by.portal_role as requested_by_role',
+                'target_user.username as target_username',
+                'target_user.email as target_email',
+                'target_user.portal_vendor_id as target_vendor_id',
+                'target_user.vendor_approved_service_categories as target_approved_service_categories',
+                'target_user.portal_service_categories as target_registered_service_categories',
             ]);
     }
 
@@ -748,6 +773,7 @@ Route::get('/admin', function (Request $request) {
         'vendorRegistrationHistory' => $vendorRegistrationHistory,
         'pendingVendorDeleteRequests' => $pendingVendorDeleteRequests,
         'pendingVendorRegistrationApprovalRequests' => $pendingVendorRegistrationApprovalRequests,
+        'pendingVendorCategoryRequests' => $pendingVendorCategoryRequests,
         'dashboardStats' => $dashboardStats,
         'systemHealth' => $systemHealth,
         'rolePermissions' => $rolePermissions,

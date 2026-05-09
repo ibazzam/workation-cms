@@ -77,10 +77,32 @@
         .st-terms-list li { font-size: 0.82rem; color: #35576d; margin: 0 0 8px; padding-left: 20px; position: relative; }
         .st-terms-list li:before { content: "▸"; position: absolute; left: 0; color: var(--brand); }
 
+        .st-gallery-stage {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f5fafd;
+        }
+        .st-gallery-primary {
+            width: 100%;
+            height: 360px;
+            object-fit: cover;
+            display: block;
+            background: #c2d9e6;
+        }
+        .st-gallery-thumbs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+            gap: 8px;
+            padding: 10px;
+            border-top: 1px solid var(--line);
+            background: #ffffff;
+        }
+
         .st-equipment-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 16px 0 0; }
         .st-ticket-card {
             border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 16px;
-            display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 14px; align-items: start;
+            display: grid; grid-template-columns: 1fr; gap: 12px;
         }
         .st-ticket-route { font-size: 0.95rem; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
         .st-ticket-meta { font-size: 0.78rem; color: var(--muted); margin: 0; }
@@ -91,14 +113,23 @@
         .st-price-col { text-align: right; }
         .st-price { font-size: 1.2rem; font-weight: 800; color: var(--brand-strong); margin: 0; }
         .st-price-unit { font-size: 0.75rem; color: var(--muted); font-weight: 500; display: block; margin: 2px 0 0; }
-        .st-qty-col { display: flex; flex-direction: column; gap: 4px; }
-        .st-qty-label { font-size: 0.72rem; font-weight: 600; color: #4a6478; }
-        .st-qty-controls { display: flex; align-items: center; gap: 4px; }
-        .st-qty-btn { width: 28px; height: 28px; border: 1px solid var(--line); background: #fff; border-radius: 5px; cursor: pointer; font-size: 0.9rem; color: var(--brand); transition: all 0.15s ease; }
-        .st-qty-btn:hover { background: #f0f6fb; border-color: var(--brand); }
-        .st-qty-input { width: 42px; text-align: center; border: 1px solid var(--line); border-radius: 5px; padding: 4px; font-size: 0.85rem; }
-        .st-add-btn { background: var(--brand); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 0.85rem; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s ease; }
-        .st-add-btn:hover { background: var(--brand-strong); }
+        .st-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .st-field label { display: block; font-size: 0.72rem; font-weight: 700; color: #4a6478; margin-bottom: 3px; }
+        .st-field input, .st-field select {
+            width: 100%; padding: 8px 10px; font-size: 0.85rem;
+            border: 1px solid #c8d8e8; border-radius: 6px; background: #fff;
+        }
+        .st-roundtrip-extra { display: none; }
+        .st-roundtrip-extra.show { display: block; }
+        .st-submit-btn {
+            background: var(--brand); color: #fff; border: none; border-radius: 8px;
+            padding: 10px 18px; font-size: 0.86rem; font-weight: 700; cursor: pointer;
+        }
+        .st-submit-btn:hover { background: var(--brand-strong); }
 
         .st-sidebar-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
         .st-sidebar-title { font-size: 0.88rem; font-weight: 700; color: var(--ink); margin: 0 0 12px; }
@@ -149,26 +180,44 @@
     'headerContinueUrl'          => request()->fullUrl(),
 ])
 
-@if($heroUrl !== '')
-    <img src="{{ $heroUrl }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-hero">
-@else
-    <div class="st-hero-placeholder"><i class="fa-solid fa-ferry"></i></div>
-@endif
-
-@if(!empty($galleryMedia) && is_array($galleryMedia) && count($galleryMedia) > 1)
-    <div class="st-gallery-strip">
-        @foreach($galleryMedia as $galleryIndex => $galleryUrl)
-            <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick="updateHeroImage(this.querySelector('img').src)">
-                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy">
-            </div>
-        @endforeach
-    </div>
-@endif
-
 <div class="st-main-container">
     <div class="st-main-content">
         <div class="st-breadcrumb">
             <a href="/catalog/sea_transport">← Sea Transport &amp; Ferries</a>
+        </div>
+
+        <div class="st-section" style="margin-top:0;">
+            <h2 class="st-section-title">Service Gallery</h2>
+            <div class="st-gallery-stage">
+                @if($heroUrl !== '')
+                    <img id="st_gallery_primary" src="{{ $heroUrl }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary">
+                @else
+                    <div class="st-hero-placeholder" style="height:360px;"><i class="fa-solid fa-ferry"></i></div>
+                @endif
+
+                <div class="st-gallery-thumbs">
+                    @php
+                        $galleryItems = [];
+                        if ($heroUrl !== '') {
+                            $galleryItems[] = $heroUrl;
+                        }
+                        if (!empty($galleryMedia) && is_array($galleryMedia)) {
+                            foreach ($galleryMedia as $galleryUrl) {
+                                if (is_string($galleryUrl) && $galleryUrl !== '' && !in_array($galleryUrl, $galleryItems, true)) {
+                                    $galleryItems[] = $galleryUrl;
+                                }
+                            }
+                        }
+                    @endphp
+                    @forelse($galleryItems as $galleryIndex => $galleryUrl)
+                        <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick="updateHeroImage('{{ $galleryUrl }}', this)">
+                            <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy">
+                        </div>
+                    @empty
+                        <div style="font-size:0.82rem; color:#5f7488; padding:4px 2px;">No gallery images uploaded yet.</div>
+                    @endforelse
+                </div>
+            </div>
         </div>
 
         <div class="st-header">
@@ -294,54 +343,128 @@
                         $displayCurrency = $isLocal ? 'MVR' : 'USD';
                         $daysStr         = implode(', ', $legDays);
                     @endphp
+                    @php
+                        $legLocalInfant  = isset($leg['local_infant'])  && $leg['local_infant']  !== null ? (float) $leg['local_infant']  : 0;
+                        $legForInfant    = isset($leg['foreign_infant'])&& $leg['foreign_infant']!== null ? (float) $leg['foreign_infant']: 0;
+                        $returnCandidates = collect($routeSchedules)->filter(static function ($candidate) use ($legOrigin, $legDest) {
+                            return (string) ($candidate['origin'] ?? '') === (string) $legDest
+                                && (string) ($candidate['destination'] ?? '') === (string) $legOrigin;
+                        })->values()->all();
+                    @endphp
                     <div class="st-ticket-card">
-                        <div>
-                            <p class="st-ticket-route">
-                                <i class="fa-solid fa-route"></i>
-                                {{ $legOrigin !== '' ? $legOrigin : '(boarding)' }} → {{ $legDest !== '' ? $legDest : '(destination)' }}
-                            </p>
-                            <div class="st-ticket-meta">
-                                @if($legDep) <div class="st-ticket-meta-item">🕐 Departs {{ $legDep }}</div> @endif
-                                @if($legArr) <div class="st-ticket-meta-item">🎯 Arrives {{ $legArr }}</div> @endif
-                                @if($legDur > 0) <div class="st-ticket-meta-item">⏱ {{ floor($legDur/60) }}h {{ $legDur%60 }}m</div> @endif
-                                @if($daysStr) <div class="st-ticket-meta-item">📅 {{ $daysStr }}</div> @endif
-                            </div>
-                        </div>
-
-                        <div>
-                            <div class="st-ticket-safety">
-                                <div class="st-ticket-safety-title">⚠️ Requirements</div>
-                                <div class="st-ticket-safety-content">
-                                    Must be able to board safely. Children must have adult supervision.
+                        <div style="display:grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap:12px; align-items:start;">
+                            <div>
+                                <p class="st-ticket-route">
+                                    <i class="fa-solid fa-route"></i>
+                                    {{ $legOrigin !== '' ? $legOrigin : '(boarding)' }} → {{ $legDest !== '' ? $legDest : '(destination)' }}
+                                </p>
+                                <div class="st-ticket-meta">
+                                    @if($legDep) <div class="st-ticket-meta-item">🕐 Departs {{ $legDep }}</div> @endif
+                                    @if($legArr) <div class="st-ticket-meta-item">🎯 Arrives {{ $legArr }}</div> @endif
+                                    @if($legDur > 0) <div class="st-ticket-meta-item">⏱ {{ floor($legDur/60) }}h {{ $legDur%60 }}m</div> @endif
+                                    @if($daysStr) <div class="st-ticket-meta-item">📅 {{ $daysStr }}</div> @endif
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="st-price-col">
-                            <p class="st-price">{{ $displayCurrency }} {{ number_format($displayAdult, 2) }}</p>
-                            <span class="st-price-unit">per person</span>
-                            <small style="font-size: 0.7rem; color: var(--muted); margin-top: 8px; display: block;">
-                                @if($isLocal && $legLocalAdult > 0)
-                                    Local rate
-                                @elseif(!$isLocal && $legForAdult > 0)
-                                    Foreign rate
-                                @else
-                                    Contact operator
-                                @endif
-                            </small>
-                        </div>
-
-                        <div class="st-qty-col">
-                            <label class="st-qty-label">Quantity</label>
-                            <div class="st-qty-controls">
-                                <button class="st-qty-btn" type="button" onclick="decreaseQty({{ $legIdx }})">−</button>
-                                <input type="number" class="st-qty-input" id="qty_{{ $legIdx }}" value="1" min="1" max="50">
-                                <button class="st-qty-btn" type="button" onclick="increaseQty({{ $legIdx }})">+</button>
+                            <div class="st-price-col">
+                                <p class="st-price">{{ $displayCurrency }} {{ number_format($displayAdult, 2) }}</p>
+                                <span class="st-price-unit">per adult</span>
+                                <small style="font-size: 0.7rem; color: var(--muted); margin-top: 8px; display: block;">
+                                    @if($isLocal && $legLocalAdult > 0)
+                                        Local rate
+                                    @elseif(!$isLocal && $legForAdult > 0)
+                                        Foreign rate
+                                    @else
+                                        Contact operator
+                                    @endif
+                                </small>
                             </div>
-                            <button class="st-add-btn" type="button" onclick="addToCart({{ $legIdx }}, '{{ $legCode }}', '{{ $legOrigin }}', '{{ $legDest }}', {{ $displayAdult }}, '{{ $displayCurrency }}')">
-                                <i class="fa-solid fa-cart-plus"></i> Add
-                            </button>
                         </div>
+
+                        <form method="POST" action="/category-booking/sea_transport/{{ $property->vendor_property_id ?? $property->id }}" style="border-top:1px dashed var(--line); padding-top:12px;">
+                            @csrf
+                            <input type="hidden" name="route_code" value="{{ $legCode }}">
+                            <input type="hidden" name="boarding_point" value="{{ $legOrigin }}">
+                            <input type="hidden" name="disembark_point" value="{{ $legDest }}">
+                            <input type="hidden" name="listing_category" value="sea_transport">
+                            <input type="hidden" name="return_boarding_point" value="{{ $legDest }}">
+                            <input type="hidden" name="return_disembark_point" value="{{ $legOrigin }}">
+
+                            <div class="st-form-grid">
+                                <div class="st-field">
+                                    <label for="travel_date_{{ $legIdx }}">Departure Date</label>
+                                    <input type="date" id="travel_date_{{ $legIdx }}" name="travel_date" min="{{ date('Y-m-d') }}" value="{{ old('travel_date', '') }}" required>
+                                </div>
+                                <div class="st-field">
+                                    <label for="trip_type_{{ $legIdx }}">Trip Type</label>
+                                    <select id="trip_type_{{ $legIdx }}" name="trip_type" onchange="syncRoundTripFields({{ $legIdx }}, {{ (float) $displayAdult }})">
+                                        <option value="one_way" {{ old('trip_type', 'one_way') === 'one_way' ? 'selected' : '' }}>One Way</option>
+                                        <option value="round_trip" {{ old('trip_type', 'one_way') === 'round_trip' ? 'selected' : '' }}>Round Trip</option>
+                                    </select>
+                                </div>
+                                <div class="st-field st-roundtrip-extra" id="return_date_wrap_{{ $legIdx }}">
+                                    <label for="return_date_{{ $legIdx }}">Return Date</label>
+                                    <input type="date" id="return_date_{{ $legIdx }}" name="return_date" min="{{ date('Y-m-d') }}" value="{{ old('return_date', '') }}">
+                                </div>
+                                <div class="st-field st-roundtrip-extra" id="return_route_wrap_{{ $legIdx }}">
+                                    <label for="return_route_code_{{ $legIdx }}">Return Route</label>
+                                    <select id="return_route_code_{{ $legIdx }}" name="return_route_code" onchange="syncRoundTripFields({{ $legIdx }}, {{ (float) $displayAdult }})">
+                                        <option value="">Use reverse route</option>
+                                        @foreach($returnCandidates as $returnLeg)
+                                            @php
+                                                $returnCode = (string) ($returnLeg['route_code'] ?? '');
+                                                $returnFare = $isLocal
+                                                    ? (float) ($returnLeg['local_adult'] ?? $displayAdult)
+                                                    : (float) ($returnLeg['foreign_adult'] ?? $displayAdult);
+                                                $returnOrigin = (string) ($returnLeg['origin'] ?? $legDest);
+                                                $returnDestination = (string) ($returnLeg['destination'] ?? $legOrigin);
+                                            @endphp
+                                            <option value="{{ $returnCode }}" data-return-fare="{{ $returnFare }}" data-return-origin="{{ $returnOrigin }}" data-return-destination="{{ $returnDestination }}">
+                                                {{ $returnOrigin }} → {{ $returnDestination }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="st-field">
+                                    <label for="adults_{{ $legIdx }}">Adults</label>
+                                    <input type="number" id="adults_{{ $legIdx }}" name="adults" min="1" max="50" value="{{ old('adults', 1) }}" required>
+                                </div>
+                                <div class="st-field">
+                                    <label for="children_{{ $legIdx }}">Children</label>
+                                    <input type="number" id="children_{{ $legIdx }}" name="children" min="0" max="50" value="{{ old('children', 0) }}">
+                                </div>
+                                <div class="st-field">
+                                    <label for="infants_{{ $legIdx }}">Infants</label>
+                                    <input type="number" id="infants_{{ $legIdx }}" name="infants" min="0" max="20" value="{{ old('infants', 0) }}">
+                                </div>
+                                <div class="st-field">
+                                    <label for="residency_{{ $legIdx }}">Nationality / Residency</label>
+                                    <select id="residency_{{ $legIdx }}" name="guest_residency">
+                                        <option value="foreign_national" {{ $visitorResidency !== 'local_resident' ? 'selected' : '' }}>Foreign national</option>
+                                        <option value="local_resident" {{ $visitorResidency === 'local_resident' ? 'selected' : '' }}>Maldivian resident</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <p style="font-size:0.8rem; color:#4a6478; margin:10px 0 10px;">
+                                <strong>Local fare:</strong>
+                                @if($legLocalAdult > 0) Adult MVR {{ number_format($legLocalAdult,2) }}@endif
+                                @if($legLocalChild > 0) · Child MVR {{ number_format($legLocalChild,2) }}@endif
+                                @if($legLocalInfant > 0) · Infant MVR {{ number_format($legLocalInfant,2) }}@endif
+                                &nbsp;|&nbsp;
+                                <strong>Foreign fare:</strong>
+                                @if($legForAdult > 0) Adult USD {{ number_format($legForAdult,2) }}@endif
+                                @if($legForChild > 0) · Child USD {{ number_format($legForChild,2) }}@endif
+                                @if($legForInfant > 0) · Infant USD {{ number_format($legForInfant,2) }}@endif
+                            </p>
+
+                            <p id="fare_estimate_{{ $legIdx }}" style="font-size:0.78rem; color:#35576d; margin:0 0 10px;">
+                                Estimated one-way adult fare: {{ $displayCurrency }} {{ number_format($displayAdult, 2) }}
+                            </p>
+
+                            <button type="submit" class="st-submit-btn">
+                                <i class="fa-solid fa-check" aria-hidden="true"></i> Continue Booking
+                            </button>
+                        </form>
                     </div>
                 @empty
                     <div style="background:#fff; border:1px dashed #c8d8e8; border-radius:10px; padding:24px; text-align:center; color:#5f7488;">
@@ -364,7 +487,7 @@
         </div>
     </div>
 
-    {{-- SIDEBAR / BOOKING CART ───────────────────────────────────────────── --}}
+    {{-- SIDEBAR / BOOKING HINTS ──────────────────────────────────────────── --}}
     <div class="st-sidebar">
         <div class="st-sidebar-card">
             <h3 class="st-sidebar-title">Book Now</h3>
@@ -377,22 +500,17 @@
 
             <div class="st-booking-cart">
                 <div class="st-cart-empty">
-                    <div class="st-cart-icon"><i class="fa-solid fa-shopping-cart"></i></div>
-                    Add equipment from the list on the left
+                    <div class="st-cart-icon"><i class="fa-solid fa-ticket"></i></div>
+                    Select a route below and complete the leg booking form.
                 </div>
-                <div id="cart_items" style="display: none;"></div>
             </div>
 
             <div style="background: #eaf9ef; border: 1px solid #b7e2c3; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px;">
                 <p style="margin: 0; font-size: 0.78rem; color: #0b5c2a;">
-                    <strong>Order Total:</strong> <span id="order_total" style="font-size: 1.1rem; font-weight: 800; color: #1d7bb5;">MVR 0.00</span>
+                    <strong>Trip Types:</strong> One way and round trip supported
                 </p>
-                <p style="margin: 5px 0 0; font-size: 0.7rem; color: #4a6b36;">Final pricing adjusted for your guest nationality at checkout.</p>
+                <p style="margin: 5px 0 0; font-size: 0.7rem; color: #4a6b36;">Final pricing is calculated from route fare + nationality at checkout.</p>
             </div>
-
-            <button style="width: 100%; background: #17a578; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 0.9rem; font-weight: 700; cursor: pointer;" onclick="proceedToCheckout()">
-                Book Now
-            </button>
         </div>
 
         <div class="st-sidebar-card">
@@ -403,73 +521,76 @@
 </div>
 
 <script>
-    let cartItems = [];
-
-    function updateHeroImage(src) {
-        const hero = document.querySelector('.st-hero');
-        if (hero) hero.src = src;
-        document.querySelectorAll('.st-gallery-thumb').forEach(t => t.classList.remove('active'));
-        event.target.closest('.st-gallery-thumb')?.classList.add('active');
-    }
-
-    function increaseQty(idx) {
-        const input = document.getElementById('qty_' + idx);
-        input.value = Math.min(50, parseInt(input.value || 0) + 1);
-    }
-
-    function decreaseQty(idx) {
-        const input = document.getElementById('qty_' + idx);
-        input.value = Math.max(1, parseInt(input.value || 0) - 1);
-    }
-
-    function addToCart(idx, code, origin, dest, price, currency) {
-        const qty = parseInt(document.getElementById('qty_' + idx).value || 1);
-        const item = { idx, code, origin, dest, price, currency, qty };
-        cartItems.push(item);
-        updateCart();
-        document.getElementById('qty_' + idx).value = 1;
-    }
-
-    function updateCart() {
-        const cartContainer = document.getElementById('cart_items');
-        const emptyCart = document.querySelector('.st-cart-empty');
-        const total = cartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-        if (cartItems.length === 0) {
-            cartContainer.style.display = 'none';
-            emptyCart.style.display = 'block';
-            document.getElementById('order_total').textContent = 'MVR 0.00';
-        } else {
-            cartContainer.style.display = 'block';
-            emptyCart.style.display = 'none';
-            cartContainer.innerHTML = cartItems.map((item, i) => `
-                <div style="padding: 8px 0; border-bottom: 1px solid #f0f6fb; font-size: 0.8rem;">
-                    <div style="font-weight: 600; color: #152738; margin-bottom: 3px;">
-                        ${item.origin} → ${item.dest}
-                    </div>
-                    <div style="color: #5f7488;">
-                        ${item.qty}x ${item.currency} ${item.price.toFixed(2)} = <strong>${item.currency} ${(item.price * item.qty).toFixed(2)}</strong>
-                        <button onclick="removeFromCart(${i})" style="margin-left: 8px; background: none; border: none; color: #c0392b; cursor: pointer; font-size: 0.75rem;">Remove</button>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('order_total').textContent = 'MVR ' + total.toFixed(2);
+    function updateHeroImage(src, thumbEl) {
+        const hero = document.getElementById('st_gallery_primary');
+        if (hero) {
+            hero.src = src;
+        }
+        document.querySelectorAll('.st-gallery-thumb').forEach(function (t) {
+            t.classList.remove('active');
+        });
+        if (thumbEl) {
+            thumbEl.classList.add('active');
         }
     }
 
-    function removeFromCart(idx) {
-        cartItems.splice(idx, 1);
-        updateCart();
+    function syncRoundTripFields(idx, oneWayAdultFare) {
+        const tripType = document.getElementById('trip_type_' + idx);
+        const returnDateWrap = document.getElementById('return_date_wrap_' + idx);
+        const returnRouteWrap = document.getElementById('return_route_wrap_' + idx);
+        const returnDateInput = document.getElementById('return_date_' + idx);
+        const returnRouteSelect = document.getElementById('return_route_code_' + idx);
+        const estimate = document.getElementById('fare_estimate_' + idx);
+        const isRoundTrip = tripType && tripType.value === 'round_trip';
+
+        if (returnDateWrap) {
+            returnDateWrap.classList.toggle('show', isRoundTrip);
+        }
+        if (returnRouteWrap) {
+            returnRouteWrap.classList.toggle('show', isRoundTrip);
+        }
+        if (returnDateInput) {
+            returnDateInput.required = !!isRoundTrip;
+        }
+
+        let returnFare = Number(oneWayAdultFare || 0);
+        if (isRoundTrip && returnRouteSelect) {
+            const selectedOption = returnRouteSelect.options[returnRouteSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset && selectedOption.dataset.returnFare) {
+                const parsed = Number(selectedOption.dataset.returnFare);
+                if (!Number.isNaN(parsed) && parsed > 0) {
+                    returnFare = parsed;
+                }
+            }
+        }
+
+        if (estimate) {
+            const currencyMatch = estimate.textContent.match(/(MVR|USD)/);
+            const currency = currencyMatch ? currencyMatch[1] : 'USD';
+            if (isRoundTrip) {
+                const total = Number(oneWayAdultFare || 0) + Number(returnFare || 0);
+                estimate.textContent = 'Estimated round-trip adult fare: ' + currency + ' ' + total.toFixed(2);
+            } else {
+                estimate.textContent = 'Estimated one-way adult fare: ' + currency + ' ' + Number(oneWayAdultFare || 0).toFixed(2);
+            }
+        }
     }
 
-    function proceedToCheckout() {
-        if (cartItems.length === 0) {
-            alert('Please add at least one ticket to your cart.');
-            return;
-        }
-        console.log('Proceeding to checkout with items:', cartItems);
-        alert('Checkout feature coming soon. Cart items: ' + cartItems.length);
-    }
+    document.addEventListener('DOMContentLoaded', function () {
+        const tripTypeSelects = document.querySelectorAll('select[id^="trip_type_"]');
+        tripTypeSelects.forEach(function (selectEl) {
+            const idx = (selectEl.id || '').replace('trip_type_', '');
+            const estimateEl = document.getElementById('fare_estimate_' + idx);
+            let oneWayFare = 0;
+            if (estimateEl) {
+                const match = estimateEl.textContent.match(/([0-9]+(?:\.[0-9]+)?)/g);
+                if (match && match.length > 0) {
+                    oneWayFare = Number(match[match.length - 1]) || 0;
+                }
+            }
+            syncRoundTripFields(idx, oneWayFare);
+        });
+    });
 
     function shareOnWhatsApp() {
         const url = window.location.href;

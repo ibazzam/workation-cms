@@ -2105,6 +2105,72 @@
                                 @endforelse
                             </div>
                         @endif
+
+                        @if ($canApproveVendorRegistrationRequest)
+                            <p class="group-title">Vendor Category Request History (Approved / Rejected)</p>
+                            <div class="registration-grid" style="margin-bottom:12px;">
+                                @forelse ($vendorCategoryRequestHistory as $historyRequest)
+                                    @php
+                                        $historyPayload = [];
+                                        if (!empty($historyRequest->payload)) {
+                                            $decodedHistoryPayload = json_decode((string) $historyRequest->payload, true);
+                                            if (is_array($decodedHistoryPayload)) {
+                                                $historyPayload = $decodedHistoryPayload;
+                                            }
+                                        }
+                                        $historyAction = strtolower(trim((string) ($historyPayload['request_action'] ?? 'subscribe')));
+                                        $historyRequestedCategories = collect($historyPayload['categories'] ?? [])->map(static fn ($value) => (string) $value)->filter()->values();
+                                        $historyRequestedCategoryLabels = $historyRequestedCategories->map(static function (string $categoryKey) use ($vendorCategoryMap): string {
+                                            return (string) ($vendorCategoryMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
+                                        })->values();
+                                        $historyDocuments = collect($historyPayload['documents'] ?? [])->filter(static fn ($value) => is_array($value))->values();
+                                        $historyActionLabel = match ($historyAction) {
+                                            'open' => 'Open Category',
+                                            'release' => 'Release Category',
+                                            default => 'Subscribe Category',
+                                        };
+                                        $historyStatus = strtoupper((string) ($historyRequest->status ?? 'UNKNOWN'));
+                                    @endphp
+                                    <div class="registration-row">
+                                        <div class="registration-head">
+                                            <span class="user-name">Vendor Category Update Request</span>
+                                            <span class="role-pill">{{ $historyStatus }}</span>
+                                            <span class="small">{{ $historyRequest->target_username ?: $historyRequest->target_identifier }} | {{ $historyRequest->target_email ?: 'n/a' }}</span>
+                                        </div>
+                                        <div class="small"><strong>Requested action:</strong> {{ $historyActionLabel }}</div>
+                                        <div class="small"><strong>Requested categories:</strong> {{ $historyRequestedCategoryLabels->isNotEmpty() ? $historyRequestedCategoryLabels->implode(', ') : 'None provided' }}</div>
+                                        @if (!empty($historyRequest->target_vendor_id))
+                                            <div class="small"><strong>Vendor ID:</strong> {{ $historyRequest->target_vendor_id }}</div>
+                                        @endif
+                                        <div class="small">Requested by: {{ $historyRequest->requested_by_name ?: 'Unknown' }}{{ $historyRequest->requested_by_role ? ' (' . $historyRequest->requested_by_role . ')' : '' }}</div>
+                                        <div class="small">Reviewed by: {{ $historyRequest->approved_by_name ?: 'Unknown' }}{{ $historyRequest->approved_by_role ? ' (' . $historyRequest->approved_by_role . ')' : '' }} · {{ $historyRequest->approved_at ? \Illuminate\Support\Carbon::parse($historyRequest->approved_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
+                                        @if (!empty($historyRequest->reason))
+                                            <div class="small">Request note: {{ $historyRequest->reason }}</div>
+                                        @endif
+                                        @if (!empty($historyRequest->rejection_reason))
+                                            <div class="small" style="color:#b91c1c;"><strong>Rejection reason:</strong> {{ $historyRequest->rejection_reason }}</div>
+                                        @endif
+                                        <div class="doc-links">
+                                            @forelse ($historyDocuments as $historyDocumentIndex => $historyDocument)
+                                                @php
+                                                    $historyDocumentName = (string) ($historyDocument['name'] ?? ('Document ' . ($historyDocumentIndex + 1)));
+                                                    $historyDocumentUrl = (string) ($historyDocument['url'] ?? '');
+                                                @endphp
+                                                @if ($historyDocumentUrl !== '')
+                                                    <a class="doc-link" href="{{ $historyDocumentUrl }}" target="_blank" rel="noopener">View {{ $historyDocumentName }}</a>
+                                                @endif
+                                            @empty
+                                                <span class="small">No supporting documents attached in this request payload.</span>
+                                            @endforelse
+                                        </div>
+                                    </div>
+                                @empty
+                                    <div class="user-row">
+                                        <div class="small">No vendor category request history yet.</div>
+                                    </div>
+                                @endforelse
+                            </div>
+                        @endif
                     @endif
 
                     <p class="group-title" id="vendorRegistrationsPanel">Pending Vendor Registrations ({{ $pendingVendorRegistrations->count() }})</p>

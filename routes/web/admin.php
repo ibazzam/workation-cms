@@ -209,6 +209,7 @@ Route::get('/admin', function (Request $request) {
     $pendingVendorDeleteRequests = collect();
     $pendingVendorRegistrationApprovalRequests = collect();
     $pendingVendorCategoryRequests = collect();
+    $vendorCategoryRequestHistory = collect();
     if (Schema::hasTable('portal_admin_action_requests')) {
         $pendingVendorDeleteRequests = DB::table('portal_admin_action_requests as par')
             ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
@@ -278,6 +279,35 @@ Route::get('/admin', function (Request $request) {
                 'target_user.portal_vendor_id as target_vendor_id',
                 'target_user.vendor_approved_service_categories as target_approved_service_categories',
                 'target_user.portal_service_categories as target_registered_service_categories',
+            ]);
+
+        $vendorCategoryRequestHistory = DB::table('portal_admin_action_requests as par')
+            ->leftJoin('users as requested_by', 'requested_by.id', '=', 'par.requested_by_user_id')
+            ->leftJoin('users as target_user', 'target_user.id', '=', 'par.target_user_id')
+            ->leftJoin('users as approver_user', 'approver_user.id', '=', 'par.approved_by_user_id')
+            ->whereIn('par.status', ['approved', 'rejected'])
+            ->where('par.action_type', 'vendor.category_request')
+            ->orderByDesc('par.approved_at')
+            ->orderByDesc('par.updated_at')
+            ->limit(180)
+            ->get([
+                'par.id',
+                'par.action_type',
+                'par.status',
+                'par.reason',
+                'par.rejection_reason',
+                'par.target_user_id',
+                'par.target_identifier',
+                'par.payload',
+                'par.created_at',
+                'par.approved_at',
+                'requested_by.name as requested_by_name',
+                'requested_by.portal_role as requested_by_role',
+                'target_user.username as target_username',
+                'target_user.email as target_email',
+                'target_user.portal_vendor_id as target_vendor_id',
+                'approver_user.name as approved_by_name',
+                'approver_user.portal_role as approved_by_role',
             ]);
     }
 
@@ -774,6 +804,7 @@ Route::get('/admin', function (Request $request) {
         'pendingVendorDeleteRequests' => $pendingVendorDeleteRequests,
         'pendingVendorRegistrationApprovalRequests' => $pendingVendorRegistrationApprovalRequests,
         'pendingVendorCategoryRequests' => $pendingVendorCategoryRequests,
+        'vendorCategoryRequestHistory' => $vendorCategoryRequestHistory,
         'dashboardStats' => $dashboardStats,
         'systemHealth' => $systemHealth,
         'rolePermissions' => $rolePermissions,

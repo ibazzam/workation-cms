@@ -32,7 +32,7 @@ class AdminFinancePageScopeTest extends TestCase
             });
     }
 
-    public function test_admin_super_is_limited_to_finance_and_permissions_pages(): void
+    public function test_admin_super_has_full_access_to_all_pages(): void
     {
         $adminSuper = User::factory()->create([
             'portal_role' => 'ADMIN_SUPER',
@@ -47,10 +47,10 @@ class AdminFinancePageScopeTest extends TestCase
             ])
             ->get('/admin?page=overview')
             ->assertOk()
-            ->assertViewHas('adminPage', 'finance')
+            ->assertViewHas('adminPage', 'overview')
             ->assertViewHas('adminAllowedPages', static function (array $pages): bool {
                 sort($pages);
-                return $pages === ['finance', 'permissions'];
+                return $pages === ['audit', 'catalog', 'content', 'finance', 'listings', 'media', 'moderation', 'overview', 'permissions', 'tools'];
             });
     }
 }

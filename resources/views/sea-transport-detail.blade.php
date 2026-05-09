@@ -163,11 +163,117 @@
 
         .st-similar-section { margin: 40px 0 0; padding: 24px 0 0; border-top: 2px solid var(--line); }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .st-main-container { grid-template-columns: 1fr; }
-            .st-snapshot { grid-template-columns: 1fr; }
-            .st-ticket-card { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .st-main-container { 
+                grid-template-columns: 1fr;
+                padding: 0 12px 40px;
+                gap: 16px;
+            }
+            .st-snapshot { grid-template-columns: 1fr; gap: 10px; }
+            .st-ticket-card { grid-template-columns: 1fr; padding: 12px; }
             .st-price-col { text-align: left; }
+            .st-form-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .st-field input, .st-field select {
+                padding: 8px 10px;
+                font-size: 0.82rem;
+            }
+            .st-gallery-strip {
+                padding: 0 8px;
+                gap: 6px;
+            }
+            .st-gallery-thumbs {
+                gap: 8px;
+                padding: 10px;
+            }
+            .st-gallery-thumbs .st-gallery-thumb {
+                height: 80px;
+            }
+            .st-submit-btn {
+                width: 100%;
+                padding: 10px 12px;
+                font-size: 0.82rem;
+            }
+            .st-sidebar-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            .st-hero {
+                height: 240px;
+            }
+            .st-hero-placeholder {
+                height: 240px;
+                font-size: 2.5rem;
+            }
+            .st-gallery-stage {
+                margin: 0;
+            }
+            .st-gallery-primary {
+                height: 280px;
+            }
+            .st-title {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .st-main-container {
+                padding: 0 10px 30px;
+                gap: 12px;
+            }
+            .st-form-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+            .st-field label {
+                font-size: 0.68rem;
+            }
+            .st-field input, .st-field select {
+                padding: 7px 8px;
+                font-size: 0.78rem;
+                min-height: 36px;
+            }
+            .st-submit-btn {
+                padding: 8px 10px;
+                font-size: 0.78rem;
+            }
+            .st-snapshot-card {
+                padding: 10px 12px;
+            }
+            .st-snapshot-card h4 {
+                font-size: 0.7rem;
+            }
+            .st-snapshot-card li {
+                font-size: 0.75rem;
+            }
+            .st-ticket-card {
+                padding: 10px;
+                gap: 10px;
+            }
+            .st-ticket-route {
+                font-size: 0.88rem;
+            }
+            .st-price {
+                font-size: 1rem;
+            }
+            .st-hero {
+                height: 200px;
+            }
+            .st-gallery-primary {
+                height: 220px;
+            }
+            .st-title {
+                font-size: 1.1rem;
+            }
+            .st-sidebar-card {
+                padding: 10px;
+            }
         }
     </style>
 </head>

@@ -32,9 +32,10 @@
             display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
             gap: 8px;
         }
-        .st-gallery-thumb { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; height: 72px; background: #edf4fb; cursor: pointer; }
+        .st-gallery-thumb { border: 2px solid var(--line); border-radius: 8px; overflow: hidden; height: 90px; background: #edf4fb; cursor: pointer; transition: all 0.2s ease; }
+        .st-gallery-thumb:hover { border-color: var(--brand); transform: scale(1.05); }
         .st-gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .st-gallery-thumb.active { border: 2px solid var(--brand); }
+        .st-gallery-thumb.active { border: 3px solid var(--brand); box-shadow: 0 0 8px rgba(15, 97, 121, 0.3); }
 
         .st-main-container { max-width: 1000px; margin: 0 auto; padding: 0 16px 60px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
         .st-main-content { width: 100%; }
@@ -92,11 +93,29 @@
         }
         .st-gallery-thumbs {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
-            gap: 8px;
-            padding: 10px;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 10px;
+            padding: 14px;
             border-top: 1px solid var(--line);
             background: #ffffff;
+        }
+        .st-gallery-thumbs .st-gallery-thumb {
+            height: 100px;
+            border: 2px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #edf4fb;
+        }
+        .st-gallery-thumbs .st-gallery-thumb:hover {
+            border-color: var(--brand);
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(15, 97, 121, 0.15);
+        }
+        .st-gallery-thumbs .st-gallery-thumb.active {
+            border: 3px solid var(--brand);
+            box-shadow: 0 0 10px rgba(15, 97, 121, 0.4);
         }
 
         .st-equipment-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 16px 0 0; }
@@ -355,14 +374,21 @@
                         <div style="display:grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap:12px; align-items:start;">
                             <div>
                                 <p class="st-ticket-route">
-                                    <i class="fa-solid fa-route"></i>
-                                    {{ $legOrigin !== '' ? $legOrigin : '(boarding)' }} → {{ $legDest !== '' ? $legDest : '(destination)' }}
+                                    <i class="fa-solid fa-route" style="margin-right: 6px;"></i>
+                                    <span style="font-weight: 700; color: var(--brand);">
+                                        {{ $legOrigin !== '' ? $legOrigin : '(boarding point)' }} 
+                                        <span style="color: #999;">→</span> 
+                                        {{ $legDest !== '' ? $legDest : '(destination)' }}
+                                    </span>
+                                    @if($legCode !== '')
+                                        <span style="display: block; font-size: 0.7rem; color: #999; margin-top: 4px; font-weight: normal;">({{ $legCode }})</span>
+                                    @endif
                                 </p>
                                 <div class="st-ticket-meta">
-                                    @if($legDep) <div class="st-ticket-meta-item">🕐 Departs {{ $legDep }}</div> @endif
-                                    @if($legArr) <div class="st-ticket-meta-item">🎯 Arrives {{ $legArr }}</div> @endif
-                                    @if($legDur > 0) <div class="st-ticket-meta-item">⏱ {{ floor($legDur/60) }}h {{ $legDur%60 }}m</div> @endif
-                                    @if($daysStr) <div class="st-ticket-meta-item">📅 {{ $daysStr }}</div> @endif
+                                    @if($legDep) <div class="st-ticket-meta-item">🕐 Departs <strong>{{ $legDep }}</strong></div> @endif
+                                    @if($legArr) <div class="st-ticket-meta-item">🎯 Arrives <strong>{{ $legArr }}</strong></div> @endif
+                                    @if($legDur > 0) <div class="st-ticket-meta-item">⏱ <strong>{{ floor($legDur/60) }}h {{ $legDur%60 }}m</strong></div> @endif
+                                    @if($daysStr) <div class="st-ticket-meta-item">📅 <strong>{{ $daysStr }}</strong></div> @endif
                                 </div>
                             </div>
                             <div class="st-price-col">

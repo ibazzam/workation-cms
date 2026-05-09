@@ -58,11 +58,11 @@
             ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
             ->unique()
             ->values();
-        $vendorAllowedCategoryKeys = $approvedVendorCategories->isNotEmpty()
-            ? ($registeredVendorCategories->isNotEmpty()
-                ? $registeredVendorCategories->intersect($approvedVendorCategories)->values()
-                : $approvedVendorCategories->values())
-            : $registeredVendorCategories->values();
+        // Show all registered categories as listing tabs. The create/edit routes
+        // independently guard against creating listings in unapproved categories.
+        $vendorAllowedCategoryKeys = $registeredVendorCategories->isNotEmpty()
+            ? $registeredVendorCategories->values()
+            : $approvedVendorCategories->values();
         $pendingVendorCategories = $approvedVendorCategories->isNotEmpty()
             ? $registeredVendorCategories->diff($approvedVendorCategories)->values()
             : collect();

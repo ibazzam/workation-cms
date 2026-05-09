@@ -1675,14 +1675,29 @@
                     <div class="grid">
                         @if ($isActivityCategory)
                             @php
-                                $isMultiDayCategory = in_array($categoryKey, ['vehicle_rental', 'remote_workspace', 'marine-transport', 'land-transport', 'conference_room'], true);
+                                $isMultiDayCategory = in_array($categoryKey, ['vehicle_rental', 'remote_workspace', 'marine-transport', 'land-transport', 'conference_room', 'sea_transport', 'liveaboard'], true);
                                 $useDatetime = in_array($categoryKey, ['restaurant', 'conference_room'], true);
                                 $dateInputType = $useDatetime ? 'datetime-local' : 'date';
                                 $dateMinAttr = $useDatetime ? ((string) ($todayDate ?? now()->toDateString()) . 'T00:00') : (string) ($todayDate ?? now()->toDateString());
                             @endphp
                             <div class="field {{ $isMultiDayCategory ? '' : 'full' }}"><label for="serviceStartDate">{{ (string) ($dateLabels['start'] ?? 'Activity Date') }}</label><input id="serviceStartDate" name="service_start_date" type="{{ $dateInputType }}" min="{{ $dateMinAttr }}" value="{{ old('service_start_date', (string) ($prefill['service_start_date'] ?? '')) }}" class="{{ $errors->has('service_start_date') ? 'input-error' : '' }}" required>@error('service_start_date')<p class="error-text">{{ $message }}</p>@enderror</div>
                             @if ($isMultiDayCategory)
-                                <div class="field"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ $dateInputType }}" min="{{ $dateMinAttr }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                                <div class="field" id="serviceEndDateField"><label for="serviceEndDate">{{ (string) ($dateLabels['end'] ?? 'End Date') }}</label><input id="serviceEndDate" name="service_end_date" type="{{ $dateInputType }}" min="{{ $dateMinAttr }}" value="{{ old('service_end_date', (string) ($prefill['service_end_date'] ?? '')) }}" class="{{ $errors->has('service_end_date') ? 'input-error' : '' }}">@error('service_end_date')<p class="error-text">{{ $message }}</p>@enderror</div>
+                            @endif
+                            @if ($categoryKey === 'sea_transport')
+                                <div class="field">
+                                    <label for="tripType">Trip Type</label>
+                                    <select id="tripType" name="trip_type">
+                                        <option value="one_way" {{ old('trip_type', (string) ($prefill['trip_type'] ?? 'one_way')) === 'one_way' ? 'selected' : '' }}>One Way</option>
+                                        <option value="round_trip" {{ old('trip_type', (string) ($prefill['trip_type'] ?? 'one_way')) === 'round_trip' ? 'selected' : '' }}>Round Trip</option>
+                                    </select>
+                                </div>
+                                <input type="hidden" name="route_code" value="{{ old('route_code', (string) ($prefill['route_code'] ?? '')) }}">
+                                <input type="hidden" name="boarding_point" value="{{ old('boarding_point', (string) ($prefill['boarding_point'] ?? '')) }}">
+                                <input type="hidden" name="disembark_point" value="{{ old('disembark_point', (string) ($prefill['disembark_point'] ?? '')) }}">
+                                <input type="hidden" name="return_route_code" value="{{ old('return_route_code', (string) ($prefill['return_route_code'] ?? '')) }}">
+                                <input type="hidden" name="return_boarding_point" value="{{ old('return_boarding_point', (string) ($prefill['return_boarding_point'] ?? '')) }}">
+                                <input type="hidden" name="return_disembark_point" value="{{ old('return_disembark_point', (string) ($prefill['return_disembark_point'] ?? '')) }}">
                             @endif
                             @foreach ($categoryFields as $field)
                                 @php
@@ -2605,6 +2620,30 @@
             }
 
             validateServiceDates();
+
+            // Sea transport one-way/round-trip date behavior.
+            const tripTypeSelect = document.getElementById('tripType');
+            const serviceEndDateField = document.getElementById('serviceEndDateField');
+            const syncTripType = function () {
+                if (!tripTypeSelect || !serviceEndDateField || !serviceEndInput) {
+                    return;
+                }
+
+                const isRoundTrip = String(tripTypeSelect.value || 'one_way') === 'round_trip';
+                serviceEndDateField.style.display = isRoundTrip ? '' : 'none';
+                serviceEndInput.required = isRoundTrip;
+
+                if (!isRoundTrip) {
+                    serviceEndInput.value = serviceStartInput ? serviceStartInput.value : serviceEndInput.value;
+                }
+
+                validateServiceDates();
+            };
+            if (tripTypeSelect) {
+                tripTypeSelect.addEventListener('change', syncTripType);
+                syncTripType();
+            }
+
             syncPrimaryMobile();
             updateGuestResidency();
             updatePaymentOptionsByNationality();

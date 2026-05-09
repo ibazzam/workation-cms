@@ -35,11 +35,43 @@
             color: #fff; font-size: 3.5rem;
         }
         .st-container { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+        .st-gallery-strip {
+            max-width: 900px;
+            margin: 10px auto 0;
+            padding: 0 16px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 8px;
+        }
+        .st-gallery-thumb {
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            overflow: hidden;
+            height: 74px;
+            background: #edf4fb;
+        }
+        .st-gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         /* ── Vessel header ───────────────────────────── */
         .st-header { margin-bottom: 20px; }
         .st-title { font-size: 1.6rem; font-weight: 800; color: var(--ink); margin: 0 0 4px; }
         .st-operator { font-size: 0.88rem; color: var(--muted); }
+        .st-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .st-detail-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fbfdff;
+            padding: 12px;
+        }
+        .st-detail-card h3 { margin: 0 0 8px; font-size: 0.88rem; color: #173f5c; }
+        .st-detail-card p { margin: 0; font-size: 0.82rem; color: #4a6478; line-height: 1.45; }
+        .st-detail-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+        .st-detail-list li { font-size: 0.82rem; color: #35576d; }
 
         /* ── Stop chain ─────────────────────────────── */
         .st-stops {
@@ -93,6 +125,8 @@
             display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
             gap: 10px; margin-bottom: 12px;
         }
+        .st-roundtrip-extra { display: none; }
+        .st-roundtrip-extra.show { display: block; }
         .st-field label { display: block; font-size: 0.72rem; font-weight: 700; color: #4a6478; margin-bottom: 3px; }
         .st-field input, .st-field select {
             width: 100%; padding: 6px 9px; font-size: 0.85rem;
@@ -114,6 +148,7 @@
             .st-fare-head { grid-template-columns: 1fr 100px; }
             .st-fare-head .st-fare-days, .st-fare-head .st-fare-price { display: none; }
             .st-fare-head .st-fare-price { display: block; }
+            .st-detail-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -151,6 +186,19 @@
     <div class="st-hero-placeholder"><i class="fa-solid fa-ferry"></i></div>
 @endif
 
+@if(!empty($galleryMedia) && is_array($galleryMedia) && count($galleryMedia) > 1)
+    <div class="st-gallery-strip">
+        @foreach($galleryMedia as $galleryIndex => $galleryUrl)
+            @if($galleryIndex === 0)
+                @continue
+            @endif
+            <div class="st-gallery-thumb">
+                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy">
+            </div>
+        @endforeach
+    </div>
+@endif
+
 <div class="st-container">
     <div class="st-breadcrumb">
         <a href="/catalog/sea_transport">← Sea Transport &amp; Ferries</a>
@@ -165,6 +213,22 @@
         @if(!empty($listingDetails['description']))
             <p style="font-size:0.88rem; color:#5f7488; margin: 8px 0 0; line-height:1.55;">{{ $listingDetails['description'] }}</p>
         @endif
+    </div>
+
+    <div class="st-detail-grid">
+        <section class="st-detail-card">
+            <h3>Operator Details</h3>
+            <ul class="st-detail-list">
+                <li><strong>Name:</strong> {{ $vendor->name ?? ($vendor->business_name ?? 'Verified local operator') }}</li>
+                <li><strong>Contact:</strong> {{ $vendor->phone ?? $vendor->email ?? 'Available after booking confirmation' }}</li>
+                <li><strong>Service Type:</strong> Scheduled sea transfer</li>
+                <li><strong>Status:</strong> Active</li>
+            </ul>
+        </section>
+        <section class="st-detail-card">
+            <h3>Guest Reviews</h3>
+            <p>Reviews section reserved. Recent ratings and traveler comments will appear here after review feed sync is enabled.</p>
+        </section>
     </div>
 
     {{-- ── Stop chain diagram ──────────────────────────────────────── --}}
@@ -229,6 +293,10 @@
             $displayAdult    = $isLocal ? $legLocalAdult : $legForAdult;
             $displayCurrency = $isLocal ? 'MVR' : 'USD';
             $daysStr         = implode(' · ', $legDays);
+            $returnCandidates = collect($routeSchedules)->filter(static function ($candidate) use ($legOrigin, $legDest) {
+                return (string) ($candidate['origin'] ?? '') === (string) $legDest
+                    && (string) ($candidate['destination'] ?? '') === (string) $legOrigin;
+            })->values()->all();
         @endphp
         <div class="st-fare-card" id="fare-card-{{ $legIdx }}">
             <div class="st-fare-head" onclick="toggleBookingForm({{ $legIdx }})">
@@ -266,6 +334,8 @@
                     <input type="hidden" name="boarding_point"   value="{{ $legOrigin }}">
                     <input type="hidden" name="disembark_point"  value="{{ $legDest }}">
                     <input type="hidden" name="listing_category" value="sea_transport">
+                    <input type="hidden" name="return_boarding_point" value="{{ $legDest }}">
+                    <input type="hidden" name="return_disembark_point" value="{{ $legOrigin }}">
 
                     <div class="st-booking-grid">
                         <div class="st-field">
@@ -273,6 +343,38 @@
                             <input type="date" id="travel_date_{{ $legIdx }}" name="travel_date"
                                    min="{{ date('Y-m-d') }}" required
                                    value="{{ old('travel_date', $legDep !== '' ? '' : '') }}">
+                        </div>
+                        <div class="st-field">
+                            <label for="trip_type_{{ $legIdx }}">Trip Type</label>
+                            <select id="trip_type_{{ $legIdx }}" name="trip_type" onchange="syncRoundTripFields({{ $legIdx }}, {{ (float) $displayAdult }})">
+                                <option value="one_way" {{ old('trip_type', 'one_way') === 'one_way' ? 'selected' : '' }}>One Way</option>
+                                <option value="round_trip" {{ old('trip_type', 'one_way') === 'round_trip' ? 'selected' : '' }}>Round Trip</option>
+                            </select>
+                        </div>
+                        <div class="st-field st-roundtrip-extra" id="return_date_wrap_{{ $legIdx }}">
+                            <label for="return_date_{{ $legIdx }}">Return Date</label>
+                            <input type="date" id="return_date_{{ $legIdx }}" name="return_date"
+                                   min="{{ date('Y-m-d') }}"
+                                   value="{{ old('return_date', '') }}">
+                        </div>
+                        <div class="st-field st-roundtrip-extra" id="return_route_wrap_{{ $legIdx }}">
+                            <label for="return_route_code_{{ $legIdx }}">Return Route</label>
+                            <select id="return_route_code_{{ $legIdx }}" name="return_route_code" onchange="syncRoundTripFields({{ $legIdx }}, {{ (float) $displayAdult }})">
+                                <option value="">Use reverse route</option>
+                                @foreach($returnCandidates as $returnLeg)
+                                    @php
+                                        $returnCode = (string) ($returnLeg['route_code'] ?? '');
+                                        $returnFare = $isLocal
+                                            ? (float) ($returnLeg['local_adult'] ?? $displayAdult)
+                                            : (float) ($returnLeg['foreign_adult'] ?? $displayAdult);
+                                        $returnOrigin = (string) ($returnLeg['origin'] ?? $legDest);
+                                        $returnDestination = (string) ($returnLeg['destination'] ?? $legOrigin);
+                                    @endphp
+                                    <option value="{{ $returnCode }}" data-return-fare="{{ $returnFare }}" data-return-origin="{{ $returnOrigin }}" data-return-destination="{{ $returnDestination }}">
+                                        {{ $returnOrigin }} → {{ $returnDestination }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="st-field">
                             <label for="adults_{{ $legIdx }}">Adults</label>
@@ -309,6 +411,10 @@
                         </p>
                     @endif
 
+                    <p id="fare_estimate_{{ $legIdx }}" style="font-size:0.78rem; color:#35576d; margin:0 0 10px;">
+                        Estimated one-way adult fare: {{ $displayCurrency }} {{ number_format($displayAdult, 2) }}
+                    </p>
+
                     <button type="submit" class="st-submit-btn">
                         <i class="fa-solid fa-check" aria-hidden="true"></i> Confirm Booking
                     </button>
@@ -336,6 +442,64 @@
             setTimeout(function() { form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 50);
         }
     }
+
+    function syncRoundTripFields(idx, oneWayAdultFare) {
+        const tripType = document.getElementById('trip_type_' + idx);
+        const returnDateWrap = document.getElementById('return_date_wrap_' + idx);
+        const returnRouteWrap = document.getElementById('return_route_wrap_' + idx);
+        const returnDateInput = document.getElementById('return_date_' + idx);
+        const returnRouteSelect = document.getElementById('return_route_code_' + idx);
+        const estimate = document.getElementById('fare_estimate_' + idx);
+        const isRoundTrip = tripType && tripType.value === 'round_trip';
+
+        if (returnDateWrap) {
+            returnDateWrap.classList.toggle('show', isRoundTrip);
+        }
+        if (returnRouteWrap) {
+            returnRouteWrap.classList.toggle('show', isRoundTrip);
+        }
+        if (returnDateInput) {
+            returnDateInput.required = !!isRoundTrip;
+        }
+
+        let returnFare = Number(oneWayAdultFare || 0);
+        if (isRoundTrip && returnRouteSelect) {
+            const selectedOption = returnRouteSelect.options[returnRouteSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset && selectedOption.dataset.returnFare) {
+                const parsed = Number(selectedOption.dataset.returnFare);
+                if (!Number.isNaN(parsed) && parsed > 0) {
+                    returnFare = parsed;
+                }
+            }
+        }
+
+        if (estimate) {
+            const currencyMatch = estimate.textContent.match(/(MVR|USD)/);
+            const currency = currencyMatch ? currencyMatch[1] : 'USD';
+            if (isRoundTrip) {
+                const total = Number(oneWayAdultFare || 0) + Number(returnFare || 0);
+                estimate.textContent = 'Estimated round-trip adult fare: ' + currency + ' ' + total.toFixed(2);
+            } else {
+                estimate.textContent = 'Estimated one-way adult fare: ' + currency + ' ' + Number(oneWayAdultFare || 0).toFixed(2);
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const tripTypeSelects = document.querySelectorAll('select[id^="trip_type_"]');
+        tripTypeSelects.forEach(function (selectEl) {
+            const idx = (selectEl.id || '').replace('trip_type_', '');
+            const estimateEl = document.getElementById('fare_estimate_' + idx);
+            let oneWayFare = 0;
+            if (estimateEl) {
+                const match = estimateEl.textContent.match(/([0-9]+(?:\.[0-9]+)?)/g);
+                if (match && match.length > 0) {
+                    oneWayFare = Number(match[match.length - 1]) || 0;
+                }
+            }
+            syncRoundTripFields(idx, oneWayFare);
+        });
+    });
     // Auto-open the form that had a validation error on the previous POST.
     @if(old('route_code'))
         document.addEventListener('DOMContentLoaded', function() {

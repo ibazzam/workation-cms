@@ -917,6 +917,33 @@ Route::post('/booking/reserve', function (Request $request) {
     return redirect($checkoutUrl);
 });
 
+
+// POST-Redirect-GET: sea-transport detail (and similar) submits a mini booking form via POST.
+// This route converts it to a GET redirect so the category-booking GET handler can
+// render the page with those values pre-filled via query string.
+Route::post('/category-booking/{category}/{property}', function (Request $request, string $category, int $property) {
+    $allowed = [
+        'route_code', 'boarding_point', 'disembark_point', 'listing_category',
+        'travel_date', 'adults', 'children', 'infants', 'guest_residency',
+        'origin_point', 'destination_point', 'departure_area', 'departure_time',
+        'return_slot', 'selected_seats', 'seat_count', 'rooms',
+        'trip_type', 'return_date', 'return_route_code', 'return_boarding_point',
+        'return_disembark_point', 'service_start_date', 'service_end_date',
+    ];
+    $params = array_filter($request->only($allowed), static fn ($v) => $v !== null && $v !== '');
+    if (!isset($params['service_start_date']) && !empty($params['travel_date'])) {
+        $params['service_start_date'] = (string) $params['travel_date'];
+    }
+    if (!isset($params['service_end_date']) && !empty($params['return_date'])) {
+        $params['service_end_date'] = (string) $params['return_date'];
+    }
+    if (!isset($params['service_end_date']) && (($params['trip_type'] ?? 'one_way') === 'one_way') && !empty($params['service_start_date'])) {
+        $params['service_end_date'] = (string) $params['service_start_date'];
+    }
+    $qs = !empty($params) ? ('?' . http_build_query($params)) : '';
+    return redirect('/category-booking/' . rawurlencode($category) . '/' . (int) $property . $qs);
+});
+
 Route::get('/category-booking/{category}/{property}', function (Request $request, string $category, int $property) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in Date', 'end_label' => 'Check-out Date'],
@@ -988,7 +1015,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ['key' => 'driver_license_number', 'label' => "Driver's License Number", 'type' => 'text', 'required' => false],
         ],
         'sea_transport' => [
-            ['key' => 'selected_seats', 'label' => 'Selected Seats', 'type' => 'text', 'required' => true],
+            ['key' => 'selected_seats', 'label' => 'Selected Seats (optional)', 'type' => 'text', 'required' => false],
             ['key' => 'seat_count', 'label' => 'Number of Seats', 'type' => 'number', 'required' => true, 'min' => 1],
         ],
         'liveaboard' => [
@@ -1364,6 +1391,15 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'vehicle_type' => trim((string) $request->query('vehicle_type', '')),
             'pickup_location' => trim((string) $request->query('pickup_location', '')),
             'dropoff_location' => trim((string) $request->query('dropoff_location', '')),
+            'route_code' => trim((string) $request->query('route_code', '')),
+            'boarding_point' => trim((string) $request->query('boarding_point', '')),
+            'disembark_point' => trim((string) $request->query('disembark_point', '')),
+            'selected_seats' => trim((string) $request->query('selected_seats', '')),
+            'seat_count' => max(1, (int) $request->query('seat_count', max(1, (int) $request->query('adults', 1)))),
+            'trip_type' => trim((string) $request->query('trip_type', 'one_way')),
+            'return_route_code' => trim((string) $request->query('return_route_code', '')),
+            'return_boarding_point' => trim((string) $request->query('return_boarding_point', '')),
+            'return_disembark_point' => trim((string) $request->query('return_disembark_point', '')),
             'service_notes' => trim((string) $request->query('service_notes', '')),
         ],
         'todayDate' => $todayDate,
@@ -1379,6 +1415,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'start_label' => 'Check-in', 'end_label' => 'Check-out'],
         'marine-transport' => ['label' => 'Marine Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
+        'sea_transport' => ['label' => 'Sea Transport & Ferries', 'start_label' => 'Departure Date', 'end_label' => 'Return Date'],
         'land-transport' => ['label' => 'Land Transport', 'start_label' => 'Travel Date', 'end_label' => 'Return Date'],
         'excursion' => ['label' => 'Excursion', 'start_label' => 'Excursion Date', 'end_label' => 'Return Date'],
         'water_sports' => ['label' => 'Water Sports', 'start_label' => 'Activity Date', 'end_label' => 'Return Date'],
@@ -1387,6 +1424,7 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'restaurant' => ['label' => 'Restaurant', 'start_label' => 'Reservation Date & Time', 'end_label' => 'Expected Departure Date & Time'],
         'vehicle_rental' => ['label' => 'Vehicle Rental', 'start_label' => 'Pickup Date', 'end_label' => 'Return Date'],
         'conference_room' => ['label' => 'Conference & Meeting Spaces', 'start_label' => 'Event Date', 'end_label' => 'Event End Date'],
+        'liveaboard' => ['label' => 'Liveaboard / Safari', 'start_label' => 'Journey Start Date', 'end_label' => 'Journey End Date'],
     ];
 
     $categoryFieldRules = [
@@ -1444,6 +1482,21 @@ Route::post('/booking/reserve-category', function (Request $request) {
             'dropoff_location' => ['required', 'string', 'max:120'],
             'driver_license_number' => ['nullable', 'string', 'max:60'],
         ],
+        'sea_transport' => [
+            'seat_count' => ['required', 'integer', 'min:1', 'max:500'],
+            'selected_seats' => ['nullable', 'string', 'max:500'],
+            'route_code' => ['nullable', 'string', 'max:80'],
+            'boarding_point' => ['nullable', 'string', 'max:120'],
+            'disembark_point' => ['nullable', 'string', 'max:120'],
+            'trip_type' => ['nullable', Rule::in(['one_way', 'round_trip'])],
+            'return_route_code' => ['nullable', 'string', 'max:80'],
+            'return_boarding_point' => ['nullable', 'string', 'max:120'],
+            'return_disembark_point' => ['nullable', 'string', 'max:120'],
+        ],
+        'liveaboard' => [
+            'boarding_point' => ['required', 'string', 'max:120'],
+            'disembark_point' => ['required', 'string', 'max:120'],
+        ],
     ];
 
     $categoryFieldLabels = [
@@ -1464,6 +1517,15 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'departure_time' => 'departure time',
         'return_slot' => 'return time slot',
         'driver_license_number' => "driver's license number",
+        'seat_count' => 'seat count',
+        'selected_seats' => 'selected seats',
+        'route_code' => 'route code',
+        'boarding_point' => 'boarding point',
+        'disembark_point' => 'disembark point',
+        'trip_type' => 'trip type',
+        'return_route_code' => 'return route code',
+        'return_boarding_point' => 'return boarding point',
+        'return_disembark_point' => 'return disembark point',
     ];
 
     $requestedCategoryKey = strtolower(trim((string) $request->input('category_key', '')));
@@ -1495,6 +1557,10 @@ Route::post('/booking/reserve-category', function (Request $request) {
         'payment_method' => ['nullable', 'string', 'max:60'],
         'additional_guest_details' => ['nullable', 'string', 'max:4000'],
         'service_notes' => ['nullable', 'string', 'max:4000'],
+        'trip_type' => ['nullable', Rule::in(['one_way', 'round_trip'])],
+        'return_route_code' => ['nullable', 'string', 'max:80'],
+        'return_boarding_point' => ['nullable', 'string', 'max:120'],
+        'return_disembark_point' => ['nullable', 'string', 'max:120'],
     ];
 
     $payload = $request->validate(array_merge($baseRules, $categoryFieldRules[$requestedCategoryKey] ?? []), [
@@ -1693,6 +1759,10 @@ Route::post('/booking/reserve-category', function (Request $request) {
         if ($categoryKey === 'sea_transport') {
             $seatCount = max(1, (int) ($payload['seat_count'] ?? ($adults + $children + $infants > 0 ? $adults + $children : 1)));
             $isLocal   = $guestResidency === 'local_resident';
+            $tripType  = strtolower(trim((string) ($payload['trip_type'] ?? 'one_way')));
+            if (!in_array($tripType, ['one_way', 'round_trip'], true)) {
+                $tripType = 'one_way';
+            }
 
             // ── Segment capacity check ────────────────────────────────
             $stStopSequence = is_array($listingDetails['stop_sequence'] ?? null) ? $listingDetails['stop_sequence'] : [];
@@ -1764,6 +1834,45 @@ Route::post('/booking/reserve-category', function (Request $request) {
                 if ($pricePerSeat > 0) {
                     $serviceSubtotal = $pricePerSeat * $seatCount;
                 }
+            }
+
+            // Optional round-trip pricing: add a return-leg fare when requested.
+            if ($tripType === 'round_trip') {
+                $returnRouteCode = trim((string) ($payload['return_route_code'] ?? ''));
+                $returnBoarding = trim((string) ($payload['return_boarding_point'] ?? $stDisembarkPt));
+                $returnDisembark = trim((string) ($payload['return_disembark_point'] ?? $stBoardingPt));
+
+                $returnLeg = null;
+                foreach ($stRouteSchedules as $stLeg) {
+                    if ($returnRouteCode !== '' && ($stLeg['route_code'] ?? '') === $returnRouteCode) {
+                        $returnLeg = $stLeg;
+                        break;
+                    }
+                    if ($returnLeg === null
+                        && ($stLeg['origin'] ?? '') === $returnBoarding
+                        && ($stLeg['destination'] ?? '') === $returnDisembark) {
+                        $returnLeg = $stLeg;
+                    }
+                }
+
+                $returnSubtotal = 0.0;
+                if ($returnLeg !== null) {
+                    $returnAdultPrice  = $isLocal ? (float) ($returnLeg['local_adult']   ?? 0) : (float) ($returnLeg['foreign_adult']  ?? 0);
+                    $returnChildPrice  = $isLocal ? (float) ($returnLeg['local_child']   ?? 0) : (float) ($returnLeg['foreign_child']  ?? 0);
+                    $returnInfantPrice = $isLocal ? (float) ($returnLeg['local_infant']  ?? 0) : (float) ($returnLeg['foreign_infant'] ?? 0);
+                    if ($returnAdultPrice > 0 || $returnChildPrice > 0) {
+                        $returnSubtotal = ($returnAdultPrice * $adults)
+                            + ($returnChildPrice * $children)
+                            + ($returnInfantPrice * $infants);
+                    }
+                }
+
+                if ($returnSubtotal <= 0) {
+                    // Safe fallback when no matching return leg was selected/found.
+                    $returnSubtotal = $serviceSubtotal;
+                }
+
+                $serviceSubtotal += $returnSubtotal;
             }
         }
 
@@ -3624,3 +3733,4 @@ Route::post('/booking/water-sports-cart', function (Request $request) {
 
     return redirect($checkoutUrl);
 });
+

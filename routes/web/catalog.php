@@ -737,16 +737,32 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
         if ($legForeign > 0 && ($fromPriceForeign <= 0 || $legForeign < $fromPriceForeign)) { $fromPriceForeign = $legForeign; }
     }
 
-    // Vessel hero image.
-    $heroMedia = Schema::hasTable('vendor_listing_media')
-        ? DB::table('vendor_listing_media')
+    // Vessel gallery (primary + additional photos).
+    $galleryMedia = [];
+    if (Schema::hasTable('vendor_listing_media')) {
+        $mediaRows = DB::table('vendor_listing_media')
             ->where('entity_type', 'sea_transport')
             ->where('entity_id', $property->id)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
-            ->first()
-        : null;
-    $heroUrl = $heroMedia ? (function_exists('portalManagedMediaUrlFromPath') ? (portalManagedMediaUrlFromPath($heroMedia->file_path) ?? $heroMedia->file_path) : $heroMedia->file_path) : '';
+            ->get();
+
+        foreach ($mediaRows as $mediaRow) {
+            $rawPath = (string) ($mediaRow->file_path ?? '');
+            if ($rawPath === '') {
+                continue;
+            }
+
+            $resolved = function_exists('portalManagedMediaUrlFromPath')
+                ? (portalManagedMediaUrlFromPath($rawPath) ?? $rawPath)
+                : $rawPath;
+
+            if ($resolved !== '') {
+                $galleryMedia[] = $resolved;
+            }
+        }
+    }
+    $heroUrl = $galleryMedia[0] ?? '';
 
     // Operator / vendor.
     $vendor = DB::table('users')->where('id', $property->vendor_user_id ?? 0)->first();
@@ -765,6 +781,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
         'fromPriceLocal'    => $fromPriceLocal,
         'fromPriceForeign'  => $fromPriceForeign,
         'heroUrl'           => $heroUrl,
+        'galleryMedia'      => $galleryMedia,
         'vendor'            => $vendor,
         'visitorResidency'  => $visitorResidency,
         'mvrUsdRate'        => $mvrUsdRate,

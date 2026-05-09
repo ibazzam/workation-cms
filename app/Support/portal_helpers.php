@@ -59,6 +59,7 @@ if (!function_exists('vendorPortalCategoryMap')) {
             'vehicle_rental' => 'Vehicle Rentals',
             'water_sports' => 'Water Sports',
             'conference_room' => 'Conference Rooms',
+            'liveaboard' => 'Liveaboard / Safari',
         ];
     }
 }

@@ -1060,7 +1060,7 @@ Route::get('/vendor/listings/create/{category}', function (string $category) {
         ]);
     }
 
-    return redirect('/vendor?page=listings')
+    return redirect('/vendor?page=listings&category=' . urlencode($normalizedCategory))
         ->with('portal_active_panel', 'listings')
         ->with('listing_wizard_step', 1)
         ->with('portal_listing_mode', 'create')
@@ -1095,7 +1095,7 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
                 ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
         }
 
-        return redirect('/vendor?page=listings')
+        return redirect('/vendor?page=listings&category=' . urlencode($listingCategoryAlias))
             ->with('portal_active_panel', 'listings')
             ->with('listing_wizard_step', 1)
             ->with('portal_listing_mode', 'manage')
@@ -1314,7 +1314,7 @@ Route::get('/vendor/listings/{category}', function (string $category) {
         ]);
     }
 
-    return redirect('/vendor?page=listings')
+    return redirect('/vendor?page=listings&category=' . urlencode($normalizedCategory))
         ->with('portal_active_panel', 'listings')
         ->with('listing_wizard_step', 1)
         ->with('portal_listing_mode', 'manage')
@@ -1361,7 +1361,7 @@ Route::get('/vendor/listings/manage/{category}', function (string $category) {
         ]);
     }
 
-    return redirect('/vendor?page=listings')
+    return redirect('/vendor?page=listings&category=' . urlencode($normalizedCategory))
         ->with('portal_active_panel', 'listings')
         ->with('listing_wizard_step', 1)
         ->with('portal_listing_mode', 'manage')

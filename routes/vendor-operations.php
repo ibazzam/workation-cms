@@ -1026,9 +1026,11 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
             ->with('listing_wizard_step', $normalizedStep);
 
         if ($normalizedMode !== '') {
+            session(['portal_listing_mode' => $normalizedMode]);
             $response->with('portal_listing_mode', $normalizedMode);
         }
         if ($normalizedCategory !== '') {
+            session(['portal_listing_category' => $normalizedCategory]);
             $response->with('portal_listing_category', $normalizedCategory);
         }
 

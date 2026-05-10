@@ -1569,7 +1569,7 @@ Route::post('/portal/vendor/properties/{property}/submit-for-review', function (
 
     $currentStatus = strtolower(trim((string) ($listing->listing_moderation_status ?? 'draft')));
 
-    if (!in_array($currentStatus, ['draft', 'rejected'], true)) {
+    if (!in_array($currentStatus, ['draft', 'rejected', 'pending'], true)) {
         return back()->with('portal_notice', 'This listing cannot be submitted for review in its current state. Status: ' . strtoupper($currentStatus));
     }
 

@@ -402,12 +402,16 @@
                                                                     @else
                                                                         <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Delete this listing?');">
                                                                             @csrf
+                                                                            <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                            <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                             <button class="btn btn-danger" type="submit">Delete Listing</button>
                                                                         </form>
                                                                     @endif
                                                                     @if (in_array($listingModerationStatus, ['draft', 'rejected'], true))
                                                                         <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/submit-for-review">
                                                                             @csrf
+                                                                            <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                            <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                             <button class="btn btn-primary" type="submit">Submit For Approval</button>
                                                                         </form>
                                                                     @elseif ($listingModerationStatus === 'approved')
@@ -438,6 +442,8 @@
                                                             <div class="media-upload-row" data-property-media-panel="{{ $propertyId }}" hidden>
                                                                 <form class="media-panel-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                     @csrf
+                                                                    <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                    <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                     <input type="hidden" name="entity_type" value="property">
                                                                     <input type="hidden" name="entity_id" value="{{ $propertyId }}">
                                                                     <input type="hidden" name="panel_entity_type" value="property">
@@ -458,6 +464,8 @@
                                                                 @else
                                                                     <form class="gallery-media-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                         @csrf
+                                                                        <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                        <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                         <input type="hidden" name="panel_entity_type" value="property">
                                                                         <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
                                                                         <div class="media-panel-bar gallery-toolbar">
@@ -480,6 +488,8 @@
                                                                                             @else
                                                                                                 <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
                                                                                                     @csrf
+                                                                                                    <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                                                    <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                                                     <input type="hidden" name="panel_entity_type" value="property">
                                                                                                     <input type="hidden" name="panel_entity_id" value="{{ $propertyId }}">
                                                                                                     <button class="btn btn-secondary" type="submit">Set Primary</button>
@@ -822,6 +832,8 @@
                                                                                             <div class="media-upload-row" data-room-media-panel="{{ $roomId }}" hidden>
                                                                                                 <form class="media-panel-form" method="POST" action="/portal/vendor/media/upload" enctype="multipart/form-data" data-media-upload-form>
                                                                                                     @csrf
+                                                                                                    <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                                                    <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                                                     <input type="hidden" name="entity_type" value="room">
                                                                                                     <input type="hidden" name="entity_id" value="{{ $roomId }}">
                                                                                                     <input type="hidden" name="panel_entity_type" value="room">
@@ -842,6 +854,8 @@
                                                                                                 @else
                                                                                                     <form class="gallery-media-form" method="POST" action="/portal/vendor/media/bulk-delete" onsubmit="return confirm('Remove selected photos?');" data-gallery-selection-form>
                                                                                                         @csrf
+                                                                                                        <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                                                        <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                                                         <input type="hidden" name="panel_entity_type" value="room">
                                                                                                         <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
                                                                                                         <div class="media-panel-bar gallery-toolbar">
@@ -864,6 +878,8 @@
                                                                                                                             @else
                                                                                                                                 <form method="POST" action="/portal/vendor/media/{{ (int) ($media->id ?? 0) }}/primary">
                                                                                                                                     @csrf
+                                                                                                                                    <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                                                                                    <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
                                                                                                                                     <input type="hidden" name="panel_entity_type" value="room">
                                                                                                                                     <input type="hidden" name="panel_entity_id" value="{{ $roomId }}">
                                                                                                                                     <button class="btn btn-secondary" type="submit">Set Primary</button>

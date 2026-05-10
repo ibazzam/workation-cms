@@ -1000,10 +1000,37 @@ if (!function_exists('vendorPortalListingsBackResponse')) {
     {
         $normalizedStep = max(1, min(4, $wizardStep));
 
-        $response = redirect('/vendor?page=listings#listings')
+        $requestedMode = (string) (
+            $extraFlash['portal_listing_mode']
+            ?? request()->input('portal_listing_mode', request()->query('mode', session('portal_listing_mode', '')))
+        );
+        $normalizedMode = strtolower(trim($requestedMode));
+        if (!in_array($normalizedMode, ['create', 'manage'], true)) {
+            $normalizedMode = '';
+        }
+
+        $requestedCategory = (string) (
+            $extraFlash['portal_listing_category']
+            ?? request()->input('portal_listing_category', request()->query('category', session('portal_listing_category', '')))
+        );
+        $normalizedCategory = vendorPortalCanonicalCategory($requestedCategory) ?? '';
+
+        $targetUrl = '/vendor?page=listings';
+        if ($normalizedCategory !== '') {
+            $targetUrl .= '&category=' . urlencode($normalizedCategory);
+        }
+
+        $response = redirect($targetUrl . '#listings')
             ->with('portal_notice', $message)
             ->with('portal_active_panel', 'listings')
             ->with('listing_wizard_step', $normalizedStep);
+
+        if ($normalizedMode !== '') {
+            $response->with('portal_listing_mode', $normalizedMode);
+        }
+        if ($normalizedCategory !== '') {
+            $response->with('portal_listing_category', $normalizedCategory);
+        }
 
         foreach ($extraFlash as $key => $value) {
             if (!is_string($key) || $key === '') {

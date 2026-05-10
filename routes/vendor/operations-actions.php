@@ -317,8 +317,8 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
     }
 
     $listingCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
-    if (!in_array($listingCategory, ['accommodation', 'remote_workspace'], true)) {
-        return back()->withErrors(['profile' => 'Transfer rates can only be updated for accommodation or remote workspace listings.'])->withInput();
+    if (!in_array($listingCategory, ['accommodation', 'liveaboard', 'remote_workspace'], true)) {
+        return back()->withErrors(['profile' => 'Transfer rates can only be updated for accommodation, liveaboard, or remote workspace listings.'])->withInput();
     }
 
     $details = [];

@@ -764,6 +764,10 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
                 ? portalManagedMediaUrlFromPath($rawPath)
                 : null;
 
+            if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                $resolved = vendorMediaStorageUrlFromPath($rawPath);
+            }
+
             if ($resolved === null || trim($resolved) === '') {
                 if (str_starts_with($rawPath, 'http://')) {
                     $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');

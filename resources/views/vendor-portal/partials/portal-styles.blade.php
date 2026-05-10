@@ -652,8 +652,9 @@
             display: flex;
             border-bottom: 2px solid #d8e2eb;
             margin-bottom: 10px;
-            overflow-x: auto;
-            scrollbar-width: none;
+            flex-wrap: wrap;
+            gap: 4px;
+            overflow-x: visible;
         }
 
         .workspace-tabs::-webkit-scrollbar {
@@ -668,9 +669,11 @@
             border: none;
             background: none;
             border-bottom: 2px solid transparent;
-            margin-bottom: -2px;
+            margin-bottom: 0;
             white-space: nowrap;
             text-decoration: none;
+            border-radius: 8px;
+            border: 1px solid transparent;
         }
 
         .workspace-tab:hover {
@@ -680,18 +683,20 @@
         .workspace-tab.is-active {
             color: #0d4f6a;
             border-bottom-color: #0f6179;
+            border-color: #d3dfe9;
+            background: #ffffff;
         }
 
         .workspace-category-tabs {
             display: flex;
             gap: 4px;
-            overflow-x: auto;
+            overflow-x: visible;
             scrollbar-width: thin;
             scrollbar-color: #b8c8d8 transparent;
             background: #e4eaf0;
             border-radius: 10px;
             padding: 3px;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
         }
 
         .workspace-category-tab {
@@ -1469,7 +1474,7 @@
         }
 
         .reservation-ops-table {
-            min-width: 1480px;
+            min-width: 1680px;
         }
 
         .ops-table th,
@@ -2792,6 +2797,16 @@
         }
 
         @media (max-width: 900px) {
+            .workspace-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
+            .workspace-category-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+
             .hero-actions {
                 align-items: flex-start;
             }

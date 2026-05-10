@@ -192,7 +192,8 @@
         $forcedMediaPanelType = strtolower(trim((string) session('portal_media_panel_type', '')));
         $forcedMediaPanelId = (int) session('portal_media_panel_id', 0);
         $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
-            return strtolower((string) ($media->entity_type ?? '')) === 'property';
+            $entityType = strtolower((string) ($media->entity_type ?? ''));
+            return in_array($entityType, ['property', 'sea_transport', 'transport'], true);
         });
         $roomMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
             return strtolower((string) ($media->entity_type ?? '')) === 'room';

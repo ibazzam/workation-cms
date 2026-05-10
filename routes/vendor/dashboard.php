@@ -695,7 +695,7 @@ Route::get('/vendor', function () {
 
                     if ($vendorPropertyIds->isNotEmpty()) {
                         $query->where(function ($propertyQuery) use ($vendorPropertyIds) {
-                            $propertyQuery->where('entity_type', 'property')
+                            $propertyQuery->whereIn('entity_type', ['property', 'sea_transport', 'transport'])
                                 ->whereIn('entity_id', $vendorPropertyIds->all());
                         });
                         $hasCondition = true;

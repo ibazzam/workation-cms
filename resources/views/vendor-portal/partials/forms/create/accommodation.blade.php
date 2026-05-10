@@ -27,6 +27,7 @@
                     <label for="property_property_type">Property Type</label>
                     <select id="property_property_type" name="property_type" class="ops-select">
                         <option value="">Select property type</option>
+                        <option value="liveaboard" @selected(old('property_type') === 'liveaboard')>Liveaboard Vessel</option>
                         <option value="hotel" @selected(old('property_type') === 'hotel')>Hotel</option>
                         <option value="resort" @selected(old('property_type') === 'resort')>Resort</option>
                         <option value="guest_house" @selected(old('property_type') === 'guest_house')>Guest House</option>
@@ -60,7 +61,7 @@
                     <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="0" max="10000" value="{{ old('max_guests') }}">
                 </div>
                 <div class="ops-field">
-                    <label for="property_capacity_value">Capacity (total units/rooms)</label>
+                    <label for="property_capacity_value">{{ $accommodationListingCategory === 'liveaboard' ? 'Capacity (total cabins)' : 'Capacity (total units/rooms)' }}</label>
                     <input id="property_capacity_value" name="capacity_value" class="ops-input" type="number" min="1" max="20000" value="{{ old('capacity_value') }}" placeholder="Total bookable units">
                 </div>
                 <div class="ops-field">
@@ -140,6 +141,26 @@
                         <input id="liveaboard_journey_days" name="journey_duration_days" class="ops-input" type="number" min="1" max="90" value="{{ old('journey_duration_days') }}" placeholder="e.g. 5">
                     </div>
                     <div class="ops-field">
+                        <label for="liveaboard_journey_start_date">Journey Start Date</label>
+                        <input id="liveaboard_journey_start_date" name="journey_start_date" class="ops-input" type="date" value="{{ old('journey_start_date') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_journey_end_date">Journey End Date</label>
+                        <input id="liveaboard_journey_end_date" name="journey_end_date" class="ops-input" type="date" value="{{ old('journey_end_date') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_auto_stop_sale_on_boarding">Auto Stop Sales At Boarding Date</label>
+                        <select id="liveaboard_auto_stop_sale_on_boarding" name="auto_stop_sale_on_boarding" class="ops-select">
+                            <option value="1" @selected((string) old('auto_stop_sale_on_boarding', '1') === '1')>Yes (recommended)</option>
+                            <option value="0" @selected((string) old('auto_stop_sale_on_boarding', '1') === '0')>No (use manual stop-sale date)</option>
+                        </select>
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_journey_stop_sale_date">Stop Sale Date (optional)</label>
+                        <input id="liveaboard_journey_stop_sale_date" name="journey_stop_sale_date" class="ops-input" type="date" value="{{ old('journey_stop_sale_date') }}" required>
+                        <p class="map-help">Mandatory. Set the final date guests are allowed to book this journey.</p>
+                    </div>
+                    <div class="ops-field">
                         <label for="liveaboard_vessel_name">Vessel / Boat Name</label>
                         <input id="liveaboard_vessel_name" name="vessel_name" class="ops-input" type="text" maxlength="120" value="{{ old('vessel_name') }}" placeholder="e.g. Ocean Explorer">
                     </div>
@@ -152,17 +173,13 @@
                         <input id="liveaboard_cabin_count" name="cabin_count" class="ops-input" type="number" min="1" max="500" value="{{ old('cabin_count') }}" placeholder="e.g. 8">
                     </div>
                     <div class="ops-field ops-field-wide">
-                        <label for="liveaboard_stopovers">Stopovers</label>
-                        <textarea id="liveaboard_stopovers" name="stopovers" class="ops-textarea" rows="4" maxlength="5000" placeholder="Format per line: StopName|yes|yes&#10;Example: Vaavu Atoll|yes|no">{{ old('stopovers') }}</textarea>
-                        <p class="map-help">Use yes/no flags as: stop name | allow embark | allow disembark.</p>
+                        <label for="liveaboard_stopovers">Route Timeline (one stop per line)</label>
+                        <textarea id="liveaboard_stopovers" name="stopovers" class="ops-textarea" rows="5" maxlength="5000" placeholder="Format: Day/Stage|Location|yes|yes|Notes&#10;Example: Day 3-4|Vaavu Atoll Thinadhoo|yes|no|Island hopping">{{ old('stopovers') }}</textarea>
+                        <p class="map-help">Use format: day/stage | location | allow embark | allow disembark | notes.</p>
                     </div>
                     <div class="ops-field ops-field-wide">
-                        <label for="liveaboard_pricing_matrix">Route / Package Pricing Matrix</label>
-                        <textarea id="liveaboard_pricing_matrix" name="pricing_matrix" class="ops-textarea" rows="4" maxlength="10000" placeholder="Format per line: FromPoint→ToPoint=Price&#10;Example: Male→Gan=5000">{{ old('pricing_matrix') }}</textarea>
-                    </div>
-                    <div class="ops-field ops-field-wide">
-                        <label for="liveaboard_journey_itinerary">Route Itinerary / Program (optional)</label>
-                        <textarea id="liveaboard_journey_itinerary" name="journey_itinerary" class="ops-textarea" rows="4" maxlength="5000" placeholder="Day 1: Male boarding and safety briefing...">{{ old('journey_itinerary') }}</textarea>
+                        <label for="liveaboard_journey_itinerary">Journey Summary (optional)</label>
+                        <textarea id="liveaboard_journey_itinerary" name="journey_itinerary" class="ops-textarea" rows="4" maxlength="5000" placeholder="Day 1: Male embark and safety briefing...">{{ old('journey_itinerary') }}</textarea>
                     </div>
                 @endif
             </div>
@@ -207,6 +224,7 @@
             </div>
         </section>
 
+        @if ($accommodationListingCategory !== 'liveaboard')
         <section class="listing-form-section" aria-label="Transfer options and charges">
             <div class="listing-form-section-head">
                 <h4>Transfer Options</h4>
@@ -250,6 +268,7 @@
                 @endforeach
             </div>
         </section>
+        @endif
 
         <section class="listing-form-section" aria-label="Policies and stay rules">
             <div class="listing-form-section-head">

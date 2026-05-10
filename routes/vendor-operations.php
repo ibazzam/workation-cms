@@ -1610,6 +1610,10 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['start_point'] = trim((string) ($validated['start_point'] ?? ''));
             $details['end_point'] = trim((string) ($validated['end_point'] ?? ''));
             $details['journey_duration_days'] = isset($validated['journey_duration_days']) ? (int) $validated['journey_duration_days'] : null;
+            $details['journey_start_date'] = trim((string) ($validated['journey_start_date'] ?? ''));
+            $details['journey_end_date'] = trim((string) ($validated['journey_end_date'] ?? ''));
+            $details['auto_stop_sale_on_boarding'] = ((string) ($validated['auto_stop_sale_on_boarding'] ?? '1')) === '1';
+            $details['journey_stop_sale_date'] = trim((string) ($validated['journey_stop_sale_date'] ?? ''));
             $details['vessel_name'] = trim((string) ($validated['vessel_name'] ?? ''));
             $details['registration_no'] = trim((string) ($validated['registration_no'] ?? ''));
             $details['cabin_count'] = isset($validated['cabin_count']) ? (int) $validated['cabin_count'] : null;
@@ -1618,7 +1622,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
             $details['journey_itinerary'] = trim((string) ($validated['journey_itinerary'] ?? ''));
             
-            // Parse stopovers (one per line, format: StopoverName or StopoverName|embark|disembark)
+            // Parse stopovers (one per line, preferred: Day/Stage|Location|yes|yes|Notes)
             $stopoverRaw = trim((string) ($validated['stopovers'] ?? ''));
             $stopovers = [];
             if ($stopoverRaw !== '') {
@@ -1626,35 +1630,49 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
                     $stopoverLine = trim($stopoverLine);
                     if ($stopoverLine === '') continue;
                     $parts = preg_split('/\|/', $stopoverLine);
-                    $name = trim($parts[0] ?? '');
+                    $firstPart = trim((string) ($parts[0] ?? ''));
+                    $secondPart = trim((string) ($parts[1] ?? ''));
+                    $name = $firstPart;
+                    $dayStage = '';
+                    if ($secondPart !== '' && in_array(strtolower($secondPart), ['yes', 'no'], true) === false) {
+                        $dayStage = $firstPart;
+                        $name = $secondPart;
+                    }
                     if ($name === '') continue;
-                    $allowEmbark = strtolower(trim($parts[1] ?? 'yes')) === 'yes';
-                    $allowDisembark = strtolower(trim($parts[2] ?? 'yes')) === 'yes';
+                    $embarkPart = $dayStage === '' ? ($parts[1] ?? 'yes') : ($parts[2] ?? 'yes');
+                    $disembarkPart = $dayStage === '' ? ($parts[2] ?? 'yes') : ($parts[3] ?? 'yes');
+                    $notesPart = $dayStage === '' ? ($parts[3] ?? '') : ($parts[4] ?? '');
+                    $allowEmbark = strtolower(trim((string) $embarkPart)) === 'yes';
+                    $allowDisembark = strtolower(trim((string) $disembarkPart)) === 'yes';
                     $stopovers[] = [
                         'name' => $name,
+                        'day_stage' => $dayStage,
                         'allow_embark' => $allowEmbark,
                         'allow_disembark' => $allowDisembark,
+                        'notes' => trim((string) $notesPart),
                     ];
                 }
             }
             $details['stopovers'] = $stopovers;
-            
-            // Parse pricing matrix (format: From→To=Price per line)
-            $pricingRaw = trim((string) ($validated['pricing_matrix'] ?? ''));
-            $pricingMatrix = [];
-            if ($pricingRaw !== '') {
-                foreach (preg_split('/[\r\n]+/', $pricingRaw) ?: [] as $pricingLine) {
-                    $pricingLine = trim($pricingLine);
-                    if ($pricingLine === '') continue;
-                    if (!str_contains($pricingLine, '=')) continue;
-                    [$routeKey, $price] = explode('=', $pricingLine, 2);
-                    $routeKey = trim($routeKey);
-                    $price = trim($price);
-                    if ($routeKey === '' || !is_numeric($price)) continue;
-                    $pricingMatrix[$routeKey] = max(0, (float) $price);
+
+            $journeyEndDate = $details['journey_end_date'];
+            $details['journey_is_expired'] = false;
+            if ($journeyEndDate !== '') {
+                try {
+                    $details['journey_is_expired'] = strtotime($journeyEndDate) < strtotime(date('Y-m-d'));
+                } catch (\Throwable $exception) {
+                    $details['journey_is_expired'] = false;
                 }
             }
-            $details['pricing_matrix'] = $pricingMatrix;
+
+            $details['journey_sales_closed'] = false;
+            if ($details['journey_stop_sale_date'] !== '') {
+                try {
+                    $details['journey_sales_closed'] = strtotime(date('Y-m-d')) >= strtotime((string) $details['journey_stop_sale_date']);
+                } catch (\Throwable $exception) {
+                    $details['journey_sales_closed'] = false;
+                }
+            }
         }
 
         if ($listingCategory !== 'accommodation') {
@@ -2068,11 +2086,35 @@ if (!function_exists('vendorPortalValidatePropertyDetails')) {
             if (!isset($details['journey_duration_days']) || $details['journey_duration_days'] < 1 || $details['journey_duration_days'] > 90) {
                 $errors[] = 'Journey duration must be between 1 and 90 days.';
             }
+            if (empty($details['journey_start_date'])) {
+                $errors[] = 'Journey start date is required for liveaboard listings.';
+            }
+            if (empty($details['journey_end_date'])) {
+                $errors[] = 'Journey end date is required for liveaboard listings.';
+            }
+            if (!empty($details['journey_start_date']) && !empty($details['journey_end_date'])) {
+                $start = strtotime((string) $details['journey_start_date']);
+                $end = strtotime((string) $details['journey_end_date']);
+                if ($start === false || $end === false) {
+                    $errors[] = 'Journey start and end date must be valid dates.';
+                } elseif ($end < $start) {
+                    $errors[] = 'Journey end date must be after or equal to journey start date.';
+                }
+            }
+            if (!empty($details['journey_stop_sale_date']) && !empty($details['journey_start_date'])) {
+                $stopSale = strtotime((string) $details['journey_stop_sale_date']);
+                $start = strtotime((string) $details['journey_start_date']);
+                if ($stopSale === false) {
+                    $errors[] = 'Stop sale date must be a valid date.';
+                } elseif ($start !== false && $stopSale > $start) {
+                    $errors[] = 'Stop sale date cannot be after journey start date.';
+                }
+            }
+            if (empty($details['journey_stop_sale_date'])) {
+                $errors[] = 'Stop sale date is required for liveaboard listings.';
+            }
             if (empty($details['stopovers'])) {
                 $errors[] = 'At least one stopover is required for liveaboard listings.';
-            }
-            if (empty($details['pricing_matrix'])) {
-                $errors[] = 'Pricing matrix with at least one route is required for liveaboard listings.';
             }
         }
 

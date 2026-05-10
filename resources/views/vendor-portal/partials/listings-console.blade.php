@@ -772,6 +772,48 @@
                                                                                                 </div>
                                                                                                 <textarea class="ops-textarea" name="child_policy" rows="3" maxlength="3000" placeholder="Child policy">{{ trim((string) ($room->child_policy ?? '')) }}</textarea>
                                                                                                 <textarea class="ops-textarea" name="extra_bed_policy" rows="3" maxlength="3000" placeholder="Extra bed policy">{{ trim((string) ($room->extra_bed_policy ?? '')) }}</textarea>
+                                                                                                @if ($categoryKey === 'liveaboard')
+                                                                                                    <div class="ops-field ops-field-wide" style="grid-column:1/-1;">
+                                                                                                        <section class="listing-form-section" aria-label="Liveaboard package transfer setup">
+                                                                                                            <div class="listing-form-section-head">
+                                                                                                                <h4>Package Transfer Setup</h4>
+                                                                                                                <p>Define embark and disembark points at package level. Enable mid-trip join only when this package supports it.</p>
+                                                                                                            </div>
+                                                                                                            <div class="ops-form-grid">
+                                                                                                                <div class="ops-field">
+                                                                                                                    <label>Transfer Included In Package</label>
+                                                                                                                    <select class="ops-select" name="package_transfer_included">
+                                                                                                                        <option value="1" @selected((int) ($room->package_transfer_included ?? 1) === 1)>Yes</option>
+                                                                                                                        <option value="0" @selected((int) ($room->package_transfer_included ?? 1) === 0)>No</option>
+                                                                                                                    </select>
+                                                                                                                </div>
+                                                                                                                <div class="ops-field">
+                                                                                                                    <label>Package Embark Point</label>
+                                                                                                                    <input class="ops-input" name="package_embark_point" type="text" maxlength="120" value="{{ trim((string) ($room->package_embark_point ?? '')) }}" placeholder="e.g. Male'">
+                                                                                                                </div>
+                                                                                                                <div class="ops-field">
+                                                                                                                    <label>Package Disembark Point</label>
+                                                                                                                    <input class="ops-input" name="package_disembark_point" type="text" maxlength="120" value="{{ trim((string) ($room->package_disembark_point ?? '')) }}" placeholder="e.g. S. Gan">
+                                                                                                                </div>
+                                                                                                                <div class="ops-field">
+                                                                                                                    <label>Allow Mid-Trip Join</label>
+                                                                                                                    <select class="ops-select" name="package_mid_trip_join_allowed">
+                                                                                                                        <option value="0" @selected((int) ($room->package_mid_trip_join_allowed ?? 0) === 0)>No</option>
+                                                                                                                        <option value="1" @selected((int) ($room->package_mid_trip_join_allowed ?? 0) === 1)>Yes</option>
+                                                                                                                    </select>
+                                                                                                                </div>
+                                                                                                                <div class="ops-field">
+                                                                                                                    <label>Mid-Trip Join Transfer Fee (MVR)</label>
+                                                                                                                    <input class="ops-input" name="package_mid_trip_join_transfer_fee" type="number" min="0" step="0.01" value="{{ isset($room->package_mid_trip_join_transfer_fee) && (float) $room->package_mid_trip_join_transfer_fee > 0 ? (float) $room->package_mid_trip_join_transfer_fee : '' }}" placeholder="Optional surcharge">
+                                                                                                                </div>
+                                                                                                                <div class="ops-field ops-field-wide">
+                                                                                                                    <label>Transfer Notes</label>
+                                                                                                                    <textarea class="ops-textarea" name="package_transfer_notes" rows="2" maxlength="2000" placeholder="Optional notes for boarding and transfer terms">{{ trim((string) ($room->package_transfer_notes ?? '')) }}</textarea>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </section>
+                                                                                                    </div>
+                                                                                                @endif
                                                                                                 <div class="inline-actions">
                                                                                                     <button class="btn btn-secondary js-row-update" type="submit">Update Room</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-close-room-edit data-room-edit-id="{{ $roomId }}">Cancel Edit</button>
@@ -1205,6 +1247,38 @@
                                                                         <label>Cots and Extra Beds Policy</label>
                                                                         <textarea class="ops-textarea" name="extra_bed_policy" rows="3" maxlength="3000" placeholder="Extra beds and cots availability...">{{ $showInlineRoomRow ? old('extra_bed_policy', '') : '' }}</textarea>
                                                                     </div>
+                                                                    @if ($categoryKey === 'liveaboard')
+                                                                        <div class="ops-field ops-field-wide">
+                                                                            <label>Transfer Included In Package</label>
+                                                                            <select class="ops-select" name="package_transfer_included">
+                                                                                <option value="1" @selected((string) ($showInlineRoomRow ? old('package_transfer_included', '1') : '1') === '1')>Yes</option>
+                                                                                <option value="0" @selected((string) ($showInlineRoomRow ? old('package_transfer_included', '1') : '1') === '0')>No</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div class="ops-field">
+                                                                            <label>Package Embark Point</label>
+                                                                            <input class="ops-input" name="package_embark_point" type="text" maxlength="120" value="{{ $showInlineRoomRow ? old('package_embark_point', '') : '' }}" placeholder="e.g. Male'">
+                                                                        </div>
+                                                                        <div class="ops-field">
+                                                                            <label>Package Disembark Point</label>
+                                                                            <input class="ops-input" name="package_disembark_point" type="text" maxlength="120" value="{{ $showInlineRoomRow ? old('package_disembark_point', '') : '' }}" placeholder="e.g. S. Gan">
+                                                                        </div>
+                                                                        <div class="ops-field">
+                                                                            <label>Allow Mid-Trip Join</label>
+                                                                            <select class="ops-select" name="package_mid_trip_join_allowed">
+                                                                                <option value="0" @selected((string) ($showInlineRoomRow ? old('package_mid_trip_join_allowed', '0') : '0') === '0')>No</option>
+                                                                                <option value="1" @selected((string) ($showInlineRoomRow ? old('package_mid_trip_join_allowed', '0') : '0') === '1')>Yes</option>
+                                                                            </select>
+                                                                        </div>
+                                                                        <div class="ops-field">
+                                                                            <label>Mid-Trip Join Transfer Fee (MVR)</label>
+                                                                            <input class="ops-input" name="package_mid_trip_join_transfer_fee" type="number" min="0" step="0.01" value="{{ $showInlineRoomRow ? old('package_mid_trip_join_transfer_fee', '') : '' }}" placeholder="Optional surcharge">
+                                                                        </div>
+                                                                        <div class="ops-field ops-field-wide">
+                                                                            <label>Transfer Notes</label>
+                                                                            <textarea class="ops-textarea" name="package_transfer_notes" rows="2" maxlength="2000" placeholder="Optional notes for boarding and transfer terms">{{ $showInlineRoomRow ? old('package_transfer_notes', '') : '' }}</textarea>
+                                                                        </div>
+                                                                    @endif
                                                                 </div>
                                                                 <div class="inline-actions" style="margin-top:10px;">
                                                                     <button class="btn btn-primary" type="submit">Save Room</button>

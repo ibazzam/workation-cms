@@ -1169,7 +1169,7 @@
                         </div>
 
                         <div class="ops-table-wrap">
-                            <table class="ops-table is-compact" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
+                            <table class="ops-table is-compact reservation-ops-table" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
                                 <thead>
                                     <tr>
                                         <th>Booking / Reservation</th>

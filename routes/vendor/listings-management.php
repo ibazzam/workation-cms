@@ -59,6 +59,12 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
+        'package_transfer_included' => ['nullable', Rule::in(['0', '1'])],
+        'package_embark_point' => ['nullable', 'string', 'max:120'],
+        'package_disembark_point' => ['nullable', 'string', 'max:120'],
+        'package_mid_trip_join_allowed' => ['nullable', Rule::in(['0', '1'])],
+        'package_mid_trip_join_transfer_fee' => ['nullable', 'numeric', 'min:0'],
+        'package_transfer_notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
     // MVR/USD rate — used to auto-compute MVR equivalents from vendor USD inputs.
@@ -239,6 +245,26 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
         $extraBedPolicy = trim((string) ($validated['extra_bed_policy'] ?? ''));
         $insertPayload['extra_bed_policy'] = $extraBedPolicy !== '' ? $extraBedPolicy : null;
     }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_transfer_included')) {
+        $insertPayload['package_transfer_included'] = ((string) ($validated['package_transfer_included'] ?? '0')) === '1';
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_embark_point')) {
+        $insertPayload['package_embark_point'] = trim((string) ($validated['package_embark_point'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_disembark_point')) {
+        $insertPayload['package_disembark_point'] = trim((string) ($validated['package_disembark_point'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_mid_trip_join_allowed')) {
+        $insertPayload['package_mid_trip_join_allowed'] = ((string) ($validated['package_mid_trip_join_allowed'] ?? '0')) === '1';
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_mid_trip_join_transfer_fee')) {
+        $insertPayload['package_mid_trip_join_transfer_fee'] = isset($validated['package_mid_trip_join_transfer_fee']) && $validated['package_mid_trip_join_transfer_fee'] !== ''
+            ? max(0, (float) $validated['package_mid_trip_join_transfer_fee'])
+            : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_transfer_notes')) {
+        $insertPayload['package_transfer_notes'] = trim((string) ($validated['package_transfer_notes'] ?? '')) ?: null;
+    }
 
     DB::table('vendor_property_room_categories')->insert($insertPayload);
 
@@ -298,6 +324,12 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
         'child_price_local' => ['nullable', 'numeric', 'min:0'],
         'child_policy' => ['nullable', 'string', 'max:3000'],
         'extra_bed_policy' => ['nullable', 'string', 'max:3000'],
+        'package_transfer_included' => ['nullable', Rule::in(['0', '1'])],
+        'package_embark_point' => ['nullable', 'string', 'max:120'],
+        'package_disembark_point' => ['nullable', 'string', 'max:120'],
+        'package_mid_trip_join_allowed' => ['nullable', Rule::in(['0', '1'])],
+        'package_mid_trip_join_transfer_fee' => ['nullable', 'numeric', 'min:0'],
+        'package_transfer_notes' => ['nullable', 'string', 'max:2000'],
     ]);
 
     // MVR/USD rate — used to auto-compute MVR equivalents from vendor USD inputs.
@@ -465,6 +497,26 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     if (Schema::hasColumn('vendor_property_room_categories', 'extra_bed_policy')) {
         $extraBedPolicy = trim((string) ($validated['extra_bed_policy'] ?? ''));
         $updatePayload['extra_bed_policy'] = $extraBedPolicy !== '' ? $extraBedPolicy : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_transfer_included')) {
+        $updatePayload['package_transfer_included'] = ((string) ($validated['package_transfer_included'] ?? '0')) === '1';
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_embark_point')) {
+        $updatePayload['package_embark_point'] = trim((string) ($validated['package_embark_point'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_disembark_point')) {
+        $updatePayload['package_disembark_point'] = trim((string) ($validated['package_disembark_point'] ?? '')) ?: null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_mid_trip_join_allowed')) {
+        $updatePayload['package_mid_trip_join_allowed'] = ((string) ($validated['package_mid_trip_join_allowed'] ?? '0')) === '1';
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_mid_trip_join_transfer_fee')) {
+        $updatePayload['package_mid_trip_join_transfer_fee'] = isset($validated['package_mid_trip_join_transfer_fee']) && $validated['package_mid_trip_join_transfer_fee'] !== ''
+            ? max(0, (float) $validated['package_mid_trip_join_transfer_fee'])
+            : null;
+    }
+    if (Schema::hasColumn('vendor_property_room_categories', 'package_transfer_notes')) {
+        $updatePayload['package_transfer_notes'] = trim((string) ($validated['package_transfer_notes'] ?? '')) ?: null;
     }
 
     DB::table('vendor_property_room_categories')
@@ -940,6 +992,10 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'start_point' => ['nullable', 'string', 'max:120'],
         'end_point' => ['nullable', 'string', 'max:120'],
         'journey_duration_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+        'journey_start_date' => ['nullable', 'date'],
+        'journey_end_date' => ['nullable', 'date'],
+        'auto_stop_sale_on_boarding' => ['nullable', Rule::in(['0', '1'])],
+        'journey_stop_sale_date' => ['nullable', 'date'],
         'vessel_name' => ['nullable', 'string', 'max:120'],
         'registration_no' => ['nullable', 'string', 'max:60'],
         'cabin_count' => ['nullable', 'integer', 'min:1', 'max:500'],
@@ -1236,6 +1292,10 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'start_point' => ['nullable', 'string', 'max:120'],
         'end_point' => ['nullable', 'string', 'max:120'],
         'journey_duration_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+        'journey_start_date' => ['nullable', 'date'],
+        'journey_end_date' => ['nullable', 'date'],
+        'auto_stop_sale_on_boarding' => ['nullable', Rule::in(['0', '1'])],
+        'journey_stop_sale_date' => ['nullable', 'date'],
         'vessel_name' => ['nullable', 'string', 'max:120'],
         'registration_no' => ['nullable', 'string', 'max:60'],
         'cabin_count' => ['nullable', 'integer', 'min:1', 'max:500'],

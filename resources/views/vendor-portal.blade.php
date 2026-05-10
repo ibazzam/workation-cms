@@ -361,7 +361,7 @@
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
                     <h1>Partner Operations Center</h1>
-                    <p>Listings, reservations, availability, and payouts.</p>
+                    <p>Workspace overview and direct actions.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
@@ -374,35 +374,6 @@
                 </div>
             </div>
         </section>
-
-        @if ($showOverviewPage)
-        <section class="card" data-panel-group="overview" aria-label="Vendor operating scope" style="margin-top:10px;">
-            <p class="label">How To Operate The Portal</p>
-            <p class="small" style="margin-top:0;">Follow this sequence for reliable daily operations: listings -> reservations -> availability -> pricing -> billing -> customer care.</p>
-            <div class="ops-metrics" style="margin-top:10px;">
-                <article class="ops-metric">
-                    <p class="metric-label">My Listings</p>
-                    <p class="metric-value">Create / Update / Remove</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Reservations</p>
-                    <p class="metric-value">Review / Confirm / Complete</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Availability</p>
-                    <p class="metric-value">Daily slot calendar</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Pricing</p>
-                    <p class="metric-value">Rates / Tariffs / Rules</p>
-                </article>
-                <article class="ops-metric">
-                    <p class="metric-label">Collections &amp; Payouts</p>
-                    <p class="metric-value">Invoice -> Collection -> Payout</p>
-                </article>
-            </div>
-        </section>
-        @endif
 
         <div class="portal-shell">
         @include('vendor-portal.partials.sidebar')
@@ -1745,7 +1716,7 @@
                     return ["stay", "accommodation", "policies", "geo"];
                 }
 
-                if (normalized === "transport" || normalized === "sea_transport" || normalized === "land_transport") {
+                if (normalized === "transport" || normalized === "sea_transport" || normalized === "land_transport" || normalized === "liveaboard") {
                     return ["capacity", "transport", "policies", "geo"];
                 }
 
@@ -1919,6 +1890,13 @@
                         note: 'Use land transport fields for cars, vans, and local ground transfers.',
                         propertyType: 'service',
                     },
+                    liveaboard: {
+                        title: 'Liveaboard / Safari Enlisting',
+                        subtitle: 'Capture route, vessel, and voyage details and save.',
+                        submit: 'Save Liveaboard Listing',
+                        note: 'Use marine transport fields for liveaboard and safari journeys.',
+                        propertyType: 'property',
+                    },
                     excursion: {
                         title: 'Excursion Enlisting',
                         subtitle: 'Fill required fields and save.',
@@ -2066,6 +2044,8 @@
                     const selectedCategory = ensureAutoCategorySelected(normalizedCategory);
                     if (transportModeInput && (normalizedCategory === 'sea_transport' || normalizedCategory === 'land_transport')) {
                         transportModeInput.value = normalizedCategory === 'sea_transport' ? 'speedboat' : 'car';
+                    } else if (transportModeInput && normalizedCategory === 'liveaboard') {
+                        transportModeInput.value = 'liveaboard';
                     }
                     propertyCategorySelect.dispatchEvent(new Event('change'));
                     applyCategoryFormMeta(selectedCategory, true);
@@ -3490,7 +3470,7 @@
                 function categoryScopesFor(category) {
                     const normalized = normalizeCategoryKey(category);
                     if (normalized === 'accommodation') return ['stay', 'accommodation', 'policies', 'geo'];
-                    if (normalized === 'transport' || normalized === 'sea_transport' || normalized === 'land_transport') return ['capacity', 'transport', 'policies', 'geo'];
+                    if (normalized === 'transport' || normalized === 'sea_transport' || normalized === 'land_transport' || normalized === 'liveaboard') return ['capacity', 'transport', 'policies', 'geo'];
                     if (normalized === 'excursion') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'water_sports') return ['capacity', 'service', 'excursion', 'policies', 'geo'];
                     if (normalized === 'remote_workspace') return ['stay', 'capacity', 'workspace', 'geo'];
@@ -3508,6 +3488,7 @@
                         transport: ['Marine or Land Transport Enlisting', 'Choose the transport mode and save the listing.', 'Save Transport Listing', 'Use marine mode for boats and ferries, or land mode for cars and vans.', 'service'],
                         sea_transport: ['Sea Transport & Ferries Enlisting', 'Capture water transfer details and save.', 'Save Sea Transport Listing', 'Use sea transport fields for speedboats, ferries, and vessel transfers.', 'service'],
                         land_transport: ['Land Transport Enlisting', 'Capture vehicle transfer details and save.', 'Save Land Transport Listing', 'Use land transport fields for cars, vans, and local ground transfers.', 'service'],
+                        liveaboard: ['Liveaboard / Safari Enlisting', 'Capture route, vessel, and voyage details and save.', 'Save Liveaboard Listing', 'Use marine transport fields for liveaboard and safari journeys.', 'property'],
                         water_sports: ['Water Sports Enlisting', 'Fill required fields and save.', 'Save Water Sports Listing', 'Use excursion/service fields for diving, snorkeling, and activity packages.', 'service'],
                         excursion: ['Excursion Enlisting', 'Fill required fields and save.', 'Save Excursion Listing', 'Fill required fields and save.', 'service'],
                         remote_workspace: ['Remote Workspace Enlisting', 'Fill required fields and save.', 'Save Remote Workspace Listing', 'Fill required fields and save.', 'service'],
@@ -3539,7 +3520,7 @@
 
                 function isMarineTransportMode(value) {
                     const mode = String(value || '').trim().toLowerCase();
-                    return /(^|\s)(speed\s?boat|ferry|boat|safari|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
+                    return /(^|\s)(speed\s?boat|ferry|boat|safari|liveaboard|dhoni|launch|catamaran|yacht)(\s|$)/.test(mode);
                 }
 
                 function applyCategorySectionFilter(categoryKey) {
@@ -3556,9 +3537,10 @@
                     }
 
                     const normalizedCategory = normalizeCategoryKey(propertyCategorySelect.value);
-                    const isTransportCategory = normalizedCategory === 'transport' || normalizedCategory === 'sea_transport' || normalizedCategory === 'land_transport';
+                    const isTransportCategory = normalizedCategory === 'transport' || normalizedCategory === 'sea_transport' || normalizedCategory === 'land_transport' || normalizedCategory === 'liveaboard';
                     const isRemoteWorkspaceCategory = normalizedCategory === 'remote_workspace';
                     const isMarine = normalizedCategory === 'sea_transport'
+                        || normalizedCategory === 'liveaboard'
                         || (normalizedCategory !== 'land_transport' && isMarineTransportMode(transportModeInput ? transportModeInput.value : ''));
                     const selectedPricingModel = transportPricingModelSelect ? String(transportPricingModelSelect.value || 'per_trip') : 'per_trip';
 

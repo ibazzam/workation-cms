@@ -502,6 +502,72 @@
             color: var(--muted);
         }
 
+        .summary-grid-compact {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .summary-grid-compact .summary-card {
+            min-height: 100px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .overview-actions-card {
+            margin-top: 12px;
+        }
+
+        .overview-actions-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .overview-actions-head .small {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.84rem;
+        }
+
+        .overview-actions-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .overview-action {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid #d7e0e6;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .overview-action:hover {
+            transform: translateY(-1px);
+            border-color: #b9c9d8;
+            box-shadow: 0 8px 24px rgba(18, 42, 63, 0.08);
+        }
+
+        .overview-action-title {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #19324a;
+        }
+
+        .overview-action-copy {
+            font-size: 0.82rem;
+            line-height: 1.4;
+            color: var(--muted);
+        }
+
         .summary-actions {
             margin-top: 10px;
             display: flex;
@@ -2734,6 +2800,11 @@
                 grid-template-columns: 1fr 1fr;
             }
 
+            .summary-grid-compact,
+            .overview-actions-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
             .progress-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -2754,6 +2825,11 @@
             .ops-grid,
             .ops-form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .overview-actions-head {
+                flex-direction: column;
+                align-items: flex-start;
             }
 
             .listing-transfer-head {

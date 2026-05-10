@@ -528,13 +528,12 @@
                                         @foreach($returnCandidates as $returnLeg)
                                             @php
                                                 $returnCode = (string) ($returnLeg['route_code'] ?? '');
-                                                $returnFare = $isLocal
-                                                    ? (float) ($returnLeg['local_adult'] ?? $displayAdult)
-                                                    : (float) ($returnLeg['foreign_adult'] ?? $displayAdult);
+                                                $returnLocalFare = (float) ($returnLeg['local_adult'] ?? $legLocalAdult);
+                                                $returnForeignFare = (float) ($returnLeg['foreign_adult'] ?? $legForAdult);
                                                 $returnOrigin = (string) ($returnLeg['origin'] ?? $legDest);
                                                 $returnDestination = (string) ($returnLeg['destination'] ?? $legOrigin);
                                             @endphp
-                                            <option value="{{ $returnCode }}" data-return-fare="{{ $returnFare }}" data-return-origin="{{ $returnOrigin }}" data-return-destination="{{ $returnDestination }}">
+                                            <option value="{{ $returnCode }}" data-return-local-fare="{{ $returnLocalFare }}" data-return-foreign-fare="{{ $returnForeignFare }}" data-return-origin="{{ $returnOrigin }}" data-return-destination="{{ $returnDestination }}">
                                                 {{ $returnOrigin }} → {{ $returnDestination }}
                                             </option>
                                         @endforeach
@@ -554,24 +553,27 @@
                                 </div>
                                 <div class="st-field">
                                     <label for="residency_{{ $legIdx }}">Nationality / Residency</label>
-                                    <select id="residency_{{ $legIdx }}" name="guest_residency">
+                                    <select id="residency_{{ $legIdx }}" name="guest_residency" data-local-adult="{{ $legLocalAdult }}" data-local-child="{{ $legLocalChild }}" data-local-infant="{{ $legLocalInfant }}" data-foreign-adult="{{ $legForAdult }}" data-foreign-child="{{ $legForChild }}" data-foreign-infant="{{ $legForInfant }}">
                                         <option value="foreign_national" {{ $visitorResidency !== 'local_resident' ? 'selected' : '' }}>Foreign national</option>
                                         <option value="local_resident" {{ $visitorResidency === 'local_resident' ? 'selected' : '' }}>Maldivian resident</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <p style="font-size:0.8rem; color:#4a6478; margin:10px 0 10px;">
-                                <strong>Local fare:</strong>
-                                @if($legLocalAdult > 0) Adult MVR {{ number_format($legLocalAdult,2) }}@endif
-                                @if($legLocalChild > 0) · Child MVR {{ number_format($legLocalChild,2) }}@endif
-                                @if($legLocalInfant > 0) · Infant MVR {{ number_format($legLocalInfant,2) }}@endif
-                                &nbsp;|&nbsp;
-                                <strong>Foreign fare:</strong>
-                                @if($legForAdult > 0) Adult USD {{ number_format($legForAdult,2) }}@endif
-                                @if($legForChild > 0) · Child USD {{ number_format($legForChild,2) }}@endif
-                                @if($legForInfant > 0) · Infant USD {{ number_format($legForInfant,2) }}@endif
-                            </p>
+                            <details style="margin:10px 0 10px;">
+                                <summary style="cursor:pointer; font-size:0.8rem; color:#35576d; font-weight:600;">View fare details</summary>
+                                <p style="font-size:0.8rem; color:#4a6478; margin:8px 0 0;">
+                                    <strong>Local fare:</strong>
+                                    @if($legLocalAdult > 0) Adult MVR {{ number_format($legLocalAdult,2) }}@endif
+                                    @if($legLocalChild > 0) · Child MVR {{ number_format($legLocalChild,2) }}@endif
+                                    @if($legLocalInfant > 0) · Infant MVR {{ number_format($legLocalInfant,2) }}@endif
+                                    &nbsp;|&nbsp;
+                                    <strong>Foreign fare:</strong>
+                                    @if($legForAdult > 0) Adult USD {{ number_format($legForAdult,2) }}@endif
+                                    @if($legForChild > 0) · Child USD {{ number_format($legForChild,2) }}@endif
+                                    @if($legForInfant > 0) · Infant USD {{ number_format($legForInfant,2) }}@endif
+                                </p>
+                            </details>
 
                             <p id="fare_estimate_{{ $legIdx }}" style="font-size:0.78rem; color:#35576d; margin:0 0 10px;">
                                 Estimated one-way adult fare: {{ $displayCurrency }} {{ number_format($displayAdult, 2) }}
@@ -720,13 +722,30 @@
         }
     }
 
-    function syncRoundTripFields(idx, oneWayAdultFare) {
+    function syncRoundTripFields(idx) {
         const tripType = document.getElementById('trip_type_' + idx);
         const returnDateWrap = document.getElementById('return_date_wrap_' + idx);
         const returnRouteWrap = document.getElementById('return_route_wrap_' + idx);
         const returnDateInput = document.getElementById('return_date_' + idx);
         const returnRouteSelect = document.getElementById('return_route_code_' + idx);
+        const residencySelect = document.getElementById('residency_' + idx);
+        const adultsInput = document.getElementById('adults_' + idx);
+        const childrenInput = document.getElementById('children_' + idx);
+        const infantsInput = document.getElementById('infants_' + idx);
         const estimate = document.getElementById('fare_estimate_' + idx);
+        if (!residencySelect) {
+            return;
+        }
+
+        const isLocal = residencySelect.value === 'local_resident';
+        const adultFare = Number(isLocal ? residencySelect.dataset.localAdult : residencySelect.dataset.foreignAdult) || 0;
+        const childFare = Number(isLocal ? residencySelect.dataset.localChild : residencySelect.dataset.foreignChild) || 0;
+        const infantFare = Number(isLocal ? residencySelect.dataset.localInfant : residencySelect.dataset.foreignInfant) || 0;
+        const currency = isLocal ? 'MVR' : 'USD';
+        const adults = Math.max(1, Number(adultsInput && adultsInput.value ? adultsInput.value : 1));
+        const children = Math.max(0, Number(childrenInput && childrenInput.value ? childrenInput.value : 0));
+        const infants = Math.max(0, Number(infantsInput && infantsInput.value ? infantsInput.value : 0));
+        const oneWayTotal = (adultFare * adults) + (childFare * children) + (infantFare * infants);
         const isRoundTrip = tripType && tripType.value === 'round_trip';
 
         if (returnDateWrap) {
@@ -739,25 +758,23 @@
             returnDateInput.required = !!isRoundTrip;
         }
 
-        let returnFare = Number(oneWayAdultFare || 0);
+        let returnAdultFare = adultFare;
         if (isRoundTrip && returnRouteSelect) {
             const selectedOption = returnRouteSelect.options[returnRouteSelect.selectedIndex];
-            if (selectedOption && selectedOption.dataset && selectedOption.dataset.returnFare) {
-                const parsed = Number(selectedOption.dataset.returnFare);
+            if (selectedOption && selectedOption.dataset) {
+                const parsed = Number(isLocal ? selectedOption.dataset.returnLocalFare : selectedOption.dataset.returnForeignFare);
                 if (!Number.isNaN(parsed) && parsed > 0) {
-                    returnFare = parsed;
+                    returnAdultFare = parsed;
                 }
             }
         }
 
         if (estimate) {
-            const currencyMatch = estimate.textContent.match(/(MVR|USD)/);
-            const currency = currencyMatch ? currencyMatch[1] : 'USD';
             if (isRoundTrip) {
-                const total = Number(oneWayAdultFare || 0) + Number(returnFare || 0);
-                estimate.textContent = 'Estimated round-trip adult fare: ' + currency + ' ' + total.toFixed(2);
+                const roundTripTotal = oneWayTotal + ((returnAdultFare * adults) + (childFare * children) + (infantFare * infants));
+                estimate.textContent = 'Estimated round-trip fare: ' + currency + ' ' + roundTripTotal.toFixed(2) + ' (' + adults + ' adult, ' + children + ' child, ' + infants + ' infant)';
             } else {
-                estimate.textContent = 'Estimated one-way adult fare: ' + currency + ' ' + Number(oneWayAdultFare || 0).toFixed(2);
+                estimate.textContent = 'Estimated one-way fare: ' + currency + ' ' + oneWayTotal.toFixed(2) + ' (' + adults + ' adult, ' + children + ' child, ' + infants + ' infant)';
             }
         }
     }
@@ -767,15 +784,35 @@
         const tripTypeSelects = document.querySelectorAll('select[id^="trip_type_"]');
         tripTypeSelects.forEach(function (selectEl) {
             const idx = (selectEl.id || '').replace('trip_type_', '');
-            const estimateEl = document.getElementById('fare_estimate_' + idx);
-            let oneWayFare = 0;
-            if (estimateEl) {
-                const match = estimateEl.textContent.match(/([0-9]+(?:\.[0-9]+)?)/g);
-                if (match && match.length > 0) {
-                    oneWayFare = Number(match[match.length - 1]) || 0;
-                }
+            const returnRouteSelect = document.getElementById('return_route_code_' + idx);
+            const residencySelect = document.getElementById('residency_' + idx);
+            const adultsInput = document.getElementById('adults_' + idx);
+            const childrenInput = document.getElementById('children_' + idx);
+            const infantsInput = document.getElementById('infants_' + idx);
+
+            syncRoundTripFields(idx);
+
+            selectEl.addEventListener('change', function () {
+                syncRoundTripFields(idx);
+            });
+            if (returnRouteSelect) {
+                returnRouteSelect.addEventListener('change', function () {
+                    syncRoundTripFields(idx);
+                });
             }
-            syncRoundTripFields(idx, oneWayFare);
+            if (residencySelect) {
+                residencySelect.addEventListener('change', function () {
+                    syncRoundTripFields(idx);
+                });
+            }
+            [adultsInput, childrenInput, infantsInput].forEach(function (input) {
+                if (!input) {
+                    return;
+                }
+                input.addEventListener('input', function () {
+                    syncRoundTripFields(idx);
+                });
+            });
         });
     });
 

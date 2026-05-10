@@ -1616,6 +1616,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['contact_name'] = trim((string) ($validated['contact_name'] ?? ''));
             $details['contact_number'] = trim((string) ($validated['contact_number'] ?? ''));
             $details['boarding_instructions'] = trim((string) ($validated['boarding_instructions'] ?? ''));
+            $details['journey_itinerary'] = trim((string) ($validated['journey_itinerary'] ?? ''));
             
             // Parse stopovers (one per line, format: StopoverName or StopoverName|embark|disembark)
             $stopoverRaw = trim((string) ($validated['stopovers'] ?? ''));

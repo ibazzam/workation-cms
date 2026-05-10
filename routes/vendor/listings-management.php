@@ -108,8 +108,8 @@ Route::post('/portal/vendor/rooms/create', function (Request $request) {
     }
 
     $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
-    if ($propertyCategory !== 'accommodation') {
-        return back()->withErrors(['profile' => 'Room categories can only be added under accommodation listings.'])->withInput();
+    if (!in_array($propertyCategory, ['accommodation', 'liveaboard'], true)) {
+        return back()->withErrors(['profile' => 'Room categories can only be added under accommodation or liveaboard listings.'])->withInput();
     }
 
     $roUsd = (float) ($validated['meal_plan_room_only_price_usd'] ?? 0);
@@ -338,8 +338,8 @@ Route::post('/portal/vendor/rooms/{room}/update', function (Request $request, in
     if (isset($roomRecord->vendor_property_id)) {
         $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById((int) $roomRecord->vendor_property_id, $vendorUserId);
         $propertyCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
-        if ($propertyCategory !== 'accommodation') {
-            return back()->withErrors(['profile' => 'Only rooms under accommodation listings can be updated here.'])->withInput();
+        if (!in_array($propertyCategory, ['accommodation', 'liveaboard'], true)) {
+            return back()->withErrors(['profile' => 'Only rooms under accommodation or liveaboard listings can be updated here.'])->withInput();
         }
     }
 
@@ -693,6 +693,181 @@ Route::post('/portal/vendor/water-sports-equipment/{item}/delete', function (int
     return vendorPortalListingsBackResponse('Rental equipment item removed.', 3);
 });
 
+Route::post('/portal/vendor/sea-transport/{property}/route-leg/{leg}/update', function (Request $request, int $property, int $leg) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($property, $vendorUserId, 'sea_transport');
+    if (!$propertyRecord) {
+        return back()->withErrors(['profile' => 'Sea transport listing not found for this vendor account.']);
+    }
+
+    $listingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    if ($listingCategory !== 'sea_transport') {
+        return back()->withErrors(['profile' => 'Route legs can only be edited for sea transport listings.']);
+    }
+
+    $validated = $request->validate([
+        'route_code' => ['nullable', 'string', 'max:60'],
+        'origin' => ['required', 'string', 'max:190'],
+        'dep_time' => ['required', 'date_format:H:i'],
+        'destination' => ['required', 'string', 'max:190'],
+        'arr_time' => ['required', 'date_format:H:i'],
+        'days' => ['nullable', 'string', 'max:200'],
+        'local_adult' => ['nullable', 'numeric', 'min:0'],
+        'local_child' => ['nullable', 'numeric', 'min:0'],
+        'local_infant' => ['nullable', 'numeric', 'min:0'],
+        'foreign_adult' => ['nullable', 'numeric', 'min:0'],
+        'foreign_child' => ['nullable', 'numeric', 'min:0'],
+        'foreign_infant' => ['nullable', 'numeric', 'min:0'],
+    ]);
+
+    $details = [];
+    if (is_string($propertyRecord->listing_details ?? null) && trim((string) $propertyRecord->listing_details) !== '') {
+        $decoded = json_decode((string) $propertyRecord->listing_details, true);
+        if (is_array($decoded)) {
+            $details = $decoded;
+        }
+    }
+
+    $routeSchedules = is_array($details['route_schedules'] ?? null) ? array_values($details['route_schedules']) : [];
+    if (!array_key_exists($leg, $routeSchedules)) {
+        return back()->withErrors(['profile' => 'Selected route leg was not found.']);
+    }
+
+    $normalizedDays = collect(preg_split('/[,\s]+/', (string) ($validated['days'] ?? ''), -1, PREG_SPLIT_NO_EMPTY) ?: [])
+        ->map(static fn (string $day): string => ucfirst(strtolower(trim($day))))
+        ->filter(static fn (string $day): bool => in_array($day, ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], true))
+        ->unique()
+        ->values()
+        ->all();
+
+    $routeSchedules[$leg] = [
+        'route_code' => trim((string) ($validated['route_code'] ?? '')),
+        'origin' => trim((string) ($validated['origin'] ?? '')),
+        'dep_time' => trim((string) ($validated['dep_time'] ?? '')),
+        'destination' => trim((string) ($validated['destination'] ?? '')),
+        'arr_time' => trim((string) ($validated['arr_time'] ?? '')),
+        'duration_minutes' => isset($routeSchedules[$leg]['duration_minutes']) && is_numeric($routeSchedules[$leg]['duration_minutes'])
+            ? (int) $routeSchedules[$leg]['duration_minutes']
+            : null,
+        'days' => $normalizedDays,
+        'local_adult' => isset($validated['local_adult']) && $validated['local_adult'] !== '' ? (float) $validated['local_adult'] : null,
+        'local_child' => isset($validated['local_child']) && $validated['local_child'] !== '' ? (float) $validated['local_child'] : null,
+        'local_infant' => isset($validated['local_infant']) && $validated['local_infant'] !== '' ? (float) $validated['local_infant'] : null,
+        'foreign_adult' => isset($validated['foreign_adult']) && $validated['foreign_adult'] !== '' ? (float) $validated['foreign_adult'] : null,
+        'foreign_child' => isset($validated['foreign_child']) && $validated['foreign_child'] !== '' ? (float) $validated['foreign_child'] : null,
+        'foreign_infant' => isset($validated['foreign_infant']) && $validated['foreign_infant'] !== '' ? (float) $validated['foreign_infant'] : null,
+    ];
+
+    $details['route_schedules'] = array_values($routeSchedules);
+
+    DB::transaction(function () use ($property, $vendorUserId, $propertyRecord, $details): void {
+        if (Schema::hasTable('vendor_properties')) {
+            $legacyUpdate = ['updated_at' => now()];
+            if (Schema::hasColumn('vendor_properties', 'listing_details')) {
+                $legacyUpdate['listing_details'] = json_encode($details);
+            }
+            DB::table('vendor_properties')
+                ->where('id', $property)
+                ->where('vendor_user_id', $vendorUserId)
+                ->update($legacyUpdate);
+        }
+
+        vendorPortalSyncCategoryListingRecord(
+            'sea_transport',
+            $property,
+            $vendorUserId,
+            trim((string) ($propertyRecord->name ?? '')),
+            trim((string) ($propertyRecord->status ?? 'active')),
+            trim((string) ($propertyRecord->location ?? '')),
+            trim((string) ($propertyRecord->description ?? '')),
+            (float) ($propertyRecord->base_price ?? 0),
+            (string) ($propertyRecord->currency ?? 'MVR'),
+            max(0, (int) ($propertyRecord->max_guests ?? 0)),
+            $details
+        );
+    });
+
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':sea_transport');
+
+    return vendorPortalListingsBackResponse('Route leg updated.', 2, [
+        'portal_listing_mode' => 'manage',
+        'portal_listing_category' => 'sea_transport',
+    ]);
+});
+
+Route::post('/portal/vendor/sea-transport/{property}/route-leg/{leg}/delete', function (int $property, int $leg) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $propertyRecord = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById($property, $vendorUserId, 'sea_transport');
+    if (!$propertyRecord) {
+        return back()->withErrors(['profile' => 'Sea transport listing not found for this vendor account.']);
+    }
+
+    $listingCategory = vendorPortalCanonicalCategory((string) ($propertyRecord->listing_category ?? ''));
+    if ($listingCategory !== 'sea_transport') {
+        return back()->withErrors(['profile' => 'Route legs can only be removed from sea transport listings.']);
+    }
+
+    $details = [];
+    if (is_string($propertyRecord->listing_details ?? null) && trim((string) $propertyRecord->listing_details) !== '') {
+        $decoded = json_decode((string) $propertyRecord->listing_details, true);
+        if (is_array($decoded)) {
+            $details = $decoded;
+        }
+    }
+
+    $routeSchedules = is_array($details['route_schedules'] ?? null) ? array_values($details['route_schedules']) : [];
+    if (!array_key_exists($leg, $routeSchedules)) {
+        return back()->withErrors(['profile' => 'Selected route leg was not found.']);
+    }
+
+    unset($routeSchedules[$leg]);
+    $details['route_schedules'] = array_values($routeSchedules);
+
+    DB::transaction(function () use ($property, $vendorUserId, $propertyRecord, $details): void {
+        if (Schema::hasTable('vendor_properties')) {
+            $legacyUpdate = ['updated_at' => now()];
+            if (Schema::hasColumn('vendor_properties', 'listing_details')) {
+                $legacyUpdate['listing_details'] = json_encode($details);
+            }
+            DB::table('vendor_properties')
+                ->where('id', $property)
+                ->where('vendor_user_id', $vendorUserId)
+                ->update($legacyUpdate);
+        }
+
+        vendorPortalSyncCategoryListingRecord(
+            'sea_transport',
+            $property,
+            $vendorUserId,
+            trim((string) ($propertyRecord->name ?? '')),
+            trim((string) ($propertyRecord->status ?? 'active')),
+            trim((string) ($propertyRecord->location ?? '')),
+            trim((string) ($propertyRecord->description ?? '')),
+            (float) ($propertyRecord->base_price ?? 0),
+            (string) ($propertyRecord->currency ?? 'MVR'),
+            max(0, (int) ($propertyRecord->max_guests ?? 0)),
+            $details
+        );
+    });
+
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':all');
+    Cache::forget('vendor:portal:listings:v4:' . $vendorUserId . ':sea_transport');
+
+    return vendorPortalListingsBackResponse('Route leg removed.', 2, [
+        'portal_listing_mode' => 'manage',
+        'portal_listing_category' => 'sea_transport',
+    ]);
+});
+
 Route::post('/portal/vendor/properties/create', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
@@ -762,6 +937,15 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
         'schedule_end_time' => ['nullable', 'date_format:H:i'],
         'booking_cutoff_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
         'boarding_instructions' => ['nullable', 'string', 'max:1000'],
+        'start_point' => ['nullable', 'string', 'max:120'],
+        'end_point' => ['nullable', 'string', 'max:120'],
+        'journey_duration_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+        'vessel_name' => ['nullable', 'string', 'max:120'],
+        'registration_no' => ['nullable', 'string', 'max:60'],
+        'cabin_count' => ['nullable', 'integer', 'min:1', 'max:500'],
+        'stopovers' => ['nullable', 'string', 'max:5000'],
+        'pricing_matrix' => ['nullable', 'string', 'max:10000'],
+        'journey_itinerary' => ['nullable', 'string', 'max:5000'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'activity_start_time' => ['nullable', 'date_format:H:i'],
         'activity_end_time' => ['nullable', 'date_format:H:i'],
@@ -941,11 +1125,11 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     $categoryCapacity = isset($propertyDetails['capacity_value']) && is_numeric($propertyDetails['capacity_value'])
         ? (int) $propertyDetails['capacity_value']
         : null;
-    $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
+    $normalizedMaxGuests = in_array($canonicalListingCategory, ['accommodation', 'liveaboard'], true)
         ? 0
         : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? 0)));
 
-    $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
+    $resolvedBasePrice = in_array($canonicalListingCategory, ['accommodation', 'liveaboard'], true)
         ? 0
         : (float) ($validated['price_local'] ?? ($validated['base_price'] ?? 0));
 
@@ -1049,6 +1233,15 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         'schedule_end_time' => ['nullable', 'date_format:H:i'],
         'booking_cutoff_minutes' => ['nullable', 'integer', 'min:0', 'max:10080'],
         'boarding_instructions' => ['nullable', 'string', 'max:1000'],
+        'start_point' => ['nullable', 'string', 'max:120'],
+        'end_point' => ['nullable', 'string', 'max:120'],
+        'journey_duration_days' => ['nullable', 'integer', 'min:1', 'max:90'],
+        'vessel_name' => ['nullable', 'string', 'max:120'],
+        'registration_no' => ['nullable', 'string', 'max:60'],
+        'cabin_count' => ['nullable', 'integer', 'min:1', 'max:500'],
+        'stopovers' => ['nullable', 'string', 'max:5000'],
+        'pricing_matrix' => ['nullable', 'string', 'max:10000'],
+        'journey_itinerary' => ['nullable', 'string', 'max:5000'],
         'excursion_duration_minutes' => ['nullable', 'integer', 'min:30', 'max:1440'],
         'activity_start_time' => ['nullable', 'date_format:H:i'],
         'activity_end_time' => ['nullable', 'date_format:H:i'],
@@ -1153,7 +1346,7 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
     }
 
     if ($canonicalListingCategory !== null) {
-        if (in_array($canonicalListingCategory, ['accommodation', 'remote_workspace'], true)) {
+        if (in_array($canonicalListingCategory, ['accommodation', 'liveaboard', 'remote_workspace'], true)) {
             // Preserve intentional clears from checkbox-based transfer UI.
             $validated['transfer_options'] = $request->input('transfer_options', []);
             $validated['transfer_rates'] = $request->input('transfer_rates', []);
@@ -1176,11 +1369,11 @@ Route::post('/portal/vendor/properties/{property}/update', function (Request $re
         ? (int) $existingDetails['capacity_value']
         : null;
 
-    $normalizedMaxGuests = $canonicalListingCategory === 'accommodation'
+    $normalizedMaxGuests = in_array($canonicalListingCategory, ['accommodation', 'liveaboard'], true)
         ? 0
         : max(0, (int) ($categoryCapacity ?? ($validated['max_guests'] ?? ($propertyRecord->max_guests ?? 0))));
 
-    $resolvedBasePrice = $canonicalListingCategory === 'accommodation'
+    $resolvedBasePrice = in_array($canonicalListingCategory, ['accommodation', 'liveaboard'], true)
         ? 0
         : (float) ($validated['price_local'] ?? ($validated['base_price'] ?? ($propertyRecord->base_price ?? 0)));
 

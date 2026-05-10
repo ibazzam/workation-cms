@@ -179,6 +179,7 @@
             grid-template-columns: minmax(0, 1fr) 220px;
             gap: 8px;
             align-items: start;
+            min-height: 360px;
         }
         .st-gallery-primary-wrap {
             border-radius: 10px;
@@ -200,9 +201,17 @@
             gap: 8px;
             background: transparent;
             padding: 0;
+            max-height: 360px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            align-content: start;
         }
 
-        .st-gallery-thumb { height: 80px; }
+        .st-gallery-thumb {
+            height: 80px;
+            flex: 0 0 auto;
+            min-height: 80px;
+        }
 
         .st-equipment-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 16px 0 0; }
         .st-ticket-card {
@@ -419,61 +428,6 @@
         </div>
         </div>
 
-        {{-- SERVICE SNAPSHOT ──────────────────────────────────────────────────── --}}
-        <div class="st-section">
-            <h2 class="st-section-title">Service Snapshot</h2>
-            <div class="st-snapshot">
-                <div class="st-snapshot-card">
-                    <h4>What is Included</h4>
-                    <ul>
-                        <li>Vessel seating and transport</li>
-                        <li>Safety briefing</li>
-                        <li>Life jacket</li>
-                        <li>Professional crew</li>
-                    </ul>
-                </div>
-                <div class="st-snapshot-card">
-                    <h4>What We Provide</h4>
-                    <ul>
-                        <li>Comfortable seating</li>
-                        <li>Air-conditioned cabin</li>
-                        <li>Refreshments (on demand)</li>
-                        <li>Luggage assistance</li>
-                    </ul>
-                </div>
-                <div class="st-snapshot-card info">
-                    <h4>Departure / Reporting Point</h4>
-                    <ul>
-                        <li><strong>Duration:</strong> Varies by route</li>
-                        <li><strong>Assembly:</strong> Main jetty dock</li>
-                        <li><strong>Check-in:</strong> 15 mins before</li>
-                        <li><strong>Meeting:</strong> Ticket counter</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        {{-- SERVICE DESCRIPTION ──────────────────────────────────────────────── --}}
-        <div class="st-section">
-            <h2 class="st-section-title">Service Description</h2>
-            <p class="st-service-desc">
-                {{ $listingDetails['description'] ?? 'Professional sea transport service offering comfortable and safe journeys across the Maldivian atolls. Our modern fleet operates on scheduled routes with experienced crew and modern safety equipment. Perfect for inter-island transfers, resort arrivals, and island hopping adventures.' }}
-            </p>
-        </div>
-
-        {{-- TERMS / POLICIES ──────────────────────────────────────────────────── --}}
-        <div class="st-section">
-            <h2 class="st-section-title">Terms / Policies</h2>
-            <ul class="st-terms-list">
-                <li>Trips may be rescheduled in case of unsafe weather</li>
-                <li>Life jackets must be worn at all times on deck</li>
-                <li>Children under 12 must be accompanied by an adult</li>
-                <li>Passengers must arrive 15 minutes before departure</li>
-                <li>Refunds available for cancellations made 24 hours in advance</li>
-                <li>Luggage allowance: 1 piece per passenger</li>
-            </ul>
-        </div>
-
         {{-- AVAILABLE TICKETS / ROUTES ─────────────────────────────────────────── --}}
         <div class="st-section">
             <h2 class="st-section-title">Available Tickets &amp; Routes</h2>
@@ -635,6 +589,61 @@
                     </div>
                 @endforelse
             </div>
+        </div>
+
+        {{-- SERVICE SNAPSHOT ──────────────────────────────────────────────────── --}}
+        <div class="st-section">
+            <h2 class="st-section-title">Service Snapshot</h2>
+            <div class="st-snapshot">
+                <div class="st-snapshot-card">
+                    <h4>What is Included</h4>
+                    <ul>
+                        <li>Vessel seating and transport</li>
+                        <li>Safety briefing</li>
+                        <li>Life jacket</li>
+                        <li>Professional crew</li>
+                    </ul>
+                </div>
+                <div class="st-snapshot-card">
+                    <h4>What We Provide</h4>
+                    <ul>
+                        <li>Comfortable seating</li>
+                        <li>Air-conditioned cabin</li>
+                        <li>Refreshments (on demand)</li>
+                        <li>Luggage assistance</li>
+                    </ul>
+                </div>
+                <div class="st-snapshot-card info">
+                    <h4>Departure / Reporting Point</h4>
+                    <ul>
+                        <li><strong>Duration:</strong> Varies by route</li>
+                        <li><strong>Assembly:</strong> Main jetty dock</li>
+                        <li><strong>Check-in:</strong> 15 mins before</li>
+                        <li><strong>Meeting:</strong> Ticket counter</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        {{-- SERVICE DESCRIPTION ──────────────────────────────────────────────── --}}
+        <div class="st-section">
+            <h2 class="st-section-title">Service Description</h2>
+            <p class="st-service-desc">
+                {{ $listingDetails['description'] ?? 'Professional sea transport service offering comfortable and safe journeys across the Maldivian atolls. Our modern fleet operates on scheduled routes with experienced crew and modern safety equipment. Perfect for inter-island transfers, resort arrivals, and island hopping adventures.' }}
+            </p>
+        </div>
+
+        {{-- TERMS / POLICIES ──────────────────────────────────────────────────── --}}
+        <div class="st-section">
+            <h2 class="st-section-title">Terms / Policies</h2>
+            <ul class="st-terms-list">
+                <li>Trips may be rescheduled in case of unsafe weather</li>
+                <li>Life jackets must be worn at all times on deck</li>
+                <li>Children under 12 must be accompanied by an adult</li>
+                <li>Passengers must arrive 15 minutes before departure</li>
+                <li>Refunds available for cancellations made 24 hours in advance</li>
+                <li>Luggage allowance: 1 piece per passenger</li>
+            </ul>
         </div>
 
         {{-- SIMILAR SERVICES ─────────────────────────────────────────────────── --}}

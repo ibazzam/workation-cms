@@ -22,7 +22,7 @@
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
             <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Vessel Details</p>
         </div>
-        <div class="ops-field">
+        <div id="vessel-details-section" class="ops-field">
             <label for="property_vessel_name">Vessel Name</label>
             <input id="property_vessel_name" name="vessel_name" class="ops-input" type="text" maxlength="120" value="{{ old('vessel_name', $propertyDetails['vessel_name'] ?? '') }}" placeholder="e.g. Island Express">
         </div>
@@ -147,8 +147,8 @@
             $stopSequenceText = old('stop_sequence', implode("\n", array_map('trim', $stopSequenceArr)));
             $existingRouteSchedules = old('route_schedules', json_encode($propertyDetails['route_schedules'] ?? []));
         @endphp
-        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border:2px solid #1d7bb5; border-radius:12px; background:#f0f8ff; padding:16px 16px 12px; margin-top:1rem; order:-1;">
-            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Step 1. Route Legs — Timetable &amp; Fares</p>
+        <div id="route-fares-section" class="ops-field ops-field-wide" style="grid-column:1/-1; border:2px solid #1d7bb5; border-radius:12px; background:#f0f8ff; padding:16px 16px 12px; margin-top:1rem;">
+            <p style="margin:0 0 0.3rem; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Route Legs &amp; Fares</p>
             <p style="font-size:0.85rem; color:#51697b; margin:0 0 0.8rem;">Maintain one card per bookable leg. Per-leg prices override the fallback prices in Step 3.</p>
 
             <div style="background:#fff; border:1px solid #cfe0eb; border-radius:8px; padding:10px 12px; margin-bottom:10px;">

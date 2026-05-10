@@ -1,7 +1,12 @@
 {{-- Standalone edit form: Accommodation --}}
+@php
+    $accommodationListingCategory = (string) ($listingCategoryOverride ?? 'accommodation');
+    $accommodationCategoryLabel = (string) ($categoryLabelOverride ?? ucwords(str_replace('_', ' ', $accommodationListingCategory)));
+    $accommodationCancelHref = (string) ($cancelHrefOverride ?? ('/vendor/listings/' . $accommodationListingCategory));
+@endphp
 <form class="ops-form" method="POST" action="/portal/vendor/properties/{{ $propertyId }}/update">
     @csrf
-    <input type="hidden" name="listing_category" value="accommodation">
+    <input type="hidden" name="listing_category" value="{{ $accommodationListingCategory }}">
     <input type="hidden" name="property_form_intent" value="1">
     <input name="area_unit" type="hidden" value="sqft">
     <input name="measurement_system" type="hidden" value="imperial">
@@ -59,6 +64,31 @@
 
         $savedPropertyAmenities = is_array($propertyDetails['property_amenities'] ?? null) ? $propertyDetails['property_amenities'] : [];
         $savedPropertyFeatures = is_array($propertyDetails['property_features'] ?? null) ? $propertyDetails['property_features'] : [];
+        $savedLiveaboardStopoversText = '';
+        if (is_array($propertyDetails['stopovers'] ?? null)) {
+            $savedLiveaboardStopoversText = implode("\n", array_map(static function ($stop): string {
+                if (!is_array($stop)) {
+                    return trim((string) $stop);
+                }
+                $name = trim((string) ($stop['name'] ?? ''));
+                if ($name === '') {
+                    return '';
+                }
+                $embark = !empty($stop['allow_embark']) ? 'yes' : 'no';
+                $disembark = !empty($stop['allow_disembark']) ? 'yes' : 'no';
+                return $name . '|' . $embark . '|' . $disembark;
+            }, $propertyDetails['stopovers']));
+            $savedLiveaboardStopoversText = trim((string) $savedLiveaboardStopoversText);
+        }
+        $savedLiveaboardPricingMatrixText = '';
+        if (is_array($propertyDetails['pricing_matrix'] ?? null)) {
+            $savedLiveaboardPricingMatrixText = implode("\n", array_map(
+                static fn ($routeKey, $price): string => trim((string) $routeKey) . '=' . (is_numeric($price) ? (string) $price : trim((string) $price)),
+                array_keys($propertyDetails['pricing_matrix']),
+                array_values($propertyDetails['pricing_matrix'])
+            ));
+            $savedLiveaboardPricingMatrixText = trim((string) $savedLiveaboardPricingMatrixText);
+        }
     @endphp
 
     <div class="listing-form-stack">
@@ -163,6 +193,49 @@
                     <div class="map-picker"><div data-edit-map-wrap aria-label="Edit pin location"></div></div>
                     <p class="map-help">Click to move the pin.</p>
                 </div>
+                @if ($accommodationListingCategory === 'liveaboard')
+                    <div class="ops-field ops-field-wide">
+                        <label style="font-weight:700; color:#1d4b66;">Journey Map Guidance</label>
+                        <p class="map-help" style="margin-bottom:8px;">Keep one pin for the primary vessel/embark base. Then maintain embark point, stopovers, and disembark point below for route clarity.</p>
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_start_point">Embark Point</label>
+                        <input id="liveaboard_start_point" name="start_point" class="ops-input" type="text" maxlength="120" value="{{ old('start_point', $propertyDetails['start_point'] ?? '') }}" placeholder="e.g. Male Jetty">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_end_point">End Point / Disembark</label>
+                        <input id="liveaboard_end_point" name="end_point" class="ops-input" type="text" maxlength="120" value="{{ old('end_point', $propertyDetails['end_point'] ?? '') }}" placeholder="e.g. Gan Harbor">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_journey_days">Journey Duration (days)</label>
+                        <input id="liveaboard_journey_days" name="journey_duration_days" class="ops-input" type="number" min="1" max="90" value="{{ old('journey_duration_days', $propertyDetails['journey_duration_days'] ?? '') }}" placeholder="e.g. 5">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_vessel_name">Vessel / Boat Name</label>
+                        <input id="liveaboard_vessel_name" name="vessel_name" class="ops-input" type="text" maxlength="120" value="{{ old('vessel_name', $propertyDetails['vessel_name'] ?? '') }}" placeholder="e.g. Ocean Explorer">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_registration_no">Registration / Hull No.</label>
+                        <input id="liveaboard_registration_no" name="registration_no" class="ops-input" type="text" maxlength="60" value="{{ old('registration_no', $propertyDetails['registration_no'] ?? '') }}">
+                    </div>
+                    <div class="ops-field">
+                        <label for="liveaboard_cabin_count">Cabin Count</label>
+                        <input id="liveaboard_cabin_count" name="cabin_count" class="ops-input" type="number" min="1" max="500" value="{{ old('cabin_count', $propertyDetails['cabin_count'] ?? '') }}" placeholder="e.g. 8">
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="liveaboard_stopovers">Stopovers</label>
+                        <textarea id="liveaboard_stopovers" name="stopovers" class="ops-textarea" rows="4" maxlength="5000" placeholder="Format per line: StopName|yes|yes&#10;Example: Vaavu Atoll|yes|no">{{ old('stopovers', $savedLiveaboardStopoversText) }}</textarea>
+                        <p class="map-help">Use yes/no flags as: stop name | allow embark | allow disembark.</p>
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="liveaboard_pricing_matrix">Route / Package Pricing Matrix</label>
+                        <textarea id="liveaboard_pricing_matrix" name="pricing_matrix" class="ops-textarea" rows="4" maxlength="10000" placeholder="Format per line: FromPoint→ToPoint=Price&#10;Example: Male→Gan=5000">{{ old('pricing_matrix', $savedLiveaboardPricingMatrixText) }}</textarea>
+                    </div>
+                    <div class="ops-field ops-field-wide">
+                        <label for="liveaboard_journey_itinerary">Route Itinerary / Program (optional)</label>
+                        <textarea id="liveaboard_journey_itinerary" name="journey_itinerary" class="ops-textarea" rows="4" maxlength="5000" placeholder="Day 1: Male boarding and safety briefing...">{{ old('journey_itinerary', $propertyDetails['journey_itinerary'] ?? '') }}</textarea>
+                    </div>
+                @endif
             </div>
         </section>
 
@@ -226,7 +299,7 @@
                                 <input type="checkbox" name="transfer_options[]" value="{{ $transferOptionKey }}" @checked(in_array($transferOptionKey, old('transfer_options', $savedTransferOptions), true))>
                                 <span>{{ $transferOptionLabel }}</span>
                             </label>
-                            <small>Optional transfer mode for this accommodation listing.</small>
+                            <small>Optional transfer mode for this {{ strtolower($accommodationCategoryLabel) }} listing.</small>
                         </div>
                         <label class="listing-transfer-rate">
                             <span>Local Adult</span>
@@ -315,6 +388,6 @@
 
     <div class="inline-actions" style="margin-top:12px;">
         <button class="btn btn-primary" type="submit">Save Changes</button>
-        <a class="btn btn-secondary" href="/vendor/listings/accommodation">Cancel</a>
+        <a class="btn btn-secondary" href="{{ $accommodationCancelHref }}">Cancel</a>
     </div>
 </form>

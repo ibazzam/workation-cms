@@ -375,6 +375,35 @@
             </div>
         </section>
 
+        @if ($showOverviewPage)
+        <section class="card" data-panel-group="overview" aria-label="Vendor operating scope" style="margin-top:10px;">
+            <p class="label">How To Operate The Portal</p>
+            <p class="small" style="margin-top:0;">Follow this sequence for reliable daily operations: listings -> reservations -> availability -> pricing -> billing -> customer care.</p>
+            <div class="ops-metrics" style="margin-top:10px;">
+                <article class="ops-metric">
+                    <p class="metric-label">My Listings</p>
+                    <p class="metric-value">Create / Update / Remove</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Reservations</p>
+                    <p class="metric-value">Review / Confirm / Complete</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Availability</p>
+                    <p class="metric-value">Daily slot calendar</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Pricing</p>
+                    <p class="metric-value">Rates / Tariffs / Rules</p>
+                </article>
+                <article class="ops-metric">
+                    <p class="metric-label">Collections &amp; Payouts</p>
+                    <p class="metric-value">Invoice -> Collection -> Payout</p>
+                </article>
+            </div>
+        </section>
+        @endif
+
         <div class="portal-shell">
         @include('vendor-portal.partials.sidebar')
 

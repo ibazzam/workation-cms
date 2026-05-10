@@ -351,6 +351,13 @@
             display: none;
         }
 
+        @media (min-width: 901px) {
+            .nav-group-body,
+            .nav-group-body:not(.is-open) {
+                display: grid;
+            }
+        }
+
         .portal-content {
             min-width: 0;
             width: 100%;

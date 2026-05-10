@@ -16,7 +16,7 @@
     $sidebarOverviewOpen = in_array($activePortalPage ?? 'overview', ['overview', 'reports'], true);
     $sidebarListingsOpen = ($activePortalPage ?? '') === 'listings';
     $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations', 'availability'], true);
-    $sidebarGrowthOpen = in_array($activePortalPage ?? '', ['promotions', 'engagement', 'billing'], true);
+    $sidebarBillingOpen = ($activePortalPage ?? '') === 'billing';
     $sidebarAccountOpen = ($activePortalPage ?? '') === 'profile';
 @endphp
 
@@ -43,7 +43,6 @@
         </button>
         <div class="nav-group-body {{ $sidebarOverviewOpen ? 'is-open' : '' }}" data-vendor-nav-group="overview">
             <a class="nav-item-link {{ ($activePortalPage ?? 'overview') === 'overview' ? 'prominent' : '' }}" href="/vendor?page=overview" data-panel-key="overview">Dashboard</a>
-            <a class="nav-item-link {{ ($activePortalPage ?? '') === 'reports' ? 'prominent' : '' }}" href="/vendor/reports" data-panel-key="overview">Reports &amp; Performance</a>
         </div>
     </div>
 
@@ -65,6 +64,7 @@
             </button>
             <div class="nav-group-body {{ $sidebarOperationsOpen ? 'is-open' : '' }}" data-vendor-nav-group="operations">
                 <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['reservations', 'operations'], true) ? 'prominent' : '' }}" href="/vendor/reservations" data-panel-key="reservations">Reservations Queue</a>
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'availability' ? 'prominent' : '' }}" href="/vendor/availability" data-panel-key="availability">Availability</a>
             </div>
         </div>
     @else
@@ -74,13 +74,12 @@
     @endif
 
     <div class="nav-group">
-        <button class="nav-group-header" type="button" data-vendor-nav-toggle="growth" aria-expanded="{{ $sidebarGrowthOpen ? 'true' : 'false' }}">
-            <span>Growth &amp; Billing</span>
+        <button class="nav-group-header" type="button" data-vendor-nav-toggle="billing" aria-expanded="{{ $sidebarBillingOpen ? 'true' : 'false' }}">
+            <span>Billing</span>
             <span class="nav-chevron" aria-hidden="true">▾</span>
         </button>
-        <div class="nav-group-body {{ $sidebarGrowthOpen ? 'is-open' : '' }}" data-vendor-nav-group="growth">
+        <div class="nav-group-body {{ $sidebarBillingOpen ? 'is-open' : '' }}" data-vendor-nav-group="billing">
             <a class="nav-item-link {{ ($activePortalPage ?? '') === 'billing' ? 'prominent' : '' }}" href="{{ '/vendor/billing' . $sidebarCategoryQuery }}" data-panel-key="billing">Collections &amp; Payouts</a>
-            <a class="nav-item-link {{ in_array($activePortalPage ?? '', ['engagement', 'promotions'], true) ? 'prominent' : '' }}" href="/vendor/promotions" data-panel-key="engagement">Customers, Reviews &amp; Loyalty</a>
         </div>
     </div>
 

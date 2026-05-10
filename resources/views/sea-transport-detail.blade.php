@@ -40,14 +40,14 @@
         .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
 
         .top-search-shell {
-            position: sticky;
-            top: var(--property-header-offset);
-            z-index: 60;
+            position: relative;
+            top: 0;
+            z-index: 1;
             border: 1px solid #d4e5ef;
-            border-radius: 0;
+            border-radius: 14px;
             background: #ffffff;
             padding: 10px;
-            margin-bottom: 0;
+            margin-bottom: 14px;
             width: 100%;
         }
 
@@ -128,6 +128,7 @@
         .st-breadcrumb { display: none; }
 
         .st-header { margin-bottom: 18px; }
+        .st-header-panel { margin-top: 12px; }
         .st-title { font-size: 1.65rem; font-weight: 800; color: var(--ink); margin: 0 0 6px; line-height: 1.2; }
         .st-location { font-size: 0.88rem; color: var(--muted); margin: 0 0 8px; }
         .st-description { font-size: 0.88rem; color: #4a6478; line-height: 1.6; margin: 0 0 14px; }
@@ -352,13 +353,13 @@
                 @endphp
                 <div class="st-gallery-layout">
                     <div class="st-gallery-primary-wrap">
-                        <img id="st_gallery_primary" src="{{ $galleryItems[0] }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary" onerror="this.onerror=null;this.src='{{ $stImageFallback }}';">
+                        <img id="st_gallery_primary" src="{{ $galleryItems[0] }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary" data-fallback-src="{{ $stImageFallback }}">
                     </div>
 
                     <div class="st-gallery-thumbs">
                         @foreach($galleryItems as $galleryIndex => $galleryUrl)
-                            <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick="updateHeroImage('{{ $galleryUrl }}', this)">
-                                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy" onerror="this.onerror=null;this.src='{{ $stImageFallback }}';">
+                            <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick='updateHeroImage(@json($galleryUrl), this)'>
+                                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy" data-fallback-src="{{ $stImageFallback }}">
                             </div>
                         @endforeach
                     </div>
@@ -366,15 +367,29 @@
             </div>
         </div>
 
+        <div class="st-section st-header-panel">
         <div class="st-header">
             <h1 class="st-title">{{ $property->name ?? 'Vessel' }}</h1>
-            @if($vendor)
+            @php
+                $primaryRoute = collect($routeSchedules ?? [])->first(function ($candidateRoute) {
+                    return trim((string) ($candidateRoute['origin'] ?? '')) !== ''
+                        || trim((string) ($candidateRoute['destination'] ?? '')) !== '';
+                });
+            @endphp
+            @if($primaryRoute)
                 <div class="st-location">
-                    <strong>{{ $vendor->name ?? ($vendor->business_name ?? 'Operator') }}</strong>
-                    @if(!empty($listingDetails['location']))
-                        · {{ $listingDetails['location'] }}
+                    <strong>{{ trim((string) ($primaryRoute['origin'] ?? '')) !== '' ? trim((string) ($primaryRoute['origin'] ?? '')) : 'Departure point' }}</strong>
+                    <span aria-hidden="true">→</span>
+                    <strong>{{ trim((string) ($primaryRoute['destination'] ?? '')) !== '' ? trim((string) ($primaryRoute['destination'] ?? '')) : 'Arrival point' }}</strong>
+                    @if(trim((string) ($primaryRoute['dep_time'] ?? '')) !== '')
+                        · Departs {{ trim((string) ($primaryRoute['dep_time'] ?? '')) }}
+                    @endif
+                    @if(trim((string) ($primaryRoute['arr_time'] ?? '')) !== '')
+                        · Arrives {{ trim((string) ($primaryRoute['arr_time'] ?? '')) }}
                     @endif
                 </div>
+            @elseif(!empty($listingDetails['location']))
+                <div class="st-location">{{ $listingDetails['location'] }}</div>
             @endif
             @if(!empty($listingDetails['description']))
                 <p class="st-description">{{ $listingDetails['description'] }}</p>
@@ -401,6 +416,7 @@
                 <button class="st-share-btn" title="Share on LinkedIn" onclick="shareOnLinkedIn()"><i class="fa-brands fa-linkedin-in"></i></button>
                 <button class="st-share-btn" title="Copy link" onclick="copyLinkToClipboard()"><i class="fa-solid fa-link"></i></button>
             </div>
+        </div>
         </div>
 
         {{-- SERVICE SNAPSHOT ──────────────────────────────────────────────────── --}}
@@ -667,7 +683,21 @@
 </div>
 </main>
 
+@include('partials.global-site-footer')
+
 <script>
+    function installImageFallbacks() {
+        document.querySelectorAll('img[data-fallback-src]').forEach(function (img) {
+            img.addEventListener('error', function () {
+                const fallbackSrc = img.getAttribute('data-fallback-src') || '';
+                if (fallbackSrc === '' || img.getAttribute('src') === fallbackSrc) {
+                    return;
+                }
+                img.setAttribute('src', fallbackSrc);
+            });
+        });
+    }
+
     function updateHeroImage(src, thumbEl) {
         const hero = document.getElementById('st_gallery_primary');
         if (hero) {
@@ -724,6 +754,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        installImageFallbacks();
         const tripTypeSelects = document.querySelectorAll('select[id^="trip_type_"]');
         tripTypeSelects.forEach(function (selectEl) {
             const idx = (selectEl.id || '').replace('trip_type_', '');

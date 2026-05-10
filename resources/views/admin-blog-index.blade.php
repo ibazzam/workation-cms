@@ -168,7 +168,7 @@
         <header class="top" aria-label="Blog manager header">
             <h1 class="title">Blog Manager</h1>
             <div class="actions">
-                <a class="btn" href="/admin">Back to Admin</a>
+                <a class="btn" href="{{ adminPortalEntryPath() }}">Back to Admin</a>
                 <a class="btn primary" href="/portal/admin/blog/create">New Post</a>
             </div>
         </header>

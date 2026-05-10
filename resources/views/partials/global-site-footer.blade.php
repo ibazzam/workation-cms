@@ -236,7 +236,6 @@
                     <li><a href="/vendor">Partner Login</a></li>
                     <li><a href="/portal/vendor/register">Become a Partner</a></li>
                     <li><a href="/portal/customer/register">Member Registration</a></li>
-                    <li><a href="/admin">Admin Login</a></li>
                 </ul>
             </section>
 

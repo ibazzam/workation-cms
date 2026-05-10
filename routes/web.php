@@ -65,7 +65,7 @@ if (!function_exists('portalRoutePath')) {
     function portalRoutePath(string $portal): string
     {
         if ($portal === 'admin') {
-            return '/admin';
+            return adminPortalEntryPath();
         }
 
         if ($portal === 'customer') {
@@ -73,6 +73,27 @@ if (!function_exists('portalRoutePath')) {
         }
 
         return '/vendor';
+    }
+}
+
+if (!function_exists('adminPortalEntryPath')) {
+    function adminPortalEntryPath(?string $page = null): string
+    {
+        $configuredPath = firstNonEmptyEnv([
+            'PORTAL_ADMIN_ENTRY_PATH',
+            'WORKATION_ADMIN_ENTRY_PATH',
+            'ADMIN_ENTRY_PATH',
+        ]);
+
+        $slug = trim($configuredPath, " \t\n\r\0\x0B/");
+        if ($slug === '') {
+            $slug = 'ops-console-3k9m2q7x';
+        }
+
+        $basePath = '/' . $slug;
+        $normalizedPage = strtolower(trim((string) ($page ?? '')));
+
+        return $normalizedPage === '' ? $basePath : ($basePath . '/' . rawurlencode($normalizedPage));
     }
 }
 

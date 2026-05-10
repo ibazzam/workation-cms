@@ -975,8 +975,8 @@
                     <div class="hero-links">
                         <a class="hero-link" href="/">Back to Home</a>
                         <a class="hero-link" href="/vendor">Go to Partners Portal</a>
-                        <a class="hero-link" href="/admin/finance">Open Finance</a>
-                        <a class="hero-link" href="/admin/moderation">Review Vendors</a>
+                        <a class="hero-link" href="{{ adminPortalEntryPath('finance') }}">Open Finance</a>
+                        <a class="hero-link" href="{{ adminPortalEntryPath('moderation') }}">Review Vendors</a>
                         <a class="hero-link" href="/portal/admin/blog">Manage Blog</a>
                     </div>
                 </div>
@@ -1005,29 +1005,29 @@
 
             <p class="nav-group-title">Overview</p>
             @if (in_array('overview', $adminAllowedPages))
-            <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="/admin/overview">Dashboard</a>
+            <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('overview') }}">Dashboard</a>
             @endif
             @if (in_array('permissions', $adminAllowedPages))
-            <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="/admin/permissions">Role Permissions</a>
+            <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('permissions') }}">Role Permissions</a>
             @endif
             @if (in_array('audit', $adminAllowedPages))
-            <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="/admin/audit">Audit History</a>
+            <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('audit') }}">Audit History</a>
             @endif
 
             <p class="nav-group-title">Finance &amp; Catalog</p>
             @if (in_array('finance', $adminAllowedPages) && $canModerateFinance)
-            <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="/admin/finance">Finance Moderation</a>
+            <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('finance') }}">Finance Moderation</a>
             @endif
             @if (in_array('media', $adminAllowedPages) && $canManageVendorUsers)
-            <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="/admin/media">Hero Image Settings</a>
+            <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('media') }}">Hero Image Settings</a>
             @endif
             @if (in_array('catalog', $adminAllowedPages) && $canManageVendorUsers)
-            <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="/admin/catalog">Listing Options</a>
+            <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('catalog') }}">Listing Options</a>
             @endif
 
             @if (in_array('content', $adminAllowedPages) && (($canManageContent ?? false) === true))
             <p class="nav-group-title">Content &amp; Media</p>
-            <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="/admin/content">Content Hub</a>
+            <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('content') }}">Content Hub</a>
             <a href="/portal/admin/blog">Blog Manager</a>
             <a href="/portal/admin/atlas">Island Atlas Manager</a>
             <a href="/portal/admin/newsletter">Newsletter Manager</a>
@@ -1038,15 +1038,15 @@
             <p class="nav-group-title">Moderation &amp; Vendors</p>
             @endif
             @if (in_array('moderation', $adminAllowedPages))
-            <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="/admin/moderation" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
+            <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('moderation') }}" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
             @endif
             @if (in_array('listings', $adminAllowedPages) && $canModerateListings)
-            <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="/admin/listings">Listing Moderation</a>
+            <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('listings') }}">Listing Moderation</a>
             @endif
 
             @if (in_array('tools', $adminAllowedPages))
             <p class="nav-group-title">Tools</p>
-            <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="/admin/tools">Session + API</a>
+            <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('tools') }}">Session + API</a>
             @endif
         </nav>
 

@@ -1477,6 +1477,34 @@
             min-width: 1680px;
         }
 
+        .reservation-ops-table th,
+        .reservation-ops-table td {
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.35;
+        }
+
+        .reservation-ops-table th:last-child,
+        .reservation-ops-table td:last-child {
+            min-width: 260px;
+            width: 260px;
+        }
+
+        .reservation-ops-table .inline-status-form {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            align-items: stretch;
+        }
+
+        .reservation-ops-table .inline-status-form .ops-select,
+        .reservation-ops-table .inline-status-form .ops-input,
+        .reservation-ops-table .inline-status-form .btn,
+        .reservation-ops-table td:last-child > form .btn {
+            width: 100%;
+            margin: 0;
+        }
+
         .ops-table th,
         .ops-table td {
             text-align: left;
@@ -2797,6 +2825,16 @@
         }
 
         @media (max-width: 900px) {
+            .reservation-ops-table {
+                min-width: 1540px;
+            }
+
+            .reservation-ops-table th:last-child,
+            .reservation-ops-table td:last-child {
+                min-width: 240px;
+                width: 240px;
+            }
+
             .workspace-tabs {
                 flex-wrap: nowrap;
                 overflow-x: auto;
@@ -3014,6 +3052,10 @@
         }
 
         @media (max-width: 640px) {
+            .reservation-ops-table {
+                min-width: 1420px;
+            }
+
             .ops-metrics {
                 grid-template-columns: 1fr 1fr;
             }

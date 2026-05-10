@@ -184,7 +184,11 @@
                         }
                     }
                     if (!in_array($categoryKey, $allVendorCategoryKeys, true)) {
-                        $categoryKey = 'accommodation';
+                        if (in_array('accommodation', $allVendorCategoryKeys, true)) {
+                            $categoryKey = 'accommodation';
+                        } else {
+                            continue;
+                        }
                     }
                     $listingCountByCategory[$categoryKey]++;
                     $availabilityTargetsByCategory[$categoryKey]->push([

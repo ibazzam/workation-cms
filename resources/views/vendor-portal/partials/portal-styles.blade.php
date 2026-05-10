@@ -1474,7 +1474,7 @@
         }
 
         .reservation-ops-table {
-            min-width: 1680px;
+            min-width: 1320px;
         }
 
         .reservation-ops-table th,
@@ -1486,8 +1486,8 @@
 
         .reservation-ops-table th:last-child,
         .reservation-ops-table td:last-child {
-            min-width: 260px;
-            width: 260px;
+            min-width: 220px;
+            width: 220px;
         }
 
         .reservation-ops-table .inline-status-form {
@@ -2826,13 +2826,13 @@
 
         @media (max-width: 900px) {
             .reservation-ops-table {
-                min-width: 1540px;
+                min-width: 1240px;
             }
 
             .reservation-ops-table th:last-child,
             .reservation-ops-table td:last-child {
-                min-width: 240px;
-                width: 240px;
+                min-width: 200px;
+                width: 200px;
             }
 
             .workspace-tabs {
@@ -3053,7 +3053,7 @@
 
         @media (max-width: 640px) {
             .reservation-ops-table {
-                min-width: 1420px;
+                min-width: 1120px;
             }
 
             .ops-metrics {

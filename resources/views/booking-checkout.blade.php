@@ -171,6 +171,9 @@
         $transferAppliedAdultRate = max(0, (float) ($summary['transfer_applied_adult_rate'] ?? 0));
         $transferAppliedChildRate = max(0, (float) ($summary['transfer_applied_child_rate'] ?? 0));
         $transferOptions = collect($summary['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
+        if ($categoryKey === 'liveaboard' && $transferOptions->isEmpty()) {
+            $isNoTransferCategory = true;
+        }
         $selectedTransferCode = strtolower(trim((string) ($summary['transfer_option'] ?? '')));
         if (in_array($selectedTransferCode, ['none', 'no_transfer', 'decline', 'declined'], true)) {
             $selectedTransferCode = '';

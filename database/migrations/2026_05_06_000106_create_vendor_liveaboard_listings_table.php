@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('vendor_liveaboard_listings', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('vendor_property_id')->index();
+            $table->unsignedBigInteger('vendor_property_id')->nullable()->index();
             $table->unsignedBigInteger('vendor_user_id')->index();
             $table->string('name', 200)->nullable();
             $table->string('status', 32)->default('active')->index();

@@ -553,6 +553,63 @@ if (!function_exists('workationResolvePropertyVendorUserId')) {
     }
 }
 
+if (!function_exists('workationLiveaboardSalesClosed')) {
+    function workationLiveaboardSalesClosed(array $listingDetails): bool
+    {
+        $stopSaleDate = trim((string) ($listingDetails['journey_stop_sale_date'] ?? ''));
+        $autoStop = (bool) ($listingDetails['auto_stop_sale_on_boarding'] ?? true);
+        if ($stopSaleDate === '' && $autoStop) {
+            $stopSaleDate = trim((string) ($listingDetails['journey_start_date'] ?? ''));
+        }
+
+        if ($stopSaleDate === '') {
+            return false;
+        }
+
+        try {
+            $today = Carbon::today();
+            return $today->greaterThanOrEqualTo(Carbon::parse($stopSaleDate)->startOfDay());
+        } catch (\Throwable $exception) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('workationLiveaboardTransferEligibility')) {
+    function workationLiveaboardTransferEligibility(?object $roomRow, ?string $boardingPoint = null): array
+    {
+        if (!$roomRow) {
+            return [
+                'eligible' => false,
+                'mid_trip_join' => false,
+                'transfer_included' => true,
+            ];
+        }
+
+        $packageTransferIncluded = isset($roomRow->package_transfer_included)
+            ? (int) $roomRow->package_transfer_included === 1
+            : true;
+        $midTripJoinAllowed = isset($roomRow->package_mid_trip_join_allowed)
+            ? (int) $roomRow->package_mid_trip_join_allowed === 1
+            : false;
+        $packageEmbarkPoint = strtolower(trim((string) ($roomRow->package_embark_point ?? '')));
+        $selectedBoardingPoint = strtolower(trim((string) ($boardingPoint ?? '')));
+
+        $isMidTripJoin = false;
+        if ($selectedBoardingPoint !== '' && $packageEmbarkPoint !== '' && $selectedBoardingPoint !== $packageEmbarkPoint) {
+            $isMidTripJoin = true;
+        }
+
+        $eligible = !$packageTransferIncluded && $midTripJoinAllowed && $isMidTripJoin;
+
+        return [
+            'eligible' => $eligible,
+            'mid_trip_join' => $isMidTripJoin,
+            'transfer_included' => $packageTransferIncluded,
+        ];
+    }
+}
+
 Route::post('/booking/reserve', function (Request $request) {
     $payload = $request->validate([
         'property_id' => ['required', 'integer', 'min:1'],
@@ -685,6 +742,11 @@ Route::post('/booking/reserve', function (Request $request) {
         $propertyDetails = [];
     }
 
+    $listingCategoryKey = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+    if ($listingCategoryKey === 'liveaboard' && workationLiveaboardSalesClosed($propertyDetails)) {
+        return back()->withErrors(['booking' => 'This journey is closed for new bookings. Stop sale date has passed.'])->withInput();
+    }
+
     $discountPercent = (float) ($propertyDetails['promotion_discount_percent'] ?? 0);
     $transferOptionCode = strtolower(trim((string) ($payload['transfer_option'] ?? '')));
     if (in_array($transferOptionCode, ['', 'none', 'no_transfer', 'decline', 'declined'], true)) {
@@ -722,6 +784,20 @@ Route::post('/booking/reserve', function (Request $request) {
             'child_charge' => 0,
         ];
     })->values()->all();
+
+    $liveaboardTransferEligibility = [
+        'eligible' => true,
+        'mid_trip_join' => false,
+        'transfer_included' => false,
+    ];
+    if ($listingCategoryKey === 'liveaboard') {
+        $liveaboardTransferEligibility = workationLiveaboardTransferEligibility($roomRow, (string) ($payload['boarding_point'] ?? ''));
+        if (!($liveaboardTransferEligibility['eligible'] ?? false)) {
+            $transferOptions = [];
+            $transferOptionCode = 'none';
+            $transferChargeOverride = 0.0;
+        }
+    }
     $guestResidency = strtolower(trim((string) ($payload['guest_residency'] ?? '')));
     if (!in_array($guestResidency, ['local_resident', 'foreign_national'], true)) {
         $guestResidency = ReservationPricingPolicy::isForeigner((string) ($payload['primary_nationality'] ?? ''), null)
@@ -839,6 +915,11 @@ Route::post('/booking/reserve', function (Request $request) {
                 'transfer_option' => (string) ($pricing['transfer_option'] ?? $transferOptionCode),
                 'transfer_option_label' => (string) ($pricing['transfer_option_label'] ?? ''),
                 'property_transfer_options' => $transferOptions,
+                'liveaboard_transfer_eligible' => (bool) ($liveaboardTransferEligibility['eligible'] ?? false),
+                'liveaboard_mid_trip_join' => (bool) ($liveaboardTransferEligibility['mid_trip_join'] ?? false),
+                'liveaboard_package_transfer_included' => (bool) ($liveaboardTransferEligibility['transfer_included'] ?? false),
+                'package_embark_point' => trim((string) ($roomRow->package_embark_point ?? '')),
+                'package_disembark_point' => trim((string) ($roomRow->package_disembark_point ?? '')),
                 'transfer_charge' => $transferCharge,
                 'transfer_charge_total' => $transferCharge,
                 'transfer_local_adult_rate' => (float) ($pricing['transfer_local_adult_rate'] ?? 0),
@@ -887,8 +968,9 @@ Route::post('/booking/reserve', function (Request $request) {
         ]);
     }
 
+    $showTransferStep = !empty($transferOptions);
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
+        . ($reservationId ? ('/' . $reservationId . ($showTransferStep ? '/transfer' : '')) : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&room_id=' . (int) $roomRow->id
         . '&checkin=' . urlencode((string) $payload['checkin'])
@@ -1052,6 +1134,10 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
     $listingDetails = json_decode((string) ($propertyRow->listing_details ?? ''), true);
     if (!is_array($listingDetails)) {
         $listingDetails = [];
+    }
+
+    if ($dbCategoryKey === 'liveaboard' && workationLiveaboardSalesClosed($listingDetails)) {
+        return back()->withErrors(['booking' => 'This journey is closed for new bookings. Stop sale date has passed.'])->withInput();
     }
 
     $transferRateMatrix = is_array($listingDetails['transfer_rate_matrix'] ?? null)
@@ -1648,6 +1734,11 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ];
     })->filter(static fn ($option) => is_array($option) && trim((string) ($option['code'] ?? '')) !== '')->values()->all();
 
+    if ($categoryKey === 'liveaboard') {
+        $transferOptions = [];
+        $transferOptionCode = 'none';
+    }
+
     $serviceStart = Carbon::parse((string) $payload['service_start_date'])->startOfDay();
 
     $serviceEndInput = trim((string) ($payload['service_end_date'] ?? ''));
@@ -2090,8 +2181,9 @@ Route::post('/booking/reserve-category', function (Request $request) {
         ]);
     }
 
+    $showTransferStep = !empty($transferOptions);
     $checkoutUrl = '/booking/checkout'
-        . ($reservationId ? ('/' . $reservationId . '/transfer') : '')
+        . ($reservationId ? ('/' . $reservationId . ($showTransferStep ? '/transfer' : '')) : '')
         . '?property_id=' . (int) $propertyRow->id
         . '&category_key=' . urlencode($categoryKey)
         . '&room_id=0'
@@ -2505,6 +2597,13 @@ Route::get('/booking/checkout/{reservation}/transfer', function (Request $reques
         : null;
 
     $transferOptions = collect($notes['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
+    if ($reservationCategoryKey === 'liveaboard') {
+        $liveaboardTransferEligible = (bool) ($notes['liveaboard_transfer_eligible'] ?? false);
+        if (!$liveaboardTransferEligible || $transferOptions->isEmpty()) {
+            return redirect('/booking/checkout/' . $reservation)
+                ->with('status', 'Transfer add-on is not required for this liveaboard package.');
+        }
+    }
     $availableCodes = $transferOptions
         ->map(static fn ($option) => strtolower(trim((string) ($option['code'] ?? ''))))
         ->filter(static fn ($code) => $code !== '')
@@ -2591,7 +2690,15 @@ Route::post('/booking/checkout/{reservation}/transfer', function (Request $reque
     ]);
 
     $notes = workationReservationPaymentNotes($reservationRow);
+    $reservationCategoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
     $transferOptions = collect($notes['property_transfer_options'] ?? [])->filter(static fn ($option) => is_array($option))->values();
+    if ($reservationCategoryKey === 'liveaboard') {
+        $liveaboardTransferEligible = (bool) ($notes['liveaboard_transfer_eligible'] ?? false);
+        if (!$liveaboardTransferEligible || $transferOptions->isEmpty()) {
+            return redirect('/booking/checkout/' . $reservation)
+                ->with('status', 'Transfer add-on is not required for this liveaboard package.');
+        }
+    }
     $availableCodes = $transferOptions
         ->map(static fn ($option) => strtolower(trim((string) ($option['code'] ?? ''))))
         ->filter(static fn ($code) => $code !== '')

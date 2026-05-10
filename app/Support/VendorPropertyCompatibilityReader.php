@@ -217,7 +217,13 @@ class VendorPropertyCompatibilityReader
                 $rows = $rows->map(static function ($row) use ($categoryKey) {
                     $row->listing_category = $categoryKey;
                     $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
-                    $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+                    $vendorPropertyId = isset($row->vendor_property_id) && is_numeric($row->vendor_property_id)
+                        ? (int) $row->vendor_property_id
+                        : 0;
+                    $dedicatedRowId = isset($row->id) && is_numeric($row->id)
+                        ? (int) $row->id
+                        : 0;
+                    $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : $dedicatedRowId;
                     if (isset($row->details) && !isset($row->listing_details)) {
                         $row->listing_details = $row->details;
                     }
@@ -263,7 +269,13 @@ class VendorPropertyCompatibilityReader
                 // Shape to match the legacy vendor_properties column names
                 $row->listing_category = $categoryKey;
                 $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
-                $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+                $vendorPropertyId = isset($row->vendor_property_id) && is_numeric($row->vendor_property_id)
+                    ? (int) $row->vendor_property_id
+                    : 0;
+                $dedicatedRowId = isset($row->id) && is_numeric($row->id)
+                    ? (int) $row->id
+                    : 0;
+                $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : $dedicatedRowId;
                 if (isset($row->details) && !isset($row->listing_details)) {
                     $row->listing_details = $row->details;
                 }
@@ -423,7 +435,13 @@ class VendorPropertyCompatibilityReader
                 ->map(static function ($row) use ($categoryKey) {
                     $row->listing_category = $categoryKey;
                     $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
-                    $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+                    $vendorPropertyId = isset($row->vendor_property_id) && is_numeric($row->vendor_property_id)
+                        ? (int) $row->vendor_property_id
+                        : 0;
+                    $dedicatedRowId = isset($row->id) && is_numeric($row->id)
+                        ? (int) $row->id
+                        : 0;
+                    $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : $dedicatedRowId;
                     if (isset($row->details) && !isset($row->listing_details)) {
                         $row->listing_details = $row->details;
                     }
@@ -459,7 +477,7 @@ class VendorPropertyCompatibilityReader
                 ->orderBy('t.listing_submitted_for_review_at')
                 ->limit($limit)
                 ->get([
-                    't.vendor_property_id as id',
+                    DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
                     't.vendor_user_id',
                     't.name as listing_name',
                     't.listing_moderation_status',
@@ -504,7 +522,7 @@ class VendorPropertyCompatibilityReader
                 ->orderByDesc('t.listing_approved_at')
                 ->limit($limit)
                 ->get([
-                    't.vendor_property_id as id',
+                    DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
                     't.vendor_user_id',
                     't.name as listing_name',
                     't.listing_moderation_status',
@@ -568,7 +586,10 @@ class VendorPropertyCompatibilityReader
             );
 
             $affected = DB::table($tableName)
-                ->where('vendor_property_id', $vendorPropertyId)
+                ->where(function ($query) use ($vendorPropertyId): void {
+                    $query->where('vendor_property_id', $vendorPropertyId)
+                        ->orWhere('id', $vendorPropertyId);
+                })
                 ->update($colPayload);
 
             if ($affected > 0 && $categoryHint === null) {
@@ -627,7 +648,10 @@ class VendorPropertyCompatibilityReader
             );
 
             $affected = DB::table($tableName)
-                ->where('vendor_property_id', $vendorPropertyId)
+                ->where(function ($query) use ($vendorPropertyId): void {
+                    $query->where('vendor_property_id', $vendorPropertyId)
+                        ->orWhere('id', $vendorPropertyId);
+                })
                 ->update($colPayload);
 
             if ($affected > 0 && $categoryHint === null) {
@@ -835,7 +859,13 @@ class VendorPropertyCompatibilityReader
     {
         $row->listing_category = $categoryKey;
         $row->dedicated_row_id = isset($row->id) ? (int) $row->id : 0;
-        $row->id = (int) ($row->vendor_property_id ?? $row->id ?? 0);
+        $vendorPropertyId = isset($row->vendor_property_id) && is_numeric($row->vendor_property_id)
+            ? (int) $row->vendor_property_id
+            : 0;
+        $dedicatedRowId = isset($row->id) && is_numeric($row->id)
+            ? (int) $row->id
+            : 0;
+        $row->id = $vendorPropertyId > 0 ? $vendorPropertyId : $dedicatedRowId;
         if (isset($row->details) && !isset($row->listing_details)) {
             $row->listing_details = $row->details;
         }

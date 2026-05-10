@@ -362,13 +362,13 @@
                 @endphp
                 <div class="st-gallery-layout">
                     <div class="st-gallery-primary-wrap">
-                        <img id="st_gallery_primary" src="{{ $galleryItems[0] }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary" data-fallback-src="{{ $stImageFallback }}">
+                        <img id="st_gallery_primary" src="{{ $galleryItems[0] }}" alt="{{ $property->name ?? 'Vessel' }}" class="st-gallery-primary" data-fallback-src="{{ $stImageFallback }}" onerror="if(this.src!==this.getAttribute('data-fallback-src'))this.src=this.getAttribute('data-fallback-src');">
                     </div>
 
                     <div class="st-gallery-thumbs">
                         @foreach($galleryItems as $galleryIndex => $galleryUrl)
                             <div class="st-gallery-thumb {{ $galleryIndex === 0 ? 'active' : '' }}" onclick='updateHeroImage(@json($galleryUrl), this)'>
-                                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy" data-fallback-src="{{ $stImageFallback }}">
+                                <img src="{{ $galleryUrl }}" alt="{{ ($property->name ?? 'Vessel') . ' image ' . ($galleryIndex + 1) }}" loading="lazy" data-fallback-src="{{ $stImageFallback }}" onerror="if(this.src!==this.getAttribute('data-fallback-src'))this.src=this.getAttribute('data-fallback-src');">
                             </div>
                         @endforeach
                     </div>
@@ -482,9 +482,9 @@
                                 </div>
                             </div>
                             <div class="st-price-col">
-                                <p class="st-price">{{ $displayCurrency }} {{ number_format($displayAdult, 2) }}</p>
+                                <p class="st-price" id="st_price_display_{{ $legIdx }}">{{ $displayCurrency }} {{ number_format($displayAdult, 2) }}</p>
                                 <span class="st-price-unit">per adult</span>
-                                <small style="font-size: 0.7rem; color: var(--muted); margin-top: 8px; display: block;">
+                                <small style="font-size: 0.7rem; color: var(--muted); margin-top: 8px; display: block;" id="st_price_label_{{ $legIdx }}">
                                     @if($isLocal && $legLocalAdult > 0)
                                         Local rate
                                     @elseif(!$isLocal && $legForAdult > 0)
@@ -553,9 +553,13 @@
                                 </div>
                                 <div class="st-field">
                                     <label for="residency_{{ $legIdx }}">Nationality / Residency</label>
+                                    <!--
+                                        Wording: Use 'Local resident' and 'Foreign visitor' for extensibility (future multi-country support).
+                                        You can add more options in the future if needed.
+                                    -->
                                     <select id="residency_{{ $legIdx }}" name="guest_residency" data-local-adult="{{ $legLocalAdult }}" data-local-child="{{ $legLocalChild }}" data-local-infant="{{ $legLocalInfant }}" data-foreign-adult="{{ $legForAdult }}" data-foreign-child="{{ $legForChild }}" data-foreign-infant="{{ $legForInfant }}">
-                                        <option value="foreign_national" {{ $visitorResidency !== 'local_resident' ? 'selected' : '' }}>Foreign national</option>
-                                        <option value="local_resident" {{ $visitorResidency === 'local_resident' ? 'selected' : '' }}>Maldivian resident</option>
+                                        <option value="local_resident" {{ $visitorResidency === 'local_resident' ? 'selected' : '' }}>Local resident</option>
+                                        <option value="foreign_national" {{ $visitorResidency !== 'local_resident' ? 'selected' : '' }}>Foreign visitor</option>
                                     </select>
                                 </div>
                             </div>
@@ -769,6 +773,15 @@
             }
         }
 
+        // Update the price in the upper right corner live
+        var priceDisplay = document.getElementById('st_price_display_' + idx);
+        var priceLabel = document.getElementById('st_price_label_' + idx);
+        if (priceDisplay) {
+            priceDisplay.textContent = currency + ' ' + adultFare.toFixed(2);
+        }
+        if (priceLabel) {
+            priceLabel.textContent = isLocal ? (adultFare > 0 ? 'Local rate' : 'Contact operator') : (adultFare > 0 ? 'Foreign rate' : 'Contact operator');
+        }
         if (estimate) {
             if (isRoundTrip) {
                 const roundTripTotal = oneWayTotal + ((returnAdultFare * adults) + (childFare * children) + (infantFare * infants));

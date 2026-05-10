@@ -243,7 +243,7 @@ if (!function_exists('vendorPortalRequiresAccommodation')) {
 if (!function_exists('vendorPortalPropertyTypeForCategory')) {
     function vendorPortalPropertyTypeForCategory(string $listingCategory): string
     {
-        return $listingCategory === 'accommodation' ? 'property' : 'service';
+        return in_array($listingCategory, ['accommodation', 'liveaboard'], true) ? 'property' : 'service';
     }
 }
 

@@ -2,7 +2,8 @@
 <form class="ops-form" method="POST" action="/portal/vendor/properties/create">
     @csrf
     <input type="hidden" name="listing_category" value="liveaboard">
-    <input name="property_type" type="hidden" value="liveaboard">
+    <input type="hidden" name="property_form_intent" value="1">
+    <input name="property_type" type="hidden" value="property">
     <input name="area_unit" type="hidden" value="sqft">
     <input name="measurement_system" type="hidden" value="imperial">
 
@@ -14,6 +15,24 @@
         <div class="ops-field ops-field-wide">
             <label for="property_description">Description <span style="color:#c0392b;">*</span></label>
             <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000" rows="5" required>{{ old('description') }}</textarea>
+        </div>
+
+        {{-- ── Cabin Listings ───────────────────────────────────────────── --}}
+        <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-top:1px solid #e0e0e0; border-bottom:1px solid #cfe0eb; padding:0.5rem 0; margin-top:1rem; margin-bottom:0.5rem;">
+            <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Cabin Listings</p>
+        </div>
+        <p style="grid-column:1/-1; font-size:0.9rem; color:#666; margin-bottom:1rem;">List cabins the same way you list rooms for accommodation. You can set separate cabin names, capacity, and package pricing later in the listing manager.</p>
+        <div class="ops-field">
+            <label for="property_cabin_count">Cabin / Room Count</label>
+            <input id="property_cabin_count" name="cabin_count" class="ops-input" type="number" min="1" value="{{ old('cabin_count') }}">
+        </div>
+        <div class="ops-field">
+            <label for="property_room_count">Room Count</label>
+            <input id="property_room_count" name="room_count" class="ops-input" type="number" min="0" value="{{ old('room_count') }}" placeholder="Optional alias for cabin inventory">
+        </div>
+        <div class="ops-field ops-field-wide">
+            <label for="property_package_notes">Package Notes</label>
+            <textarea id="property_package_notes" name="package_notes" class="ops-textarea" rows="3" maxlength="1500" placeholder="Add package tiers, inclusions, and upgrade notes.">{{ old('package_notes') }}</textarea>
         </div>
 
         {{-- ── Journey Route ─────────────────────────────────────────────── --}}
@@ -70,10 +89,6 @@
         <div class="ops-field">
             <label for="property_max_guests">Max Guests Onboard</label>
             <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="1" max="1000" value="{{ old('max_guests') }}">
-        </div>
-        <div class="ops-field">
-            <label for="property_cabin_count">Cabin / Room Count</label>
-            <input id="property_cabin_count" name="cabin_count" class="ops-input" type="number" min="1" value="{{ old('cabin_count') }}">
         </div>
 
         {{-- ── Service Information ───────────────────────────────────────── --}}

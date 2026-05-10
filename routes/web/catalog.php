@@ -748,7 +748,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'sea_transport'])
+            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'room'])
             ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
@@ -786,6 +786,44 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
         }
 
         $galleryMedia = array_values(array_unique(array_filter($galleryMedia, static fn ($url): bool => is_string($url) && trim($url) !== '')));
+
+        if ($galleryMedia === []) {
+            foreach (['gallery_media', 'gallery_images', 'gallery', 'images', 'media_urls', 'media'] as $mediaKey) {
+                $mediaValue = $listingDetails[$mediaKey] ?? null;
+                if (is_string($mediaValue)) {
+                    $decoded = json_decode($mediaValue, true);
+                    $mediaValue = is_array($decoded) ? $decoded : [$mediaValue];
+                }
+                if (!is_array($mediaValue)) {
+                    continue;
+                }
+
+                foreach ($mediaValue as $candidateUrl) {
+                    if (!is_string($candidateUrl)) {
+                        continue;
+                    }
+
+                    $candidateUrl = trim($candidateUrl);
+                    if ($candidateUrl === '') {
+                        continue;
+                    }
+
+                    $resolved = function_exists('portalManagedMediaUrlFromPath')
+                        ? (portalManagedMediaUrlFromPath($candidateUrl) ?? $candidateUrl)
+                        : $candidateUrl;
+
+                    if ($resolved !== '' && !in_array($resolved, $galleryMedia, true)) {
+                        $galleryMedia[] = $resolved;
+                    }
+                }
+
+                if ($galleryMedia !== []) {
+                    break;
+                }
+            }
+
+            $galleryMedia = array_values(array_unique(array_filter($galleryMedia, static fn ($url): bool => is_string($url) && trim($url) !== '')));
+        }
     }
     $heroUrl = $galleryMedia[0] ?? '';
     if ($heroUrl === '') {

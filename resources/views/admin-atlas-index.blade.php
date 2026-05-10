@@ -103,7 +103,7 @@
             <p style="margin:0;color:#4b637a;">Manage atolls and islands used across blog atlas, vendor, customer, and search forms.</p>
         </div>
         <div class="actions">
-            <a class="btn" href="/admin?page=media">Back to Admin</a>
+            <a class="btn" href="{{ adminPortalEntryPath('media') }}">Back to Admin</a>
             <a class="btn primary" href="/portal/admin/atlas/atolls/create">New Atoll</a>
             <a class="btn primary" href="/portal/admin/atlas/islands/create">New Island</a>
         </div>

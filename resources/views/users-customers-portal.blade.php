@@ -205,7 +205,7 @@
             <h1>Users and Customers Console</h1>
             <p>Unified layout for portal admin users, vendor users, and customer accounts with quick filtering and empty-state handling.</p>
             <div class="hero-links">
-                <a class="hero-link" href="/admin">Back to Admin Portal</a>
+                <a class="hero-link" href="{{ adminPortalEntryPath() }}">Back to Admin Portal</a>
                 <a class="hero-link" href="/customer">Open Customer Portal</a>
                 <a class="hero-link" href="/vendor">Open Partners Portal</a>
             </div>

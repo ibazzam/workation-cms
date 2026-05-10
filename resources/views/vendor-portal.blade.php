@@ -361,7 +361,7 @@
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
                     <h1>Partner Operations Center</h1>
-                    <p>Manage listings, reservations, availability, and payouts from one workspace.</p>
+                    <p>Listings, reservations, availability, and payouts.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
@@ -372,29 +372,6 @@
                         </form>
                     </div>
                 </div>
-            </div>
-            <div class="hero-highlights" aria-label="Vendor dashboard highlights">
-                <article class="hero-highlight">
-                    <p class="hero-highlight-label">Live Listings</p>
-                    <p class="hero-highlight-value">{{ $vendorActiveListingCount }} / {{ $vendorListingCount }}</p>
-                    <p class="hero-highlight-meta">Active listings ready for reservations</p>
-                </article>
-                <article class="hero-highlight">
-                    <p class="hero-highlight-label">Reservations in Flow</p>
-                    <p class="hero-highlight-value">{{ $vendorPendingReservationsCount + $vendorConfirmedReservationsCount }}</p>
-                    <p class="hero-highlight-meta">Pending and confirmed guest reservations</p>
-                </article>
-                <article class="hero-highlight">
-                    <p class="hero-highlight-label">Gross Earnings</p>
-                    <p class="hero-highlight-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
-                    <p class="hero-highlight-meta">Revenue tracked across current vendor bookings</p>
-                </article>
-            </div>
-            <div class="hero-links" aria-label="Quick actions">
-                <a class="hero-link" href="/vendor/listings">Manage Listings</a>
-                <a class="hero-link" href="/vendor/reservations">Moderate Reservations</a>
-                <a class="hero-link" href="/vendor/availability">Update Availability</a>
-                <a class="hero-link" href="/vendor/billing">Collections &amp; Payouts</a>
             </div>
         </section>
 
@@ -2113,6 +2090,30 @@
                 return field.offsetParent !== null;
             }
 
+            function syncRequiredConstraintsForCreateForm() {
+                if (!propertyCreateForm) {
+                    return;
+                }
+
+                propertyCreateForm.querySelectorAll('input, select, textarea').forEach((field) => {
+                    if (!field) {
+                        return;
+                    }
+
+                    if (!field.hasAttribute('data-original-required')) {
+                        field.setAttribute('data-original-required', field.required ? '1' : '0');
+                    }
+
+                    const originallyRequired = field.getAttribute('data-original-required') === '1';
+                    if (!originallyRequired) {
+                        field.required = false;
+                        return;
+                    }
+
+                    field.required = isFieldVisibleForValidation(field);
+                });
+            }
+
             function applyFieldValidationState(field) {
                 if (!field) {
                     return true;
@@ -2135,6 +2136,8 @@
                 if (!propertyCreateForm) {
                     return true;
                 }
+
+                syncRequiredConstraintsForCreateForm();
 
                 const requiredFields = Array.from(propertyCreateForm.querySelectorAll('input, select, textarea'))
                     .filter((field) => field.required);
@@ -2466,8 +2469,36 @@
                 });
             });
 
+            const isMobileVendorNavViewport = function () {
+                return window.matchMedia('(max-width: 900px)').matches;
+            };
+
+            const syncVendorNavGroupBehavior = function () {
+                const mobileViewport = isMobileVendorNavViewport();
+                vendorNavGroupToggles.forEach((toggle) => {
+                    const groupKey = String(toggle.getAttribute('data-vendor-nav-toggle') || '').trim();
+                    if (groupKey === '') {
+                        return;
+                    }
+                    const body = document.querySelector('[data-vendor-nav-group="' + groupKey + '"]');
+                    if (!body) {
+                        return;
+                    }
+
+                    if (!mobileViewport) {
+                        body.classList.add('is-open');
+                        toggle.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            };
+
+            syncVendorNavGroupBehavior();
+
             vendorNavGroupToggles.forEach((toggle) => {
                 toggle.addEventListener('click', function () {
+                    if (!isMobileVendorNavViewport()) {
+                        return;
+                    }
                     const groupKey = String(toggle.getAttribute('data-vendor-nav-toggle') || '').trim();
                     if (groupKey === '') {
                         return;
@@ -2480,6 +2511,8 @@
                     toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                 });
             });
+
+            window.addEventListener('resize', syncVendorNavGroupBehavior);
 
             window.addEventListener("hashchange", function () {
                 showPanelGroup(resolvePanelFromHash(window.location.hash));
@@ -2526,6 +2559,8 @@
             }
 
             if (propertyCreateForm) {
+                syncRequiredConstraintsForCreateForm();
+
                 propertyCreateForm.querySelectorAll('input, select, textarea').forEach((field) => {
                     if (!field.required) {
                         return;
@@ -2542,6 +2577,7 @@
                 });
 
                 propertyCreateForm.addEventListener('submit', function (event) {
+                    syncRequiredConstraintsForCreateForm();
                     if (!validatePropertyCreateForm(true)) {
                         event.preventDefault();
                     }
@@ -2551,6 +2587,7 @@
             if (propertyCreateSubmitButton && propertyCreateForm) {
                 propertyCreateSubmitButton.addEventListener('click', function (event) {
                     event.preventDefault();
+                    syncRequiredConstraintsForCreateForm();
                     if (!validatePropertyCreateForm(true)) {
                         return;
                     }

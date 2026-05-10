@@ -118,7 +118,7 @@ Route::get('/users', function (Request $request) {
 
 use Illuminate\Support\Facades\Auth;
 
-Route::get('/admin', function (Request $request) {
+$renderAdminPortalPage = function (Request $request) {
     $portal = 'admin';
     $config = portalConfig($portal);
     if (!session()->get($config['session_key'], false)) {
@@ -835,24 +835,63 @@ Route::get('/admin', function (Request $request) {
         'adminPage' => $adminPage,
         'adminAllowedPages' => $adminAllowedPages,
     ]);
-});
+};
 
-Route::get('/admin/{page}', function (Request $request, string $page) {
+Route::get(adminPortalEntryPath(), $renderAdminPortalPage);
+
+Route::get(rtrim(adminPortalEntryPath(), '/') . '/{page}', function (Request $request, string $page) use ($renderAdminPortalPage) {
     $normalizedPage = strtolower(trim($page));
+    $request->query->set('page', $normalizedPage);
 
-    return redirect()->to('/admin?page=' . urlencode($normalizedPage));
+    return $renderAdminPortalPage($request);
 })->where('page', 'overview|permissions|finance|media|content|catalog|moderation|listings|audit|tools');
 
-Route::get('/portal/admin', function (Request $request) {
-    $page = strtolower(trim((string) $request->query('page', 'overview')));
+Route::get('/admin', function (Request $request) use ($renderAdminPortalPage) {
+    $config = portalConfig('admin');
+    if (!session()->get($config['session_key'], false)) {
+        abort(404);
+    }
 
-    return redirect()->to('/admin?page=' . urlencode($page));
+    $page = strtolower(trim((string) $request->query('page', 'overview')));
+    $request->query->set('page', $page);
+
+    return $renderAdminPortalPage($request);
 });
 
-Route::get('/portal/admin/{page}', function (string $page) {
-    $normalizedPage = strtolower(trim($page));
+Route::get('/admin/{page}', function (Request $request, string $page) use ($renderAdminPortalPage) {
+    $config = portalConfig('admin');
+    if (!session()->get($config['session_key'], false)) {
+        abort(404);
+    }
 
-    return redirect()->to('/admin?page=' . urlencode($normalizedPage));
+    $normalizedPage = strtolower(trim($page));
+    $request->query->set('page', $normalizedPage);
+
+    return $renderAdminPortalPage($request);
+})->where('page', 'overview|permissions|finance|media|content|catalog|moderation|listings|audit|tools');
+
+Route::get('/portal/admin', function (Request $request) use ($renderAdminPortalPage) {
+    $config = portalConfig('admin');
+    if (!session()->get($config['session_key'], false)) {
+        abort(404);
+    }
+
+    $page = strtolower(trim((string) $request->query('page', 'overview')));
+    $request->query->set('page', $page);
+
+    return $renderAdminPortalPage($request);
+});
+
+Route::get('/portal/admin/{page}', function (Request $request, string $page) use ($renderAdminPortalPage) {
+    $config = portalConfig('admin');
+    if (!session()->get($config['session_key'], false)) {
+        abort(404);
+    }
+
+    $normalizedPage = strtolower(trim($page));
+    $request->query->set('page', $normalizedPage);
+
+    return $renderAdminPortalPage($request);
 })->where('page', 'overview|permissions|finance|media|content|catalog|moderation|listings|audit|tools');
 
 Route::post('/portal/admin/finance/commission/update', function (Request $request) {

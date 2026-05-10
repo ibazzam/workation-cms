@@ -30,7 +30,7 @@
     <header class="top">
         <h1 class="title">Announcement Manager</h1>
         <div class="actions">
-            <a class="btn" href="/admin/content">Back to Content Hub</a>
+            <a class="btn" href="{{ adminPortalEntryPath('content') }}">Back to Content Hub</a>
             <a class="btn primary" href="/portal/admin/announcement/create">New Announcement</a>
         </div>
     </header>

@@ -2094,6 +2094,11 @@
         $homeWeekendDealCards = $homeWeekendDealCards ?? collect();
         $homeLovedCards = $homeLovedCards ?? collect();
         $cardSvgFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
+        $homeBranding = function_exists('workationLogoAndTaglineProfile') ? workationLogoAndTaglineProfile() : [];
+        $homeBrandLogo = trim((string) ($homeBranding['logo_url'] ?? ''));
+        $homeBrandName = trim((string) ($homeBranding['brand_name'] ?? 'Workation'));
+        $homeBrandLogoAlt = trim((string) ($homeBranding['logo_alt'] ?? 'Workation logo'));
+        $homeBrandTagline = trim((string) ($homeBranding['tagline'] ?? 'Maldives Travel Market'));
     @endphp
 
     <main class="page" data-api-base="{{ $apiBase }}">
@@ -2101,8 +2106,15 @@
             <div class="header-main">
                 <div class="header-brand-wrap">
                     <div>
-                        <a class="header-brand header-brand-link" href="/">Workation</a>
-                        <p class="header-subline">Maldives Travel Market</p>
+                        @if ($homeBrandLogo !== '')
+                            <a class="header-brand header-brand-link" href="/" title="{{ $homeBrandLogoAlt }}" style="display:inline-flex;align-items:center;gap:8px;">
+                                <img src="{{ $homeBrandLogo }}" alt="{{ $homeBrandLogoAlt }}" style="max-height:40px;width:auto;" onerror="this.style.display='none';var fb=this.parentElement.querySelector('[data-home-brand-fallback]');if(fb){fb.style.display='inline';}">
+                                <span data-home-brand-fallback style="display:none;">{{ $homeBrandName }}</span>
+                            </a>
+                        @else
+                            <a class="header-brand header-brand-link" href="/">{{ $homeBrandName }}</a>
+                        @endif
+                        <p class="header-subline">{{ $homeBrandTagline }}</p>
                     </div>
                 </div>
                 <div class="header-search-mini" aria-label="Quick destination search">
@@ -2148,8 +2160,15 @@
         <div class="page-body-split">
             <aside class="floating-sidebar sidebar-shell" aria-label="Category sidebar">
                 <div class="sidebar-brand" aria-label="Sidebar workation logo">
-                    <a class="sidebar-brand-title" href="/">Workation</a>
-                    <p class="sidebar-brand-subline">Maldives Travel Market</p>
+                    @if ($homeBrandLogo !== '')
+                        <a class="sidebar-brand-title" href="/" title="{{ $homeBrandLogoAlt }}" style="display:inline-flex;align-items:center;gap:8px;">
+                            <img src="{{ $homeBrandLogo }}" alt="{{ $homeBrandLogoAlt }}" style="max-height:40px;width:auto;" onerror="this.style.display='none';var fb=this.parentElement.querySelector('[data-home-sidebar-brand-fallback]');if(fb){fb.style.display='inline';}">
+                            <span data-home-sidebar-brand-fallback style="display:none;">{{ $homeBrandName }}</span>
+                        </a>
+                    @else
+                        <a class="sidebar-brand-title" href="/">{{ $homeBrandName }}</a>
+                    @endif
+                    <p class="sidebar-brand-subline">{{ $homeBrandTagline }}</p>
                 </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">

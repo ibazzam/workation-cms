@@ -352,7 +352,8 @@
         <div class="uniform-header-brand-wrap">
             @if ($headerBrandLogo !== '')
                 <a class="uniform-header-brand" href="/" title="{{ $headerBrandLogoAlt }}" style="display: inline-flex; align-items: center; gap: 8px;">
-                    <img src="{{ $headerBrandLogo }}" alt="{{ $headerBrandLogoAlt }}" style="max-height: 40px; width: auto;">
+                    <img src="{{ $headerBrandLogo }}" alt="{{ $headerBrandLogoAlt }}" style="max-height: 40px; width: auto;" onerror="this.style.display='none';var fb=this.parentElement.querySelector('[data-brand-fallback]');if(fb){fb.style.display='inline';}">
+                    <span data-brand-fallback style="display:none;">{{ $headerBrandName }}</span>
                 </a>
             @else
                 <a class="uniform-header-brand" href="/">{{ $headerBrandName }}</a>

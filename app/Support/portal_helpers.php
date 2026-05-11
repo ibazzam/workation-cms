@@ -685,12 +685,21 @@ if (!function_exists('vendorDeliverOtpCode')) {
     function vendorDeliverOtpCode(string $channel, string $destination, string $otpCode): void
     {
         if ($channel === 'email') {
-            Mail::raw(
-                "Your Workation vendor verification code is {$otpCode}. This code expires in 10 minutes.",
-                function ($message) use ($destination): void {
-                    $message->to($destination)->subject('Your Workation verification code');
-                }
-            );
+            workationSendBrandedMail($destination, 'Your Workation verification code', [
+                'preheader' => 'Use this code to finish verifying your vendor account.',
+                'headline' => 'Verification code',
+                'intro' => 'Use the code below to complete your vendor verification.',
+                'statusLabel' => 'One-time code',
+                'statusTone' => 'info',
+                'bodyLines' => [
+                    'Your Workation vendor verification code is ' . $otpCode . '.',
+                    'This code expires in 10 minutes.',
+                ],
+                'metaRows' => [
+                    'Code' => $otpCode,
+                    'Expires' => '10 minutes',
+                ],
+            ]);
             return;
         }
 
@@ -838,6 +847,131 @@ if (!function_exists('vendorDeliverOtpCode')) {
         if (!$smsResponse->successful()) {
             throw new \RuntimeException('Phone OTP delivery failed with status ' . $smsResponse->status() . '.');
         }
+    }
+}
+
+if (!function_exists('workationSendBrandedMail')) {
+    function workationSendBrandedMail(string $to, string $subject, array $data = []): void
+    {
+        if ($to === '' || !str_contains($to, '@')) {
+            return;
+        }
+
+        $html = view('emails.workation-standard', array_merge([
+            'subject' => $subject,
+            'branding' => workationBrandingProfile(),
+        ], $data))->render();
+
+        try {
+            Mail::html($html, static function ($message) use ($to, $subject): void {
+                $message->to($to)->subject($subject);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('workationSendBrandedMail: failed to send email', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+}
+
+if (!function_exists('workationBrandingProfile')) {
+    function workationBrandingProfile(): array
+    {
+        static $brandingCache = null;
+        if (is_array($brandingCache)) {
+            return $brandingCache;
+        }
+
+        $defaults = [
+            'name' => trim((string) env('WORKATION_BRAND_NAME', 'Workation')),
+            'tagline' => trim((string) env('WORKATION_BRAND_TAGLINE', 'Stay, work, and travel.')),
+            'support_email' => trim((string) env('WORKATION_BRAND_SUPPORT_EMAIL', config('mail.from.address', 'support@workation.com'))),
+            'mobile' => trim((string) env('WORKATION_BRAND_MOBILE', '')),
+            'hotline' => trim((string) env('WORKATION_BRAND_HOTLINE', '')),
+            'url' => rtrim((string) env('WORKATION_BRAND_URL', config('app.url', url('/'))), '/'),
+            'logo_url' => trim((string) env('WORKATION_BRAND_LOGO_URL', env('WORKATION_EMAIL_LOGO_URL', ''))),
+            'logo_path' => trim((string) env('WORKATION_BRAND_LOGO_PATH', '')),
+            'accent' => trim((string) env('WORKATION_BRAND_ACCENT', '#0f6179')),
+            'accent_strong' => trim((string) env('WORKATION_BRAND_ACCENT_STRONG', '#0b4f66')),
+            'muted' => trim((string) env('WORKATION_BRAND_MUTED', '#607486')),
+            'surface' => trim((string) env('WORKATION_BRAND_SURFACE', '#ffffff')),
+            'surface_soft' => trim((string) env('WORKATION_BRAND_SURFACE_SOFT', '#f3f8f5')),
+            'address_lines_raw' => (string) env('WORKATION_BRAND_ADDRESS_LINES', ''),
+        ];
+
+        $storedSettings = [];
+        if (Schema::hasTable('portal_finance_settings')) {
+            try {
+                $storedSettings = DB::table('portal_finance_settings')
+                    ->whereIn('setting_key', [
+                        'branding_name',
+                        'branding_tagline',
+                        'branding_support_email',
+                        'branding_mobile',
+                        'branding_hotline',
+                        'branding_url',
+                        'branding_logo',
+                        'branding_accent',
+                        'branding_accent_strong',
+                        'branding_muted',
+                        'branding_surface',
+                        'branding_surface_soft',
+                        'branding_address_lines',
+                    ])
+                    ->pluck('value_string', 'setting_key')
+                    ->all();
+            } catch (\Throwable $e) {
+                $storedSettings = [];
+            }
+        }
+
+        $brandName = trim((string) ($storedSettings['branding_name'] ?? $defaults['name']));
+        $brandTagline = trim((string) ($storedSettings['branding_tagline'] ?? $defaults['tagline']));
+        $supportEmail = trim((string) ($storedSettings['branding_support_email'] ?? $defaults['support_email']));
+        $mobile = trim((string) ($storedSettings['branding_mobile'] ?? $defaults['mobile']));
+        $hotline = trim((string) ($storedSettings['branding_hotline'] ?? $defaults['hotline']));
+        $brandUrl = rtrim((string) ($storedSettings['branding_url'] ?? $defaults['url']), '/');
+        $logoUrl = trim((string) ($storedSettings['branding_logo'] ?? $defaults['logo_url']));
+        $logoPath = trim((string) $defaults['logo_path']);
+
+        if ($logoUrl === '' && $logoPath !== '' && is_file($logoPath)) {
+            $mime = function_exists('mime_content_type') ? (string) (mime_content_type($logoPath) ?: 'image/png') : 'image/png';
+            $contents = file_get_contents($logoPath);
+            if (is_string($contents) && $contents !== '') {
+                $logoUrl = 'data:' . $mime . ';base64,' . base64_encode($contents);
+            }
+        }
+
+        if ($logoUrl !== '' && !str_contains($logoUrl, '://') && !str_starts_with($logoUrl, 'data:') && function_exists('portalManagedMediaUrlFromPath')) {
+            $logoUrl = portalManagedMediaUrlFromPath($logoUrl) ?? $logoUrl;
+        }
+
+        $addressLines = collect(explode('|', (string) ($storedSettings['branding_address_lines'] ?? $defaults['address_lines_raw'])))
+            ->map(static fn ($line) => trim((string) $line))
+            ->filter(static fn ($line) => $line !== '')
+            ->values()
+            ->all();
+
+        $brandingCache = [
+            'name' => $brandName !== '' ? $brandName : 'Workation',
+            'tagline' => $brandTagline !== '' ? $brandTagline : 'Stay, work, and travel.',
+            'support_email' => $supportEmail !== '' ? $supportEmail : 'support@workation.com',
+            'mobile' => $mobile,
+            'hotline' => $hotline,
+            'url' => $brandUrl !== '' ? $brandUrl : url('/'),
+            'logo_url' => $logoUrl,
+            'logo_alt' => ($brandName !== '' ? $brandName : 'Workation') . ' logo',
+            'accent' => trim((string) ($storedSettings['branding_accent'] ?? $defaults['accent'])),
+            'accent_strong' => trim((string) ($storedSettings['branding_accent_strong'] ?? $defaults['accent_strong'])),
+            'muted' => trim((string) ($storedSettings['branding_muted'] ?? $defaults['muted'])),
+            'surface' => trim((string) ($storedSettings['branding_surface'] ?? $defaults['surface'])),
+            'surface_soft' => trim((string) ($storedSettings['branding_surface_soft'] ?? $defaults['surface_soft'])),
+            'address_lines' => $addressLines,
+        ];
+
+        return $brandingCache;
     }
 }
 

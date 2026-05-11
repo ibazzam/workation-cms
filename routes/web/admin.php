@@ -596,6 +596,22 @@ $renderAdminPortalPage = function (Request $request) {
         'image_stored_value' => '',
         'image_url' => '',
     ];
+    $brandingSettings = [
+        'name' => trim((string) env('WORKATION_BRAND_NAME', 'Workation')) ?: 'Workation',
+        'tagline' => trim((string) env('WORKATION_BRAND_TAGLINE', 'Stay, work, and travel.')) ?: 'Stay, work, and travel.',
+        'support_email' => trim((string) env('WORKATION_BRAND_SUPPORT_EMAIL', config('mail.from.address', 'support@workation.com'))) ?: 'support@workation.com',
+        'mobile' => trim((string) env('WORKATION_BRAND_MOBILE', '')),
+        'hotline' => trim((string) env('WORKATION_BRAND_HOTLINE', '')),
+        'url' => rtrim((string) env('WORKATION_BRAND_URL', config('app.url', url('/'))), '/'),
+        'address_lines' => trim((string) env('WORKATION_BRAND_ADDRESS_LINES', '')),
+        'accent' => trim((string) env('WORKATION_BRAND_ACCENT', '#0f6179')) ?: '#0f6179',
+        'accent_strong' => trim((string) env('WORKATION_BRAND_ACCENT_STRONG', '#0b4f66')) ?: '#0b4f66',
+        'muted' => trim((string) env('WORKATION_BRAND_MUTED', '#607486')) ?: '#607486',
+        'surface' => trim((string) env('WORKATION_BRAND_SURFACE', '#ffffff')) ?: '#ffffff',
+        'surface_soft' => trim((string) env('WORKATION_BRAND_SURFACE_SOFT', '#f3f8f5')) ?: '#f3f8f5',
+        'logo_stored_value' => trim((string) env('WORKATION_BRAND_LOGO_URL', env('WORKATION_EMAIL_LOGO_URL', ''))),
+        'logo_url' => trim((string) env('WORKATION_BRAND_LOGO_URL', env('WORKATION_EMAIL_LOGO_URL', ''))),
+    ];
 
     if (Schema::hasTable('portal_finance_settings')) {
         $mediaSettingKeys = collect(array_keys($catalogHeroAdminCategories))
@@ -606,6 +622,19 @@ $renderAdminPortalPage = function (Request $request) {
             ->push('blog_sidebar_ad_cta_label')
             ->push('blog_sidebar_ad_cta_url')
             ->push('blog_sidebar_ad_image')
+            ->push('branding_name')
+            ->push('branding_tagline')
+            ->push('branding_support_email')
+            ->push('branding_mobile')
+            ->push('branding_hotline')
+            ->push('branding_url')
+            ->push('branding_address_lines')
+            ->push('branding_accent')
+            ->push('branding_accent_strong')
+            ->push('branding_muted')
+            ->push('branding_surface')
+            ->push('branding_surface_soft')
+            ->push('branding_logo')
             ->values();
 
         $mediaSettings = DB::table('portal_finance_settings')
@@ -635,6 +664,24 @@ $renderAdminPortalPage = function (Request $request) {
             'cta_url' => trim((string) ($mediaSettings->get('blog_sidebar_ad_cta_url') ?? '/catalog/marine-transport')) ?: '/catalog/marine-transport',
             'image_stored_value' => trim((string) ($mediaSettings->get('blog_sidebar_ad_image') ?? '')),
             'image_url' => portalManagedMediaUrlFromPath(trim((string) ($mediaSettings->get('blog_sidebar_ad_image') ?? ''))) ?? '',
+        ];
+
+        $brandingLogoStoredValue = trim((string) ($mediaSettings->get('branding_logo') ?? $brandingSettings['logo_stored_value']));
+        $brandingSettings = [
+            'name' => trim((string) ($mediaSettings->get('branding_name') ?? $brandingSettings['name'])) ?: 'Workation',
+            'tagline' => trim((string) ($mediaSettings->get('branding_tagline') ?? $brandingSettings['tagline'])) ?: 'Stay, work, and travel.',
+            'support_email' => trim((string) ($mediaSettings->get('branding_support_email') ?? $brandingSettings['support_email'])) ?: 'support@workation.com',
+            'mobile' => trim((string) ($mediaSettings->get('branding_mobile') ?? $brandingSettings['mobile'])),
+            'hotline' => trim((string) ($mediaSettings->get('branding_hotline') ?? $brandingSettings['hotline'])),
+            'url' => rtrim((string) ($mediaSettings->get('branding_url') ?? $brandingSettings['url']), '/'),
+            'address_lines' => trim((string) ($mediaSettings->get('branding_address_lines') ?? $brandingSettings['address_lines'])),
+            'accent' => trim((string) ($mediaSettings->get('branding_accent') ?? $brandingSettings['accent'])) ?: '#0f6179',
+            'accent_strong' => trim((string) ($mediaSettings->get('branding_accent_strong') ?? $brandingSettings['accent_strong'])) ?: '#0b4f66',
+            'muted' => trim((string) ($mediaSettings->get('branding_muted') ?? $brandingSettings['muted'])) ?: '#607486',
+            'surface' => trim((string) ($mediaSettings->get('branding_surface') ?? $brandingSettings['surface'])) ?: '#ffffff',
+            'surface_soft' => trim((string) ($mediaSettings->get('branding_surface_soft') ?? $brandingSettings['surface_soft'])) ?: '#f3f8f5',
+            'logo_stored_value' => $brandingLogoStoredValue,
+            'logo_url' => portalManagedMediaUrlFromPath($brandingLogoStoredValue) ?? $brandingLogoStoredValue,
         ];
     }
 
@@ -782,6 +829,7 @@ $renderAdminPortalPage = function (Request $request) {
         'catalogHeroAdminCategories' => $catalogHeroAdminCategories,
         'destinationMediaOverrides' => $destinationMediaOverrides,
         'blogSidebarAdSettings' => $blogSidebarAdSettings,
+        'brandingSettings' => $brandingSettings,
         'vendorCategoryMap' => vendorPortalCategoryMap(),
         'canModerateListings' => $canModerateListings,
         'pendingModerationListings' => $pendingModerationListings,
@@ -1517,6 +1565,112 @@ Route::post('/portal/admin/media-blog-ad/update', function (Request $request) {
     ]);
 
     return redirect('/admin?page=media')->with('portal_notice', 'Blog article ad settings updated.');
+});
+
+Route::post('/portal/admin/media-branding/update', function (Request $request) {
+    if (!canManageVendorUsers()) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Only ADMIN_SUPER or ADMIN can update branding settings.']);
+    }
+
+    if (!Schema::hasTable('portal_finance_settings')) {
+        return redirect('/admin?page=media')->withErrors(['auth' => 'Settings table is not ready. Run migrations first.']);
+    }
+
+    $validated = $request->validate([
+        'branding_name' => ['nullable', 'string', 'max:190'],
+        'branding_tagline' => ['nullable', 'string', 'max:255'],
+        'branding_support_email' => ['nullable', 'email', 'max:190'],
+        'branding_mobile' => ['nullable', 'string', 'max:80'],
+        'branding_hotline' => ['nullable', 'string', 'max:80'],
+        'branding_url' => ['nullable', 'string', 'max:2048'],
+        'branding_address_lines' => ['nullable', 'string', 'max:1000'],
+        'branding_accent' => ['nullable', 'string', 'max:20'],
+        'branding_accent_strong' => ['nullable', 'string', 'max:20'],
+        'branding_muted' => ['nullable', 'string', 'max:20'],
+        'branding_surface' => ['nullable', 'string', 'max:20'],
+        'branding_surface_soft' => ['nullable', 'string', 'max:20'],
+        'branding_logo_url' => ['nullable', 'string', 'max:2048'],
+        'branding_logo_file' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        'branding_logo_clear' => ['nullable', 'boolean'],
+    ]);
+
+    $actorUserId = is_numeric(session('portal_admin_user_id')) ? (int) session('portal_admin_user_id') : null;
+    $existingLogoValue = trim((string) (DB::table('portal_finance_settings')
+        ->where('setting_key', 'branding_logo')
+        ->value('value_string') ?? ''));
+
+    $nextLogoValue = $existingLogoValue;
+    $shouldClear = $request->boolean('branding_logo_clear');
+    $uploadedFile = $request->file('branding_logo_file');
+    $submittedLogoUrl = trim((string) ($validated['branding_logo_url'] ?? ''));
+
+    if ($shouldClear) {
+        portalDeleteManagedPublicAsset($existingLogoValue);
+        $nextLogoValue = '';
+    } elseif ($uploadedFile) {
+        $storedPath = portalStoreAdminHeroImage($uploadedFile, 'branding_logo');
+        if ($storedPath === null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'branding_logo_file' => 'Unable to process and store the uploaded logo. Use a valid JPG, PNG, or WebP file.',
+            ]);
+        }
+
+        if ($existingLogoValue !== '' && $existingLogoValue !== $storedPath) {
+            portalDeleteManagedPublicAsset($existingLogoValue);
+        }
+
+        $nextLogoValue = $storedPath;
+    } elseif ($submittedLogoUrl !== '') {
+        if (str_starts_with($submittedLogoUrl, 'http://')) {
+            $submittedLogoUrl = 'https://' . ltrim(substr($submittedLogoUrl, 7), '/');
+        }
+
+        if ($existingLogoValue !== '' && $existingLogoValue !== $submittedLogoUrl) {
+            portalDeleteManagedPublicAsset($existingLogoValue);
+        }
+
+        $nextLogoValue = $submittedLogoUrl;
+    }
+
+    $persistSetting = static function (string $settingKey, ?string $value, ?int $updatedByUserId): void {
+        $storedValue = trim((string) ($value ?? ''));
+        DB::table('portal_finance_settings')->updateOrInsert(
+            ['setting_key' => $settingKey],
+            [
+                'value_decimal' => null,
+                'value_string' => $storedValue !== '' ? $storedValue : null,
+                'value_json' => null,
+                'updated_by_user_id' => $updatedByUserId,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+    };
+
+    foreach ([
+        'branding_name',
+        'branding_tagline',
+        'branding_support_email',
+        'branding_mobile',
+        'branding_hotline',
+        'branding_url',
+        'branding_address_lines',
+        'branding_accent',
+        'branding_accent_strong',
+        'branding_muted',
+        'branding_surface',
+        'branding_surface_soft',
+    ] as $settingKey) {
+        $persistSetting($settingKey, $validated[$settingKey] ?? null, $actorUserId);
+    }
+    $persistSetting('branding_logo', $nextLogoValue, $actorUserId);
+
+    portalAdminAuditLog('media_branding.updated', [
+        'target_role' => 'ADMIN_MEDIA',
+        'has_logo' => $nextLogoValue !== '',
+    ]);
+
+    return redirect('/admin?page=media')->with('portal_notice', 'Branding settings updated.');
 });
 
 Route::get('/portal/admin/blog', function () {

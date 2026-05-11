@@ -23,13 +23,10 @@
     @php
         $docType = strtolower((string) ($document_type ?? 'invoice'));
         $isConfirmation = $docType === 'confirmation';
+        $branding = $branding ?? workationBrandingProfile();
     @endphp
 
-    <div class="header">
-        <p class="title">{{ $isConfirmation ? 'Reservation Confirmation' : 'Tax Invoice' }}</p>
-        <p class="muted">Workation</p>
-        <p class="muted">Generated: {{ (string) ($generated_at ?? '') }}</p>
-    </div>
+    @include('documents.partials.letterhead', ['branding' => $branding, 'isConfirmation' => $isConfirmation, 'generated_at' => $generated_at ?? ''])
 
     <table class="grid">
         <tr>

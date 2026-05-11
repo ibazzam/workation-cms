@@ -1748,6 +1748,109 @@
                         </form>
                     @endif
                 </div>
+
+                @php
+                    $branding = is_array($brandingSettings ?? null) ? $brandingSettings : [];
+                    $brandingLogoUrl = (string) ($branding['logo_url'] ?? '');
+                    $brandingLogoStoredValue = trim((string) ($branding['logo_stored_value'] ?? ''));
+                    $brandingExternalLogo = preg_match('#^https?://#i', $brandingLogoStoredValue) === 1 ? $brandingLogoStoredValue : '';
+                @endphp
+                <div style="padding:16px;border:1px solid #d7e0e6;border-radius:12px;background:#f9fbfc;margin-top:18px;">
+                    <p style="font-weight:600;margin:0 0 8px;">Branding Settings</p>
+                    <p class="small" style="margin:0 0 12px;line-height:1.5;">Manage the corporate identity used in branded emails, invoices, and reservation confirmation PDFs. Upload a logo or paste an external URL, then update the contact and color fields below.</p>
+
+                    @if ($brandingLogoUrl !== '')
+                        <img src="{{ $brandingLogoUrl }}" alt="Brand logo preview" style="display:block;width:100%;max-width:260px;max-height:96px;object-fit:contain;border-radius:10px;border:1px solid #d7e0e6;margin-bottom:10px;background:#ffffff;padding:12px;">
+                        <p class="small" style="margin:0 0 12px;">Logo source: {{ $brandingExternalLogo !== '' ? 'External URL' : 'Managed upload' }}</p>
+                    @else
+                        <p class="small" style="margin:0 0 12px;">No brand logo configured yet. The templates will fall back to a text badge.</p>
+                    @endif
+
+                    <form method="POST" action="/portal/admin/media-branding/update" enctype="multipart/form-data" style="margin-bottom:12px;">
+                        @csrf
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end;">
+                            <div>
+                                <label for="branding_name" style="display:block;margin-bottom:4px;font-size:0.85rem;">Brand Name</label>
+                                <input id="branding_name" name="branding_name" type="text" maxlength="190" value="{{ old('branding_name', $branding['name'] ?? 'Workation') }}" placeholder="Workation" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_tagline" style="display:block;margin-bottom:4px;font-size:0.85rem;">Tagline</label>
+                                <input id="branding_tagline" name="branding_tagline" type="text" maxlength="255" value="{{ old('branding_tagline', $branding['tagline'] ?? '') }}" placeholder="Stay, work, and travel." style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_support_email" style="display:block;margin-bottom:4px;font-size:0.85rem;">Support Email</label>
+                                <input id="branding_support_email" name="branding_support_email" type="email" maxlength="190" value="{{ old('branding_support_email', $branding['support_email'] ?? '') }}" placeholder="support@example.com" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Website URL</label>
+                                <input id="branding_url" name="branding_url" type="text" maxlength="2048" value="{{ old('branding_url', $branding['url'] ?? '') }}" placeholder="https://workation.mv" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_mobile" style="display:block;margin-bottom:4px;font-size:0.85rem;">Mobile</label>
+                                <input id="branding_mobile" name="branding_mobile" type="text" maxlength="80" value="{{ old('branding_mobile', $branding['mobile'] ?? '') }}" placeholder="+960 777 1234" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_hotline" style="display:block;margin-bottom:4px;font-size:0.85rem;">Hotline</label>
+                                <input id="branding_hotline" name="branding_hotline" type="text" maxlength="80" value="{{ old('branding_hotline', $branding['hotline'] ?? '') }}" placeholder="333 9000" style="display:block;width:100%;">
+                            </div>
+                        </div>
+
+                        <label for="branding_address_lines" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Address / Letterhead Lines</label>
+                        <textarea id="branding_address_lines" name="branding_address_lines" maxlength="1000" placeholder="Hulhumale, Maldives | Mon-Sat 09:00-18:00 | Tax ID 123456" style="display:block;width:100%;max-width:760px;min-height:84px;">{{ old('branding_address_lines', $branding['address_lines'] ?? '') }}</textarea>
+                        <p class="small" style="margin:6px 0 0;">Use <strong>|</strong> between items. These appear on the PDF letterhead footer line.</p>
+
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;margin-top:12px;max-width:760px;">
+                            <div>
+                                <label for="branding_accent" style="display:block;margin-bottom:4px;font-size:0.85rem;">Accent Color</label>
+                                <input id="branding_accent" name="branding_accent" type="text" maxlength="20" value="{{ old('branding_accent', $branding['accent'] ?? '#0f6179') }}" placeholder="#0f6179" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_accent_strong" style="display:block;margin-bottom:4px;font-size:0.85rem;">Accent Strong</label>
+                                <input id="branding_accent_strong" name="branding_accent_strong" type="text" maxlength="20" value="{{ old('branding_accent_strong', $branding['accent_strong'] ?? '#0b4f66') }}" placeholder="#0b4f66" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_muted" style="display:block;margin-bottom:4px;font-size:0.85rem;">Muted Text</label>
+                                <input id="branding_muted" name="branding_muted" type="text" maxlength="20" value="{{ old('branding_muted', $branding['muted'] ?? '#607486') }}" placeholder="#607486" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_surface" style="display:block;margin-bottom:4px;font-size:0.85rem;">Surface</label>
+                                <input id="branding_surface" name="branding_surface" type="text" maxlength="20" value="{{ old('branding_surface', $branding['surface'] ?? '#ffffff') }}" placeholder="#ffffff" style="display:block;width:100%;">
+                            </div>
+                            <div>
+                                <label for="branding_surface_soft" style="display:block;margin-bottom:4px;font-size:0.85rem;">Surface Soft</label>
+                                <input id="branding_surface_soft" name="branding_surface_soft" type="text" maxlength="20" value="{{ old('branding_surface_soft', $branding['surface_soft'] ?? '#f3f8f5') }}" placeholder="#f3f8f5" style="display:block;width:100%;">
+                            </div>
+                        </div>
+
+                        <label for="branding_logo_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload logo (JPG, PNG, WebP · max 4 MB)</label>
+                        <input id="branding_logo_file" name="branding_logo_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
+
+                        <label for="branding_logo_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS logo URL</label>
+                        <input id="branding_logo_url" name="branding_logo_url" type="text" maxlength="2048" value="{{ old('branding_logo_url', $brandingExternalLogo) }}" placeholder="https://cdn.example.com/brand/logo.png" style="display:block;width:100%;max-width:640px;margin-bottom:12px;">
+
+                        <button class="btn btn-primary" type="submit">Save Branding Settings</button>
+                    </form>
+
+                    @if ($brandingLogoUrl !== '')
+                        <form method="POST" action="/portal/admin/media-branding/update" style="display:inline;">
+                            @csrf
+                            <input type="hidden" name="branding_name" value="{{ $branding['name'] ?? 'Workation' }}">
+                            <input type="hidden" name="branding_tagline" value="{{ $branding['tagline'] ?? '' }}">
+                            <input type="hidden" name="branding_support_email" value="{{ $branding['support_email'] ?? '' }}">
+                            <input type="hidden" name="branding_mobile" value="{{ $branding['mobile'] ?? '' }}">
+                            <input type="hidden" name="branding_hotline" value="{{ $branding['hotline'] ?? '' }}">
+                            <input type="hidden" name="branding_url" value="{{ $branding['url'] ?? '' }}">
+                            <input type="hidden" name="branding_address_lines" value="{{ $branding['address_lines'] ?? '' }}">
+                            <input type="hidden" name="branding_accent" value="{{ $branding['accent'] ?? '#0f6179' }}">
+                            <input type="hidden" name="branding_accent_strong" value="{{ $branding['accent_strong'] ?? '#0b4f66' }}">
+                            <input type="hidden" name="branding_muted" value="{{ $branding['muted'] ?? '#607486' }}">
+                            <input type="hidden" name="branding_surface" value="{{ $branding['surface'] ?? '#ffffff' }}">
+                            <input type="hidden" name="branding_surface_soft" value="{{ $branding['surface_soft'] ?? '#f3f8f5' }}">
+                            <input type="hidden" name="branding_logo_clear" value="1">
+                            <button class="btn" type="submit" style="background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;" onclick="return confirm('Remove the brand logo?')">Remove Logo</button>
+                        </form>
+                    @endif
+                </div>
             @endif
         </section>
 

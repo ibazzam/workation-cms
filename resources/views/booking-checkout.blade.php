@@ -143,6 +143,7 @@
         $infants = max(0, (int) ($summary['infants'] ?? 0));
         $guests = $adults + $children + $infants;
         $categoryKey = strtolower(trim((string) ($summary['category_key'] ?? '')));
+        $isAccommodationCheckout = $categoryKey === 'accommodation';
         $requiresCustomerAuth = (bool) ($requiresCustomerAuth ?? false);
         $customerAuthenticated = (bool) ($customerAuthenticated ?? false);
         $customerLoginContinueUrl = trim((string) ($customerLoginContinueUrl ?? request()->fullUrl()));
@@ -312,6 +313,12 @@
                 3 => '3. Payment Method',
                 4 => '4. Final Confirmation',
             ];
+        $checkoutStartTs = strtotime((string) ($summary['checkin'] ?? ''));
+        $checkoutEndTs = strtotime((string) ($summary['checkout'] ?? ''));
+        $checkoutDurationCount = max(1, (int) (($checkoutEndTs > $checkoutStartTs) ? ceil(($checkoutEndTs - $checkoutStartTs) / 86400) : 1));
+        $checkoutDurationUnit = $isAccommodationCheckout
+            ? ($checkoutDurationCount === 1 ? 'night' : 'nights')
+            : ($checkoutDurationCount === 1 ? 'day' : 'days');
     @endphp
 
     <main class="page">
@@ -502,30 +509,34 @@
                 </div>
 
                 <aside class="mini-panel checkout-summary" aria-label="Reservation compact summary">
-                    <section class="mini-section" aria-label="Hotel and room summary">
-                        <h2 class="mini-title">1. Hotel detail</h2>
+                    <section class="mini-section" aria-label="{{ $isAccommodationCheckout ? 'Hotel and room summary' : 'Service summary' }}">
+                        <h2 class="mini-title">1. {{ $isAccommodationCheckout ? 'Hotel detail' : 'Service detail' }}</h2>
                         @if ($checkoutMediaUrl !== '')
-                            <img class="hotel-thumb" src="{{ $checkoutMediaUrl }}" alt="Hotel image" loading="lazy">
+                            <img class="hotel-thumb" src="{{ $checkoutMediaUrl }}" alt="Property image" loading="lazy">
                         @endif
                         <div class="hotel-name">{{ (string) ($property->name ?? 'Property') }}</div>
                         <div class="room-meta">
-                            <strong>{{ $roomName !== '' ? $roomName : 'Room' }}</strong>
+                            <strong>{{ $roomName !== '' ? $roomName : ($isAccommodationCheckout ? 'Room' : 'Service') }}</strong>
                             <span>x{{ $guests }} guests</span>
-                            <span>{{ trim((string) ($room->bed_type ?? '1 bed')) }}</span>
-                            <span>{{ (int) ($room->non_smoking ?? 1) === 1 ? 'Non-smoking' : 'Smoking allowed' }}</span>
+                            @if ($isAccommodationCheckout)
+                                <span>{{ trim((string) ($room->bed_type ?? '1 bed')) }}</span>
+                                <span>{{ (int) ($room->non_smoking ?? 1) === 1 ? 'Non-smoking' : 'Smoking allowed' }}</span>
+                            @endif
                         </div>
                     </section>
 
                     <section class="mini-section" aria-label="Stay dates">
-                        <h2 class="mini-title">2. Stay dates</h2>
-                        <div class="compact-line"><span>{{ (string) ($summary['checkin'] ?? '-') }} - {{ (string) ($summary['checkout'] ?? '-') }}</span><strong>{{ max(1, (int) ((strtotime((string) ($summary['checkout'] ?? '')) > strtotime((string) ($summary['checkin'] ?? ''))) ? ceil((strtotime((string) ($summary['checkout'] ?? '')) - strtotime((string) ($summary['checkin'] ?? ''))) / 86400) : 1)) }} night</strong></div>
-                        <div class="fine-print">Check-in: 15:00-06:00</div>
-                        <div class="fine-print">Check-out: Before 12:00</div>
+                        <h2 class="mini-title">2. {{ $isAccommodationCheckout ? 'Stay dates' : 'Service dates' }}</h2>
+                        <div class="compact-line"><span>{{ (string) ($summary['checkin'] ?? '-') }} - {{ (string) ($summary['checkout'] ?? '-') }}</span><strong>{{ $checkoutDurationCount }} {{ $checkoutDurationUnit }}</strong></div>
+                        @if ($isAccommodationCheckout)
+                            <div class="fine-print">Check-in: 15:00-06:00</div>
+                            <div class="fine-print">Check-out: Before 12:00</div>
+                        @endif
                     </section>
 
                     <section class="mini-section" aria-label="Price details">
                         <h2 class="mini-title">3. Price details</h2>
-                        <div class="invoice-row"><span>1 room x 1 night</span><strong>{{ $displayCurrency }} {{ number_format($displayRoomSubtotal, 2) }}</strong></div>
+                        <div class="invoice-row"><span>{{ $isAccommodationCheckout ? '1 room x 1 night' : '1 service booking' }}</span><strong>{{ $displayCurrency }} {{ number_format($displayRoomSubtotal, 2) }}</strong></div>
                         @if ($discountAmount > 0)
                             <div class="invoice-row"><span>Discount</span><strong>- {{ $displayCurrency }} {{ number_format($displayDiscountAmount, 2) }}</strong></div>
                         @endif

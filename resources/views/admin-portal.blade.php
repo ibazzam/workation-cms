@@ -2552,6 +2552,11 @@
                         <p class="group-title">Pending Review ({{ count($pendingModerationListings) }})</p>
                         <div class="registration-grid" style="margin-bottom:16px;">
                             @forelse ($pendingModerationListings as $listing)
+                                @php
+                                    $listingRouteId = (int) ($listing->dedicated_row_id ?? 0) > 0
+                                        ? (int) ($listing->dedicated_row_id ?? 0)
+                                        : (int) ($listing->id ?? 0);
+                                @endphp
                                 <div class="registration-row">
                                     <div class="registration-head">
                                         <span class="user-name">{{ $listing->listing_name ?: ('Listing #' . $listing->id) }}</span>
@@ -2563,23 +2568,25 @@
                                         <div class="small">Submitted: {{ \Illuminate\Support\Carbon::parse($listing->listing_submitted_for_review_at)->format('Y-m-d H:i') }}</div>
                                     @endif
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
+                                        <a href="/portal/admin/listings/{{ $listingRouteId }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}&row_id={{ $listingRouteId }}" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
                                     </div>
                                     <div class="registration-actions">
-                                        <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/approve">
+                                        <form method="POST" action="/portal/admin/listings/{{ $listingRouteId }}/approve">
                                             @csrf
                                             <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
-                                            <label class="small" for="approve_listing_notes_{{ $listing->id }}">Approval notes (optional)</label>
-                                            <textarea id="approve_listing_notes_{{ $listing->id }}" name="admin_notes" placeholder="Internal notes for this approval"></textarea>
+                                            <input type="hidden" name="listing_dedicated_row_id" value="{{ $listingRouteId }}">
+                                            <label class="small" for="approve_listing_notes_{{ $listingRouteId }}">Approval notes (optional)</label>
+                                            <textarea id="approve_listing_notes_{{ $listingRouteId }}" name="admin_notes" placeholder="Internal notes for this approval"></textarea>
                                             <button class="btn-approve" type="submit">Approve Listing</button>
                                         </form>
-                                        <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/reject">
+                                        <form method="POST" action="/portal/admin/listings/{{ $listingRouteId }}/reject">
                                             @csrf
                                             <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
-                                            <label class="small" for="reject_listing_notes_{{ $listing->id }}">Rejection reason <span style="color:red">*</span></label>
-                                            <textarea id="reject_listing_notes_{{ $listing->id }}" name="admin_notes" required placeholder="Explain what must be resolved before the listing can be approved"></textarea>
-                                            <label class="small" for="reject_listing_missing_docs_{{ $listing->id }}">Missing documents (optional)</label>
-                                            <textarea id="reject_listing_missing_docs_{{ $listing->id }}" name="missing_documents" placeholder="List missing documents if any are required to proceed"></textarea>
+                                            <input type="hidden" name="listing_dedicated_row_id" value="{{ $listingRouteId }}">
+                                            <label class="small" for="reject_listing_notes_{{ $listingRouteId }}">Rejection reason <span style="color:red">*</span></label>
+                                            <textarea id="reject_listing_notes_{{ $listingRouteId }}" name="admin_notes" required placeholder="Explain what must be resolved before the listing can be approved"></textarea>
+                                            <label class="small" for="reject_listing_missing_docs_{{ $listingRouteId }}">Missing documents (optional)</label>
+                                            <textarea id="reject_listing_missing_docs_{{ $listingRouteId }}" name="missing_documents" placeholder="List missing documents if any are required to proceed"></textarea>
                                             <button class="btn-reject" type="submit">Reject Listing</button>
                                         </form>
                                     </div>
@@ -2594,6 +2601,11 @@
                         <p class="group-title" id="listingModerationHistoryPanel">Moderation History ({{ count($listingModerationHistory) }})</p>
                         <div class="registration-grid">
                             @forelse ($listingModerationHistory as $listing)
+                                @php
+                                    $listingRouteId = (int) ($listing->dedicated_row_id ?? 0) > 0
+                                        ? (int) ($listing->dedicated_row_id ?? 0)
+                                        : (int) ($listing->id ?? 0);
+                                @endphp
                                 <div class="registration-row">
                                     <div class="registration-head">
                                         <span class="user-name">{{ $listing->listing_name ?: ('Listing #' . $listing->id) }}</span>
@@ -2609,15 +2621,16 @@
                                     </div>
                                     <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}" target="_blank" rel="noopener">Open Listing Preview</a>
+                                        <a href="/portal/admin/listings/{{ $listingRouteId }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}&row_id={{ $listingRouteId }}" target="_blank" rel="noopener">Open Listing Preview</a>
                                     </div>
                                     @if (strtolower((string) ($listing->listing_moderation_status ?? '')) === 'approved')
                                         <div class="registration-actions" style="margin-top:8px;">
-                                            <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/unapprove">
+                                            <form method="POST" action="/portal/admin/listings/{{ $listingRouteId }}/unapprove">
                                                 @csrf
                                                 <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
-                                                <label class="small" for="unapprove_listing_notes_{{ $listing->id }}">Unapprove reason (optional)</label>
-                                                <textarea id="unapprove_listing_notes_{{ $listing->id }}" name="admin_notes" placeholder="Why move this listing back to pending review?"></textarea>
+                                                <input type="hidden" name="listing_dedicated_row_id" value="{{ $listingRouteId }}">
+                                                <label class="small" for="unapprove_listing_notes_{{ $listingRouteId }}">Unapprove reason (optional)</label>
+                                                <textarea id="unapprove_listing_notes_{{ $listingRouteId }}" name="admin_notes" placeholder="Why move this listing back to pending review?"></textarea>
                                                 <button class="btn-reject" type="submit" onclick="return confirm('Move this approved listing back to Pending Review?');">Unapprove Listing</button>
                                             </form>
                                         </div>

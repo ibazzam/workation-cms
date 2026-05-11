@@ -3692,7 +3692,8 @@
                             // Falls back to $fallback (base_price in MVR) converted as needed.
                             $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
                                 if ($visitorIsLocal) {
-                                    return $localMvr > 0 ? $localMvr : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : $fallback);
+                                    // Local pricing is always MVR; fallback is already MVR.
+                                    return $localMvr > 0 ? $localMvr : $fallback;
                                 }
                                 return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
                             };
@@ -3752,12 +3753,12 @@
                                 ],
                             ])->filter(static fn ($item) => (float) ($item['nightly'] ?? 0) > 0)->values();
 
-                            if ($rateOptions->isEmpty() && $defaultNightlyRate > 0) {
+                            if ($rateOptions->isEmpty() && $roomOnlyNightlyRate > 0) {
                                 $rateOptions = collect([[
                                     'meal_plan' => 'Room Only',
                                     'title' => 'Room Only',
                                     'subtitle' => 'Standard room rate',
-                                    'nightly' => $defaultNightlyRate,
+                                    'nightly' => $roomOnlyNightlyRate,
                                 ]]);
                             }
 
@@ -3881,7 +3882,7 @@
                                                     <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
                                                     @if (($visitorResidency ?? 'foreign_national') === 'local_resident')
                                                         <div class="room-price-local-badge">Local Rate</div>
-                                                    @elseif (($mvrUsdRate ?? 0) > 0)
+                                                    @elseif (($mvrUsdRate ?? 0) > 0 && strtoupper((string) $roomCurrency) === 'MVR')
                                                         <div class="room-price-usd-hint">≈ USD {{ number_format($nightlyRateRaw / $mvrUsdRate, 0) }} / night</div>
                                                     @endif
                                                     <div class="room-price-summary" data-rate-summary data-rate-currency="{{ $roomCurrency }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">

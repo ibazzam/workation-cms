@@ -2732,7 +2732,10 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     if ($categoryHint === null) {
         return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
     }
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    $dedicatedRowId = max(0, (int) $request->input('listing_dedicated_row_id', 0));
+    $listingRow = $dedicatedRowId > 0
+        ? \App\Support\VendorPropertyCompatibilityReader::loadPropertyByDedicatedRowId($dedicatedRowId, $categoryHint)
+        : \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2747,11 +2750,12 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
 
     \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
-        $listing,
+        (int) ($listingRow->id ?? $listing),
         'approved',
         $adminNotes ?: null,
         $adminUserId,
-        $categoryHint
+        $categoryHint,
+        $dedicatedRowId > 0 ? $dedicatedRowId : (int) ($listingRow->dedicated_row_id ?? 0)
     );
 
     portalAdminAuditLog('listing.approved', [
@@ -2805,7 +2809,10 @@ Route::post('/portal/admin/listings/{listing}/unapprove', function (Request $req
         return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
     }
 
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    $dedicatedRowId = max(0, (int) $request->input('listing_dedicated_row_id', 0));
+    $listingRow = $dedicatedRowId > 0
+        ? \App\Support\VendorPropertyCompatibilityReader::loadPropertyByDedicatedRowId($dedicatedRowId, $categoryHint)
+        : \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2824,7 +2831,8 @@ Route::post('/portal/admin/listings/{listing}/unapprove', function (Request $req
     \App\Support\VendorPropertyCompatibilityReader::reopenForReview(
         (int) ($listingRow->id ?? $listing),
         $unapproveNotes,
-        $resolvedCategoryHint
+        $resolvedCategoryHint,
+        $dedicatedRowId > 0 ? $dedicatedRowId : (int) ($listingRow->dedicated_row_id ?? 0)
     );
 
     portalAdminAuditLog('listing.unapproved', [
@@ -2844,7 +2852,10 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     }
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->query('category', ''));
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    $dedicatedRowId = max(0, (int) $request->query('row_id', 0));
+    $listingRow = ($dedicatedRowId > 0 && $categoryHint !== null)
+        ? \App\Support\VendorPropertyCompatibilityReader::loadPropertyByDedicatedRowId($dedicatedRowId, $categoryHint)
+        : \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2882,7 +2893,10 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     if ($categoryHint === null) {
         return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
     }
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    $dedicatedRowId = max(0, (int) $request->input('listing_dedicated_row_id', 0));
+    $listingRow = $dedicatedRowId > 0
+        ? \App\Support\VendorPropertyCompatibilityReader::loadPropertyByDedicatedRowId($dedicatedRowId, $categoryHint)
+        : \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2902,11 +2916,12 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     }
 
     \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
-        $listing,
+        (int) ($listingRow->id ?? $listing),
         'rejected',
         $rejectionNotes,
         $adminUserId,
-        $categoryHint
+        $categoryHint,
+        $dedicatedRowId > 0 ? $dedicatedRowId : (int) ($listingRow->dedicated_row_id ?? 0)
     );
 
     portalAdminAuditLog('listing.rejected', [

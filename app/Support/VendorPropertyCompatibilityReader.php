@@ -411,6 +411,30 @@ class VendorPropertyCompatibilityReader
     }
 
     /**
+     * Load a listing by dedicated-table primary key scoped to a specific category.
+     */
+    public static function loadPropertyByDedicatedRowId(int $dedicatedRowId, string $categoryHint): ?object
+    {
+        $normalizedRowId = max(0, $dedicatedRowId);
+        $normalizedCategoryHint = trim((string) $categoryHint);
+        if ($normalizedRowId <= 0 || $normalizedCategoryHint === '') {
+            return null;
+        }
+
+        $tableName = self::categoryTableMap()[$normalizedCategoryHint] ?? null;
+        if ($tableName === null || !self::hasTable($tableName)) {
+            return null;
+        }
+
+        $row = DB::table($tableName)->where('id', $normalizedRowId)->first();
+        if (!$row) {
+            return null;
+        }
+
+        return self::shapeDedicatedRow($row, $normalizedCategoryHint);
+    }
+
+    /**
      * Load all listings for a given vendor user from dedicated tables.
      * Shaped to match legacy vendor_properties row format.
      */
@@ -484,6 +508,7 @@ class VendorPropertyCompatibilityReader
                 ->limit($limit)
                 ->get([
                     DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
+                    't.id as dedicated_row_id',
                     't.vendor_user_id',
                     't.name as listing_name',
                     't.listing_moderation_status',
@@ -529,6 +554,7 @@ class VendorPropertyCompatibilityReader
                 ->limit($limit)
                 ->get([
                     DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
+                    't.id as dedicated_row_id',
                     't.vendor_user_id',
                     't.name as listing_name',
                     't.listing_moderation_status',
@@ -561,7 +587,8 @@ class VendorPropertyCompatibilityReader
         string $status,
         ?string $adminNotes,
         ?int $approvedByUserId,
-        ?string $categoryHint = null
+        ?string $categoryHint = null,
+        ?int $dedicatedRowId = null
     ): void {
         $now = now();
         $dedicatedPayload = [
@@ -591,12 +618,17 @@ class VendorPropertyCompatibilityReader
                 ARRAY_FILTER_USE_KEY
             );
 
-            $affected = DB::table($tableName)
-                ->where(function ($query) use ($vendorPropertyId): void {
-                    $query->where('vendor_property_id', $vendorPropertyId)
+            $query = DB::table($tableName);
+            if ($dedicatedRowId !== null && $dedicatedRowId > 0) {
+                $query->where('id', $dedicatedRowId);
+            } else {
+                $query->where(function ($nested) use ($vendorPropertyId): void {
+                    $nested->where('vendor_property_id', $vendorPropertyId)
                         ->orWhere('id', $vendorPropertyId);
-                })
-                ->update($colPayload);
+                });
+            }
+
+            $affected = $query->update($colPayload);
 
             if ($affected > 0 && $categoryHint === null) {
                 break; // Found and updated the right table; stop scanning.
@@ -688,7 +720,7 @@ class VendorPropertyCompatibilityReader
     /**
      * Move a moderated listing back to pending_review (admin unapprove/reopen flow).
      */
-    public static function reopenForReview(int $vendorPropertyId, ?string $adminNotes = null, ?string $categoryHint = null): void
+    public static function reopenForReview(int $vendorPropertyId, ?string $adminNotes = null, ?string $categoryHint = null, ?int $dedicatedRowId = null): void
     {
         $now = now();
         $payload = [
@@ -718,12 +750,17 @@ class VendorPropertyCompatibilityReader
                 ARRAY_FILTER_USE_KEY
             );
 
-            $affected = DB::table($tableName)
-                ->where(function ($query) use ($vendorPropertyId): void {
-                    $query->where('vendor_property_id', $vendorPropertyId)
+            $query = DB::table($tableName);
+            if ($dedicatedRowId !== null && $dedicatedRowId > 0) {
+                $query->where('id', $dedicatedRowId);
+            } else {
+                $query->where(function ($nested) use ($vendorPropertyId): void {
+                    $nested->where('vendor_property_id', $vendorPropertyId)
                         ->orWhere('id', $vendorPropertyId);
-                })
-                ->update($colPayload);
+                });
+            }
+
+            $affected = $query->update($colPayload);
 
             if ($affected > 0 && $categoryHint === null) {
                 break;

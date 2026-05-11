@@ -457,6 +457,313 @@
             gap: 8px;
         }
 
+        #cabins-section .rooms-grid {
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .cabin-room-card {
+            border: 1px solid #dbe7f0;
+            border-radius: 13px;
+            overflow: hidden;
+            background: #fbfdff;
+            display: grid;
+            grid-template-columns: minmax(230px, 260px) minmax(0, 1fr);
+            align-items: stretch;
+            padding: 0;
+        }
+
+        .room-media-link {
+            display: block;
+            height: 100%;
+        }
+
+        .room-media {
+            position: relative;
+            background: linear-gradient(135deg, #d9ebf4 0%, #f0f7fc 100%);
+            min-height: 220px;
+        }
+
+        .room-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .room-tag {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 999px;
+            background: rgba(14, 70, 92, 0.72);
+            color: #f2fcff;
+            font-size: 0.71rem;
+            padding: 4px 8px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .room-tag i { margin-right: 5px; font-size: 0.7rem; }
+
+        .room-body { padding: 12px; display: grid; gap: 10px; }
+        .room-body h3 { margin: 0; font-size: 1rem; color: #153f59; }
+
+        .room-name-link {
+            color: #153f59;
+            text-decoration: none;
+        }
+
+        .room-name-link:hover { text-decoration: underline; }
+
+        .room-offer-table {
+            border: 1px solid #d8e7f1;
+            border-radius: 11px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .room-offer-head,
+        .room-offer-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1.3fr) 88px minmax(190px, 0.9fr);
+        }
+
+        .room-offer-head {
+            background: #f3f8fc;
+            color: #274d65;
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .room-offer-head span,
+        .room-offer-row > div {
+            padding: 9px 10px;
+            border-right: 1px solid #e0ebf3;
+        }
+
+        .room-offer-head span:last-child,
+        .room-offer-row > div:last-child { border-right: 0; }
+
+        .room-offer-row {
+            border-top: 1px solid #e0ebf3;
+            align-items: center;
+        }
+
+        .room-offer-row.is-hidden { display: none; }
+
+        .room-choices {
+            display: grid;
+            gap: 5px;
+            color: #2c5169;
+            font-size: 0.8rem;
+        }
+
+        .room-option-title {
+            font-weight: 700 !important;
+            font-size: 0.88rem !important;
+            color: #0f6179 !important;
+        }
+
+        .room-option-subtitle {
+            font-size: 0.78rem !important;
+            color: #5a7a8a !important;
+        }
+
+        .room-sleeps {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            color: #244960;
+            font-size: 0.84rem;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .room-sleeps-icons {
+            display: inline-flex;
+            align-items: flex-end;
+            gap: 2px;
+            color: #1f6f95;
+        }
+
+        .room-sleeps-icons .fa-user { font-size: 0.84rem; }
+        .room-sleeps-icons .room-sleeps-child { font-size: 0.7rem; opacity: 0.95; }
+
+        .room-price-box {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .room-price-now {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #10344b;
+            line-height: 1;
+        }
+
+        .room-price-summary {
+            margin-top: 4px;
+            color: #254b63;
+            font-size: 0.82rem;
+            font-weight: 600;
+            line-height: 1.35;
+        }
+
+        .room-price-summary-note {
+            margin-top: 1px;
+            color: #4f6f85;
+            font-size: 0.78rem;
+            line-height: 1.3;
+        }
+
+        .reserve-btn {
+            text-decoration: none;
+            border: 1px solid #0f6179;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0f6179 0%, #1d848c 100%);
+            color: #ecfcff;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 9px 15px;
+            white-space: nowrap;
+        }
+
+        .room-side-details {
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 6px;
+        }
+
+        .room-side-details li {
+            list-style: none;
+            display: flex;
+            gap: 7px;
+            color: #3d5f74;
+            font-size: 0.8rem;
+            align-items: center;
+        }
+
+        .room-side-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: #3a82aa;
+            flex: 0 0 7px;
+        }
+
+        .room-offer-expand {
+            display: flex;
+            justify-content: center;
+            margin-top: 8px;
+            padding-bottom: 8px;
+        }
+
+        .room-offer-expand-btn {
+            padding: 6px 12px;
+            font-size: 0.75rem;
+            border: 1px solid #bdd8ea;
+            border-radius: 999px;
+            background: #f8fcff;
+            color: #1d5a7a;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .room-details-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .room-details-modal-overlay.is-active { display: flex; }
+
+        .room-details-modal {
+            background: #ffffff;
+            border-radius: 16px;
+            width: min(1080px, calc(100% - 24px));
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .room-details-modal-close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            z-index: 1001;
+        }
+
+        .room-details-content {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+            gap: 20px;
+            padding: 24px;
+            align-items: start;
+        }
+
+        .room-details-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .room-details-gallery img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #d6e7f3;
+            background: #f2f8fc;
+        }
+
+        .room-details-title {
+            margin: 0;
+            color: #153f59;
+            font-size: 1.25rem;
+        }
+
+        .room-bed-info {
+            margin-top: 6px;
+            color: #3f6277;
+            font-size: 0.9rem;
+        }
+
+        .room-details-description {
+            margin: 12px 0 0;
+            color: #3a5b70;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .room-select-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 14px;
+            text-decoration: none;
+            border: 1px solid #0f6179;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #0f6179 0%, #1d848c 100%);
+            color: #ecfcff;
+            font-size: 0.88rem;
+            font-weight: 700;
+            padding: 10px 16px;
+        }
+
         .review-card {
             border: 1px solid #d4e5ef;
             border-radius: 14px;
@@ -537,6 +844,15 @@
             .gallery-banner-wrap { min-height: 250px; }
             .rooms-grid { grid-template-columns: 1fr; }
             .amenities-columns { grid-template-columns: 1fr; }
+            .cabin-room-card { grid-template-columns: 1fr; }
+            .room-offer-head,
+            .room-offer-row { grid-template-columns: minmax(0, 1fr); }
+            .room-offer-head span:nth-child(2),
+            .room-offer-head span:nth-child(3) { display: none; }
+            .room-offer-row > div { border-right: 0; border-top: 1px solid #e0ebf3; }
+            .room-offer-row > div:first-child { border-top: 0; }
+            .room-details-content { grid-template-columns: 1fr; }
+            .room-details-gallery img { height: 140px; }
         }
     </style>
     @include('partials.uniform-buttons')
@@ -752,87 +1068,157 @@
                     $roomName = trim((string) ($room->name ?? 'Cabin'));
                     $bedType = trim((string) ($room->bed_type ?? 'Standard Bed'));
                     $maxOccupancy = max(1, (int) ($room->max_occupancy ?? 2));
-                    $roomMedia = $roomMediaByRoom->get($roomId, collect())->take(1);
-                    $roomThumb = $roomMedia->isNotEmpty() ? $roomMedia->first() : null;
-                    
-                    // Pricing
+                    $roomMedia = collect($roomMediaByRoom->get($roomId, collect()));
+                    $roomImages = $roomMedia->map(static fn ($url) => trim((string) $url))->filter(static fn ($url) => $url !== '')->values();
+                    $roomThumb = $roomImages->first();
+
                     $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
                     $roomCurrency = $visitorIsLocal ? 'MVR' : 'USD';
-                    
+
                     $defaultNightlyRate = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
-                    
-                    $roomOnlyNightlyRate = $visitorIsLocal
-                        ? (float) ($room->meal_plan_room_only_price_local ?? 0)
-                        : (float) ($room->meal_plan_room_only_price_usd ?? 0);
-                    
-                    if ($roomOnlyNightlyRate <= 0) {
-                        $roomOnlyNightlyRate = $defaultNightlyRate;
+                    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
+                        if ($visitorIsLocal) {
+                            return $localMvr > 0 ? $localMvr : $fallback;
+                        }
+                        return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
+                    };
+
+                    $roomOnlyNightlyRate = $resolveVisitorRate(
+                        (float) ($room->meal_plan_room_only_price_usd ?? 0),
+                        (float) ($room->meal_plan_room_only_price_local ?? 0),
+                        $defaultNightlyRate
+                    );
+
+                    $rateOptions = collect([
+                        [
+                            'meal_plan' => 'Room Only',
+                            'title' => 'Room Only',
+                            'subtitle' => 'Cabin only (no meals)',
+                            'nightly' => $roomOnlyNightlyRate,
+                            'icon' => 'fa-solid fa-bed',
+                        ],
+                        [
+                            'meal_plan' => 'BB',
+                            'title' => 'Bed & Breakfast',
+                            'subtitle' => 'Breakfast included',
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0),
+                            'icon' => 'fa-solid fa-mug-hot',
+                        ],
+                        [
+                            'meal_plan' => 'HB',
+                            'title' => 'Half Board',
+                            'subtitle' => 'Half board included',
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0),
+                            'icon' => 'fa-solid fa-utensils',
+                        ],
+                        [
+                            'meal_plan' => 'FB',
+                            'title' => 'Full Board',
+                            'subtitle' => 'Full board included',
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0),
+                            'icon' => 'fa-solid fa-bowl-food',
+                        ],
+                        [
+                            'meal_plan' => 'All Inclusive',
+                            'title' => 'All Inclusive',
+                            'subtitle' => 'Journey package with meals & transfers',
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0),
+                            'icon' => 'fa-solid fa-champagne-glasses',
+                        ],
+                    ])->filter(static fn ($item) => (float) ($item['nightly'] ?? 0) > 0)->values();
+
+                    if ($rateOptions->isEmpty() && $roomOnlyNightlyRate > 0) {
+                        $rateOptions = collect([[
+                            'meal_plan' => 'Room Only',
+                            'title' => 'Room Only',
+                            'subtitle' => 'Standard cabin rate',
+                            'nightly' => $roomOnlyNightlyRate,
+                            'icon' => 'fa-solid fa-bed',
+                        ]]);
                     }
-                    
-                    $roomPrice = number_format($roomOnlyNightlyRate, 2);
-                    
-                    // Amenities
+
                     $amenitiesText = collect(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: [])
                         ->map(static fn ($item) => trim((string) $item))
-                        ->filter()->take(3)->values();
+                        ->filter()->values();
+
+                    $roomDescription = trim((string) ($room->description ?? ''));
+                    $roomLinkBase = '/category-booking/liveaboard/' . ($property->vendor_property_id ?? $property->id);
                 @endphp
-                <article class="room-card" data-room-id="{{ $roomId }}">
-                    <a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-media-link" title="Reserve {{ $roomName }}">
-                        <div class="room-media" style="background: linear-gradient(135deg, #d9ebf4 0%, #f0f7fc 100%); display: flex; align-items: center; justify-content: center; min-height: 220px;">
+                <article class="room-card cabin-room-card" data-room-id="{{ $roomId }}" data-room-name="{{ $roomName }}" data-room-bed="{{ $bedType }}" data-room-description="{{ $roomDescription }}" data-room-currency="{{ $roomCurrency }}" data-room-images='@json($roomImages->all())' data-room-amenities='@json($amenitiesText->all())'>
+                    <a href="#" class="room-media-link" data-open-room-modal="{{ $roomId }}" title="View {{ $roomName }} details">
+                        <div class="room-media">
                             @if ($roomThumb)
-                                <img src="{{ $roomThumb }}" alt="{{ $roomName }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ $roomThumb }}" alt="{{ $roomName }}" loading="lazy">
                             @else
                                 <i class="fa-solid fa-door-open" style="font-size: 2.5rem; color: #0f6179; opacity: 0.3;"></i>
                             @endif
+                            <span class="room-tag"><i class="{{ (string) (($rateOptions->first()['icon'] ?? 'fa-solid fa-bed')) }}" aria-hidden="true"></i>{{ (string) (($rateOptions->first()['meal_plan'] ?? 'Room Only')) }}</span>
                         </div>
                     </a>
                     <div class="room-body">
-                        <h3><a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-name-link" title="Reserve {{ $roomName }}">{{ $roomName }}</a></h3>
+                        <h3><a href="#" class="room-name-link" data-open-room-modal="{{ $roomId }}">{{ $roomName }}</a></h3>
                         
                         <div class="room-offer-table">
                             <div class="room-offer-head">
-                                <span>Cabin Type</span>
+                                <span>Your Choices</span>
                                 <span>Sleeps</span>
-                                <span>Price</span>
+                                <span>Today's Price</span>
                             </div>
-                            <div class="room-offer-row">
-                                <div>
-                                    <span class="room-option-title">All Inclusive</span>
-                                    <span class="room-option-subtitle">Complete journey package with meals & transfers</span>
-                                </div>
-                                <div>
-                                    <span class="room-sleeps">
-                                        <span class="room-sleeps-icons">
-                                            @for ($i = 0; $i < min(2, $maxOccupancy); $i++)
-                                                <i class="fa-solid fa-user"></i>
-                                            @endfor
-                                            @for ($i = 0; $i < max(0, $maxOccupancy - 2); $i++)
-                                                <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
-                                            @endfor
+                            @foreach ($rateOptions as $rateIndex => $rateOption)
+                                @php
+                                    $nightlyRateRaw = (float) ($rateOption['nightly'] ?? 0);
+                                    $ratePrice = number_format($nightlyRateRaw, 2);
+                                    $reserveLink = $roomLinkBase . '?' . http_build_query([
+                                        'room_id' => $roomId,
+                                        'meal_plan' => (string) ($rateOption['meal_plan'] ?? 'Room Only'),
+                                        'guest_residency' => $visitorResidency ?? 'foreign_national',
+                                    ]);
+                                @endphp
+                                <div class="room-offer-row{{ $rateIndex > 0 ? ' is-hidden' : '' }}">
+                                    <div class="room-choices">
+                                        <span class="room-option-title">{{ (string) ($rateOption['title'] ?? 'Room Only') }}</span>
+                                        <span class="room-option-subtitle">{{ (string) ($rateOption['subtitle'] ?? 'Rate details available') }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="room-sleeps">
+                                            <span class="room-sleeps-icons">
+                                                @for ($i = 0; $i < min(2, $maxOccupancy); $i++)
+                                                    <i class="fa-solid fa-user"></i>
+                                                @endfor
+                                                @for ($i = 0; $i < max(0, $maxOccupancy - 2); $i++)
+                                                    <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
+                                                @endfor
+                                            </span>
                                         </span>
-                                        <span style="font-size: 0.8rem; color: #3a5568;">Up to {{ $maxOccupancy }}</span>
-                                    </span>
-                                </div>
-                                <div>
-                                    <div class="room-price-box">
-                                        <div>
-                                            <div class="room-price-now">{{ $roomCurrency }} {{ $roomPrice }}</div>
-                                            <div class="room-price-summary">Per person all-inclusive</div>
-                                            <div class="room-price-summary-note">Meals, activities & transfers included</div>
+                                    </div>
+                                    <div>
+                                        <div class="room-price-box">
+                                            <div>
+                                                <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
+                                                <div class="room-price-summary">Per person</div>
+                                                <div class="room-price-summary-note">Journey package rate</div>
+                                            </div>
+                                            <a class="reserve-btn" href="{{ $reserveLink }}">Reserve</a>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endforeach
+
+                            @if ($rateOptions->count() > 1)
+                                <div class="room-offer-expand">
+                                    <button class="room-offer-expand-btn" data-expand-toggle="room-{{ $roomId }}">Show More Rates</button>
+                                </div>
+                            @endif
                         </div>
 
                         <ul class="room-side-details">
                             <li><span class="room-side-dot"></span><span>{{ $bedType }}</span></li>
                             <li><span class="room-side-dot"></span><span>Up to {{ $maxOccupancy }} guests</span></li>
                             <li><span class="room-side-dot"></span><span>Air conditioned</span></li>
-                            @foreach ($amenitiesText as $amenity)
+                            @foreach ($amenitiesText->take(3) as $amenity)
                                 <li><span class="room-side-dot"></span><span>{{ $amenity }}</span></li>
                             @endforeach
-                            <li><a class="summary-review-link" href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}">Reserve cabin</a></li>
+                            <li><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">Room Details</a></li>
                         </ul>
                     </div>
                 </article>
@@ -937,6 +1323,26 @@
             </div>
         @endif
     </section>
+
+    <div class="room-details-modal-overlay" id="roomDetailsModal" data-room-modal>
+        <div class="room-details-modal">
+            <button class="room-details-modal-close" data-close-modal>×</button>
+            <div id="roomModalContent" class="room-details-content"></div>
+        </div>
+    </div>
+
+    <template id="roomDetailsTemplate">
+        <div class="room-details-gallery" data-gallery></div>
+        <div class="room-details-sidebar">
+            <div class="room-details-header">
+                <h2 class="room-details-title" data-title></h2>
+                <div class="room-bed-info" data-bedinfo></div>
+                <p class="room-details-description" data-description></p>
+            </div>
+            <div class="room-amenities-grid" data-amenities></div>
+            <a class="room-select-btn" data-select-btn href="#">Reserve Cabin</a>
+        </div>
+    </template>
 </main>
 
 @include('partials.global-site-footer')
@@ -969,6 +1375,151 @@
                 }
             });
         });
+
+        // Room Rate Expansion
+        document.querySelectorAll('[data-expand-toggle]').forEach((btn) => {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                const table = this.closest('.room-offer-table');
+                if (!table) {
+                    return;
+                }
+
+                const rows = Array.from(table.querySelectorAll('.room-offer-row')).slice(1);
+                if (rows.length === 0) {
+                    return;
+                }
+
+                const nowHidden = !rows[0].classList.contains('is-hidden');
+                rows.forEach((row) => {
+                    row.classList.toggle('is-hidden', nowHidden);
+                });
+
+                this.textContent = nowHidden ? 'Show More Rates' : 'Show Less Rates';
+            });
+        });
+
+        // Room Details Modal
+        (function () {
+            const modal = document.getElementById('roomDetailsModal');
+            const roomDetailLinks = document.querySelectorAll('[data-open-room-modal]');
+            const closeBtn = modal?.querySelector('[data-close-modal]');
+            const template = document.getElementById('roomDetailsTemplate');
+            const contentArea = document.getElementById('roomModalContent');
+
+            if (!modal || !template || !contentArea || roomDetailLinks.length === 0) {
+                return;
+            }
+
+            function parseJsonArray(value) {
+                if (!value) {
+                    return [];
+                }
+                try {
+                    const parsed = JSON.parse(value);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function titleCaseToken(token) {
+                return String(token || '')
+                    .replace(/[_-]+/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .replace(/\b\w/g, (char) => char.toUpperCase());
+            }
+
+            function buildRoomData(roomCard) {
+                const roomId = roomCard.dataset.roomId || '';
+                const roomName = roomCard.dataset.roomName || 'Cabin';
+                const roomBed = roomCard.dataset.roomBed || 'Standard Bed';
+                const roomDescription = roomCard.dataset.roomDescription || '';
+                const roomImages = parseJsonArray(roomCard.dataset.roomImages);
+                const roomAmenities = parseJsonArray(roomCard.dataset.roomAmenities);
+                const roomLink = roomCard.querySelector('.reserve-btn')?.getAttribute('href') || '#';
+                const maxOccupancy = roomCard.querySelector('.room-side-details li:nth-child(2) span:last-child')?.textContent?.trim() || 'Up to 2 guests';
+
+                return {
+                    roomId,
+                    roomName,
+                    roomBed,
+                    roomDescription,
+                    roomImages,
+                    roomAmenities,
+                    roomLink,
+                    maxOccupancy,
+                };
+            }
+
+            function populateModal(roomId) {
+                const roomCard = document.querySelector(`.room-card[data-room-id="${roomId}"]`);
+                if (!roomCard) {
+                    return;
+                }
+
+                const roomData = buildRoomData(roomCard);
+                contentArea.innerHTML = '';
+
+                const clone = template.content.cloneNode(true);
+
+                const galleryEl = clone.querySelector('[data-gallery]');
+                if (galleryEl) {
+                    const images = roomData.roomImages.length > 0 ? roomData.roomImages.slice(0, 4) : [''];
+                    galleryEl.innerHTML = images.map((src, index) => `<img src="${src}" alt="${roomData.roomName} image ${index + 1}" loading="lazy">`).join('');
+                }
+
+                const titleEl = clone.querySelector('[data-title]');
+                if (titleEl) {
+                    titleEl.textContent = roomData.roomName;
+                }
+
+                const bedInfoEl = clone.querySelector('[data-bedinfo]');
+                if (bedInfoEl) {
+                    bedInfoEl.textContent = `${titleCaseToken(roomData.roomBed)} • ${roomData.maxOccupancy}`;
+                }
+
+                const descriptionEl = clone.querySelector('[data-description]');
+                if (descriptionEl) {
+                    descriptionEl.textContent = roomData.roomDescription !== ''
+                        ? roomData.roomDescription
+                        : `${roomData.roomName} includes comfortable bedding and curated onboard amenities for a complete liveaboard journey.`;
+                }
+
+                const amenitiesEl = clone.querySelector('[data-amenities]');
+                if (amenitiesEl) {
+                    const amenities = roomData.roomAmenities.length > 0 ? roomData.roomAmenities : ['Air conditioned cabin', 'Onboard housekeeping', 'Safety equipment'];
+                    amenitiesEl.innerHTML = `<ul class="room-side-details">${amenities.map((item) => `<li><span class="room-side-dot"></span><span>${titleCaseToken(item)}</span></li>`).join('')}</ul>`;
+                }
+
+                const selectBtn = clone.querySelector('[data-select-btn]');
+                if (selectBtn) {
+                    selectBtn.href = roomData.roomLink;
+                }
+
+                contentArea.appendChild(clone);
+            }
+
+            roomDetailLinks.forEach((link) => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const roomId = this.dataset.openRoomModal;
+                    populateModal(roomId);
+                    modal.classList.add('is-active');
+                });
+            });
+
+            closeBtn?.addEventListener('click', function () {
+                modal.classList.remove('is-active');
+            });
+
+            modal.addEventListener('click', function (e) {
+                if (e.target === this) {
+                    this.classList.remove('is-active');
+                }
+            });
+        })();
     });
 </script>
 </body>

@@ -2853,11 +2853,11 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     $listingId = (int) ($listingRow->id ?? $listing);
 
     if ($resolvedCategory === 'accommodation') {
-        return redirect('/property/' . $listingId . '?preview=admin&category=accommodation');
+        return redirect('/property/' . $listingId . '?preview=admin');
     }
 
     if ($resolvedCategory === 'sea_transport') {
-        return redirect('/sea-transport/' . $listingId . '?preview=admin&category=sea_transport');
+        return redirect('/sea-transport/' . $listingId . '?preview=admin');
     }
 
     $bookingSlugMap = [
@@ -2865,7 +2865,7 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     ];
     $bookingCategory = $bookingSlugMap[$resolvedCategory] ?? $resolvedCategory;
 
-    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?preview=admin&category=' . rawurlencode($resolvedCategory));
+    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?preview=admin');
 });
 
 Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {

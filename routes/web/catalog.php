@@ -1053,16 +1053,22 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
     $roomMediaByRoom = collect();
     
     if ($propertyId > 0 && Schema::hasTable('vendor_property_room_categories')) {
+        $hasLegacyPropertyId = Schema::hasColumn('vendor_property_room_categories', 'property_id');
+
         $roomsQuery = DB::table('vendor_property_room_categories')
-            ->where(function ($query) use ($propertyId, $vendorUserId) {
+            ->where(function ($query) use ($propertyId, $vendorUserId, $hasLegacyPropertyId) {
                 $query->where(function ($inner) use ($propertyId, $vendorUserId) {
                     $inner->where('vendor_property_id', $propertyId)
                         ->where('vendor_user_id', $vendorUserId);
-                })->orWhere(function ($inner) use ($propertyId, $vendorUserId) {
-                    $inner->where('property_id', $propertyId)
-                        ->where('vendor_user_id', $vendorUserId)
-                        ->where('vendor_property_id', 0);
                 });
+
+                if ($hasLegacyPropertyId) {
+                    $query->orWhere(function ($inner) use ($propertyId, $vendorUserId) {
+                        $inner->where('property_id', $propertyId)
+                            ->where('vendor_user_id', $vendorUserId)
+                            ->where('vendor_property_id', 0);
+                    });
+                }
             })
             ->orderBy('id')
             ->get();

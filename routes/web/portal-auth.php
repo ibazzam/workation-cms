@@ -2844,9 +2844,6 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     }
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->query('category', ''));
-    if ($categoryHint === null) {
-        return back()->withErrors(['listing' => 'Missing listing category context for preview. Open preview from the listing moderation panel.']);
-    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);

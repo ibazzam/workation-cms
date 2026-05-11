@@ -725,58 +725,12 @@ $renderAdminPortalPage = function (Request $request) {
         $alerts->push('Finance moderation tables are missing. Run migrations to enable frontend commission controls.');
     }
 
-    // Listing moderation data — read from dedicated category tables (primary source),
-    // falling back to vendor_properties if dedicated tables lack moderation columns.
+    // Listing moderation data comes only from dedicated category tables.
     $pendingModerationListings = \App\Support\VendorPropertyCompatibilityReader::pendingModerationListings(100);
     $listingModerationHistory = \App\Support\VendorPropertyCompatibilityReader::listingModerationHistory(80);
 
-    // Fallback: if dedicated tables have no moderation columns yet, read from vendor_properties.
-    if ($pendingModerationListings->isEmpty()
-        && Schema::hasTable('vendor_properties')
-        && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
-        $pendingModerationListings = DB::table('vendor_properties as vp')
-            ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
-            ->where('vp.listing_moderation_status', 'pending_review')
-            ->orderBy('vp.listing_submitted_for_review_at')
-            ->limit(100)
-            ->get([
-                'vp.id',
-                'vp.vendor_user_id',
-                'vp.name as listing_name',
-                'vp.listing_category',
-                'vp.listing_moderation_status',
-                'vp.listing_admin_notes',
-                'vp.listing_submitted_for_review_at',
-                'vp.created_at',
-                'vu.name as vendor_name',
-                'vu.email as vendor_email',
-                'vu.portal_vendor_id',
-            ]);
-    }
-    if ($listingModerationHistory->isEmpty()
-        && Schema::hasTable('vendor_properties')
-        && Schema::hasColumn('vendor_properties', 'listing_moderation_status')) {
-        $listingModerationHistory = DB::table('vendor_properties as vp')
-            ->leftJoin('users as vu', 'vu.id', '=', 'vp.vendor_user_id')
-            ->leftJoin('users as approver', 'approver.id', '=', 'vp.listing_approved_by_user_id')
-            ->whereIn('vp.listing_moderation_status', ['approved', 'rejected', 'suspended'])
-            ->orderByDesc('vp.listing_approved_at')
-            ->limit(80)
-            ->get([
-                'vp.id',
-                'vp.vendor_user_id',
-                'vp.name as listing_name',
-                'vp.listing_category',
-                'vp.listing_moderation_status',
-                'vp.listing_admin_notes',
-                'vp.listing_approved_at',
-                'vu.name as vendor_name',
-                'vu.email as vendor_email',
-                'vu.portal_vendor_id',
-                'approver.name as approved_by_name',
-                'approver.portal_role as approved_by_role',
-            ]);
-    }
+    // Deliberately do not fall back to vendor_properties for moderation listings.
+    // Dedicated category tables are the source of truth and avoid stale legacy rows.
 
     if ($pendingModerationListings->isNotEmpty()) {
         $alerts->push('Listings pending moderation approval: ' . $pendingModerationListings->count());

@@ -2729,6 +2729,9 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     }
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
@@ -2798,12 +2801,31 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     }
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->query('category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context for preview. Open preview from the listing moderation panel.']);
+    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
 
-    return redirect('/property/' . (int) $listing . '?preview=admin');
+    $resolvedCategory = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
+    $listingId = (int) ($listingRow->id ?? $listing);
+
+    if ($resolvedCategory === 'accommodation') {
+        return redirect('/property/' . $listingId . '?preview=admin&category=accommodation');
+    }
+
+    if ($resolvedCategory === 'sea_transport') {
+        return redirect('/sea-transport/' . $listingId . '?preview=admin&category=sea_transport');
+    }
+
+    $bookingSlugMap = [
+        'land_transport' => 'land-transport',
+    ];
+    $bookingCategory = $bookingSlugMap[$resolvedCategory] ?? $resolvedCategory;
+
+    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?preview=admin&category=' . rawurlencode($resolvedCategory));
 });
 
 Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {
@@ -2817,6 +2839,9 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     ]);
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);

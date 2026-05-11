@@ -701,32 +701,6 @@ if (!function_exists('vendorDeliverOtpCode')) {
                 ],
             ]);
             return;
-
-        if (!function_exists('workationSendBrandedMail')) {
-            function workationSendBrandedMail(string $to, string $subject, array $data = []): void
-            {
-                if ($to === '' || !str_contains($to, '@')) {
-                    return;
-                }
-
-                $html = view('emails.workation-standard', array_merge([
-                    'subject' => $subject,
-                    'branding' => workationBrandingProfile(),
-                ], $data))->render();
-
-                try {
-                    Mail::html($html, static function ($message) use ($to, $subject): void {
-                        $message->to($to)->subject($subject);
-                    });
-                } catch (\Throwable $e) {
-                    Log::warning('workationSendBrandedMail: failed to send email', [
-                        'to' => $to,
-                        'subject' => $subject,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-        }
         }
 
         if ($channel !== 'phone') {
@@ -872,6 +846,32 @@ if (!function_exists('vendorDeliverOtpCode')) {
 
         if (!$smsResponse->successful()) {
             throw new \RuntimeException('Phone OTP delivery failed with status ' . $smsResponse->status() . '.');
+        }
+    }
+}
+
+if (!function_exists('workationSendBrandedMail')) {
+    function workationSendBrandedMail(string $to, string $subject, array $data = []): void
+    {
+        if ($to === '' || !str_contains($to, '@')) {
+            return;
+        }
+
+        $html = view('emails.workation-standard', array_merge([
+            'subject' => $subject,
+            'branding' => workationBrandingProfile(),
+        ], $data))->render();
+
+        try {
+            Mail::html($html, static function ($message) use ($to, $subject): void {
+                $message->to($to)->subject($subject);
+            });
+        } catch (\Throwable $e) {
+            Log::warning('workationSendBrandedMail: failed to send email', [
+                'to' => $to,
+                'subject' => $subject,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 }

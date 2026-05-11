@@ -2065,30 +2065,35 @@ Route::post('/portal/admin/users/{user}/manage', function (Request $request, Use
         $vendorEmail = strtolower(trim((string) ($user->email ?? '')));
         if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
             $statusLabel = strtoupper(str_replace('_', ' ', (string) ($user->vendor_verification_status ?? 'pending')));
-            $mailLines = [
-                'Your business/service verification review has been updated.',
-                '',
-                'Status: ' . $statusLabel,
-            ];
+            $bodyLines = ['Your business/service verification review has been updated.'];
 
             if ((string) ($user->vendor_verification_status ?? '') === 'rejected') {
                 if ($resolvedRejectionReason !== '') {
-                    $mailLines[] = 'Reason: ' . $resolvedRejectionReason;
+                    $bodyLines[] = 'Reason: ' . $resolvedRejectionReason;
                 }
                 if ($resolvedMissingDocuments !== []) {
-                    $mailLines[] = 'Missing documents: ' . implode(', ', $resolvedMissingDocuments);
+                    $bodyLines[] = 'Missing documents: ' . implode(', ', $resolvedMissingDocuments);
                 }
             }
 
             if ($soleProprietorNameOverride) {
-                $mailLines[] = 'Reviewer note: Sole proprietor name rule override has been applied.';
+                $bodyLines[] = 'Reviewer note: Sole proprietor name rule override has been applied.';
             }
 
             try {
-                Mail::raw(implode("\n", $mailLines), static function ($message) use ($vendorEmail) {
-                    $message->to($vendorEmail)
-                        ->subject('Vendor verification update');
-                });
+                workationSendBrandedMail($vendorEmail, 'Vendor verification update', [
+                    'preheader' => 'Your verification review status has changed.',
+                    'headline' => 'Vendor verification update',
+                    'intro' => 'Your business/service verification review has been updated.',
+                    'statusLabel' => $statusLabel,
+                    'statusTone' => ((string) ($user->vendor_verification_status ?? '') === 'approved') ? 'success' : (((string) ($user->vendor_verification_status ?? '') === 'rejected') ? 'danger' : 'info'),
+                    'bodyLines' => $bodyLines,
+                    'metaRows' => [
+                        'Status' => $statusLabel,
+                    ],
+                    'ctaUrl' => url('/portal/vendor/login'),
+                    'ctaLabel' => 'Open Vendor Portal',
+                ]);
                 $notificationSentAt = now();
             } catch (\Throwable $exception) {
                 Log::warning('Unable to send vendor verification update email.', [
@@ -2771,21 +2776,22 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
         $vendorEmail = strtolower(trim((string) ($vendorUser?->email ?? '')));
         if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
             $approvalNotes = trim((string) ($adminNotes ?? ''));
-            $body = [
-                'Your service listing has been approved.',
-                '',
-                'Listing: ' . (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
-            ];
-
-            if ($approvalNotes !== '') {
-                $body[] = 'Reviewer notes: ' . $approvalNotes;
-            }
-
             try {
-                Mail::raw(implode("\n", $body), static function ($message) use ($vendorEmail) {
-                    $message->to($vendorEmail)
-                        ->subject('Service listing approved');
-                });
+                workationSendBrandedMail($vendorEmail, 'Service listing approved', [
+                    'preheader' => 'Your service listing is now approved.',
+                    'headline' => 'Service listing approved',
+                    'intro' => 'Your service listing has been approved and is now open for bookings.',
+                    'statusLabel' => 'Approved',
+                    'statusTone' => 'success',
+                    'bodyLines' => $approvalNotes !== ''
+                        ? ['Your service listing has been approved.', 'Reviewer notes: ' . $approvalNotes]
+                        : ['Your service listing has been approved.'],
+                    'metaRows' => [
+                        'Listing' => (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
+                    ],
+                    'ctaUrl' => url('/vendor'),
+                    'ctaLabel' => 'Open Vendor Dashboard',
+                ]);
             } catch (\Throwable $exception) {
                 Log::warning('Unable to send listing approval notification.', [
                     'listing_id' => $listing,
@@ -2936,22 +2942,24 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
         $vendorUser = User::query()->find($vendorUserId);
         $vendorEmail = strtolower(trim((string) ($vendorUser?->email ?? '')));
         if ($vendorEmail !== '' && filter_var($vendorEmail, FILTER_VALIDATE_EMAIL)) {
-            $body = [
-                'Your service listing has been rejected after review.',
-                '',
-                'Listing: ' . (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
-                'Reason: ' . trim((string) $validated['admin_notes']),
-            ];
-
-            if ($missingDocuments !== '') {
-                $body[] = 'Missing documents: ' . $missingDocuments;
-            }
-
             try {
-                Mail::raw(implode("\n", $body), static function ($message) use ($vendorEmail) {
-                    $message->to($vendorEmail)
-                        ->subject('Service listing review update');
-                });
+                workationSendBrandedMail($vendorEmail, 'Service listing review update', [
+                    'preheader' => 'Your service listing review has been updated.',
+                    'headline' => 'Service listing review update',
+                    'intro' => 'Your service listing has been reviewed and requires changes before it can be approved.',
+                    'statusLabel' => 'Rejected',
+                    'statusTone' => 'danger',
+                    'bodyLines' => array_values(array_filter([
+                        'Your service listing has been rejected after review.',
+                        'Reason: ' . trim((string) $validated['admin_notes']),
+                        $missingDocuments !== '' ? 'Missing documents: ' . $missingDocuments : null,
+                    ])),
+                    'metaRows' => [
+                        'Listing' => (string) ($listingRow->listing_name ?? ('Listing #' . $listing)),
+                    ],
+                    'ctaUrl' => url('/vendor'),
+                    'ctaLabel' => 'Open Vendor Dashboard',
+                ]);
             } catch (\Throwable $exception) {
                 Log::warning('Unable to send listing rejection notification.', [
                     'listing_id' => $listing,

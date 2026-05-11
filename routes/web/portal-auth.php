@@ -2728,7 +2728,8 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
         abort(403);
     }
 
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
+    $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2740,7 +2741,7 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
 
     $adminNotes = trim((string) ($request->input('admin_notes') ?? ''));
     $adminUserId = (int) session('portal_admin_user_id');
-    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? ''));
+    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
 
     \App\Support\VendorPropertyCompatibilityReader::updateModerationStatus(
         $listing,
@@ -2796,7 +2797,8 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
         abort(403);
     }
 
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
+    $categoryHint = vendorPortalCanonicalCategory((string) $request->query('category', ''));
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2814,7 +2816,8 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
         'missing_documents' => ['nullable', 'string', 'max:1000'],
     ]);
 
-    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing);
+    $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
@@ -2825,7 +2828,7 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     }
 
     $adminUserId = (int) session('portal_admin_user_id');
-    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? ''));
+    $categoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
 
     $rejectionNotes = trim((string) $validated['admin_notes']);
     $missingDocuments = trim((string) ($validated['missing_documents'] ?? ''));

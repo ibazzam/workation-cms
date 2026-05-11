@@ -206,10 +206,16 @@ Route::get('/property/{property}', function (Request $request, int $property) {
                 (int) ($propertyRow->dedicated_row_id ?? 0),
             ])->filter(static fn (int $id) => $id > 0)->unique()->values();
 
+            $propertyEntityTypes = ['property'];
+            $currentCategory = strtolower(trim((string) ($propertyRow->listing_category ?? '')));
+            if (in_array($currentCategory, ['sea_transport', 'land_transport', 'transport', 'marine_transport', 'liveaboard'], true)) {
+                $propertyEntityTypes = ['property', 'service', 'sea_transport', 'transport', 'marine_transport'];
+            }
+
             $mediaQuery = DB::table('vendor_listing_media');
-            $mediaQuery->where(function ($query) use ($propertyMediaEntityIds, $roomIds) {
-                $query->orWhere(function ($inner) use ($propertyMediaEntityIds) {
-                    $inner->where('entity_type', 'property')->whereIn('entity_id', $propertyMediaEntityIds->all());
+            $mediaQuery->where(function ($query) use ($propertyMediaEntityIds, $roomIds, $propertyEntityTypes) {
+                $query->orWhere(function ($inner) use ($propertyMediaEntityIds, $propertyEntityTypes) {
+                    $inner->whereIn('entity_type', $propertyEntityTypes)->whereIn('entity_id', $propertyMediaEntityIds->all());
                 });
 
                 if ($roomIds->isNotEmpty()) {
@@ -220,8 +226,12 @@ Route::get('/property/{property}', function (Request $request, int $property) {
             });
 
             $mediaRows = $mediaQuery->orderByDesc('is_primary')->orderByDesc('created_at')->limit(300)->get();
+            $propertyEntityTypeLookup = collect($propertyEntityTypes)
+                ->map(static fn ($type) => strtolower((string) $type))
+                ->flip();
+
             $payload['property_media'] = $mediaRows
-                ->filter(static fn ($m) => strtolower((string) ($m->entity_type ?? '')) === 'property')
+                ->filter(static fn ($m) => $propertyEntityTypeLookup->has(strtolower((string) ($m->entity_type ?? ''))))
                 ->values()
                 ->all();
             $payload['room_media_rows'] = $mediaRows

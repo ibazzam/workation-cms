@@ -1554,16 +1554,22 @@ Route::post('/portal/vendor/properties/{property}/delete', function (int $proper
     return vendorPortalListingsBackResponse('Property listing removed.', 1);
 });
 
-Route::post('/portal/vendor/properties/{property}/submit-for-review', function (int $property) {
+Route::post('/portal/vendor/properties/{property}/submit-for-review', function (Request $request, int $property) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');
     }
 
     $vendorUserId = (int) session('portal_vendor_user_id', 0);
 
-    // Load listing from dedicated table first; fall back to vendor_properties.
-    $listing = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($property);
-    if (!$listing || (int) ($listing->vendor_user_id ?? 0) !== $vendorUserId) {
+    $requestedListingCategory = vendorPortalCanonicalCategory((string) $request->input('portal_listing_category', ''));
+
+    // Load owned listing using category hint to avoid cross-category ID collisions.
+    $listing = \App\Support\VendorPropertyCompatibilityReader::loadOwnedPropertyById(
+        $property,
+        $vendorUserId,
+        $requestedListingCategory
+    );
+    if (!$listing) {
         return back()->withErrors(['profile' => 'Listing not found.']);
     }
 

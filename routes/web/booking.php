@@ -1116,7 +1116,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $categoryFields = collect($categoryFieldMap[$categoryKey] ?? [])->values();
 
-    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property);
+    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, $dbCategoryKey);
     if (!$propertyRow) {
         abort(404);
     }
@@ -1176,9 +1176,15 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $propertyMedia = collect();
     if (Schema::hasTable('vendor_listing_media')) {
+        $propertyMediaEntityIds = collect(workationPropertyLookupIds($propertyRow))
+            ->map(static fn ($id) => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
         $propertyMedia = DB::table('vendor_listing_media')
             ->where('entity_type', 'property')
-            ->where('entity_id', (int) ($propertyRow->id ?? 0))
+            ->whereIn('entity_id', $propertyMediaEntityIds->isNotEmpty() ? $propertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)])
             ->orderByDesc('is_primary')
             ->orderByDesc('created_at')
             ->limit(20)

@@ -2563,17 +2563,19 @@
                                         <div class="small">Submitted: {{ \Illuminate\Support\Carbon::parse($listing->listing_submitted_for_review_at)->format('Y-m-d H:i') }}</div>
                                     @endif
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
+                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
                                     </div>
                                     <div class="registration-actions">
                                         <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/approve">
                                             @csrf
+                                            <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
                                             <label class="small" for="approve_listing_notes_{{ $listing->id }}">Approval notes (optional)</label>
                                             <textarea id="approve_listing_notes_{{ $listing->id }}" name="admin_notes" placeholder="Internal notes for this approval"></textarea>
                                             <button class="btn-approve" type="submit">Approve Listing</button>
                                         </form>
                                         <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/reject">
                                             @csrf
+                                            <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
                                             <label class="small" for="reject_listing_notes_{{ $listing->id }}">Rejection reason <span style="color:red">*</span></label>
                                             <textarea id="reject_listing_notes_{{ $listing->id }}" name="admin_notes" required placeholder="Explain what must be resolved before the listing can be approved"></textarea>
                                             <label class="small" for="reject_listing_missing_docs_{{ $listing->id }}">Missing documents (optional)</label>
@@ -2607,7 +2609,7 @@
                                     </div>
                                     <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview" target="_blank" rel="noopener">Open Listing Preview</a>
+                                        <a href="/portal/admin/listings/{{ $listing->id }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}" target="_blank" rel="noopener">Open Listing Preview</a>
                                     </div>
                                     @if (!empty($listing->listing_approved_at))
                                         <div class="small">Actioned: {{ \Illuminate\Support\Carbon::parse($listing->listing_approved_at)->format('Y-m-d H:i') }} by {{ $listing->approved_by_name ?: 'Unknown' }}</div>

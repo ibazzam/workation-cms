@@ -562,6 +562,12 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $mediaEntityTypes = in_array($dbCategoryKey, ['accommodation'], true)
                 ? ['property']
                 : ['service', 'property'];
+            if (in_array($dbCategoryKey, ['sea_transport', 'land_transport', 'liveaboard'], true)) {
+                $mediaEntityTypes = array_values(array_unique(array_merge(
+                    $mediaEntityTypes,
+                    ['sea_transport', 'transport', 'marine_transport']
+                )));
+            }
             $mediaRows = collect(Cache::remember(
                 'catalog:property_media:v2:' . md5($dbCategoryKey . ':' . implode('|', $mediaEntityTypes) . ':' . $propertyLookupIds->implode(',')),
                 now()->addMinutes(3),
@@ -716,10 +722,18 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
 Route::get('/sea-transport/{id}', function (Request $request, int $id) {
     $stTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor('sea_transport');
-    $property = DB::table($stTable)
-        ->where('vendor_property_id', $id)
-        ->where('status', 'active')
-        ->first();
+    $propertyQuery = DB::table($stTable)
+        ->where(function ($query) use ($id) {
+            $query->where('vendor_property_id', $id)
+                ->orWhere('id', $id);
+        })
+        ->where('status', 'active');
+
+    if (Schema::hasColumn($stTable, 'listing_moderation_status')) {
+        $propertyQuery->where('listing_moderation_status', 'approved');
+    }
+
+    $property = $propertyQuery->first();
 
     if (!$property) {
         abort(404);
@@ -748,7 +762,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'room'])
+            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport', 'room'])
             ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')

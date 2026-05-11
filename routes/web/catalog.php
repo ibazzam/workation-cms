@@ -1045,6 +1045,66 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
 
     $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
 
+    // Query rooms for this liveaboard property
+    $propertyId = (int) ($property->id ?? 0);
+    $vendorUserId = (int) ($property->vendor_user_id ?? 0);
+    
+    $rooms = collect();
+    $roomMediaByRoom = collect();
+    
+    if ($propertyId > 0 && Schema::hasTable('vendor_property_room_categories')) {
+        $roomsQuery = DB::table('vendor_property_room_categories')
+            ->where(function ($query) use ($propertyId, $vendorUserId) {
+                $query->where(function ($inner) use ($propertyId, $vendorUserId) {
+                    $inner->where('vendor_property_id', $propertyId)
+                        ->where('vendor_user_id', $vendorUserId);
+                })->orWhere(function ($inner) use ($propertyId, $vendorUserId) {
+                    $inner->where('property_id', $propertyId)
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->where('vendor_property_id', 0);
+                });
+            })
+            ->orderBy('id')
+            ->get();
+        
+        $rooms = collect($roomsQuery);
+        
+        // Query room media if table exists
+        if (Schema::hasTable('vendor_listing_media') && $rooms->isNotEmpty()) {
+            $roomIds = $rooms->pluck('id')->all();
+            $mediaRows = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', ['room', 'cabin', 'room_category'])
+                ->whereIn('entity_id', $roomIds)
+                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->get();
+            
+            foreach ($mediaRows as $mediaRow) {
+                $entityId = (int) ($mediaRow->entity_id ?? 0);
+                if (!$roomMediaByRoom->has($entityId)) {
+                    $roomMediaByRoom->put($entityId, collect());
+                }
+                
+                $mediaUrl = '/media/vendor/' . ((int) ($mediaRow->id ?? 0)) . '/thumb';
+                $roomMediaByRoom->get($entityId)->push($mediaUrl);
+            }
+        }
+    }
+
+    // Media URL resolver helper
+    $mediaUrl = static function ($media, $variant = 'thumb') {
+        if (!$media) {
+            return null;
+        }
+        
+        $mediaId = (int) ($media->id ?? 0);
+        if ($mediaId > 0) {
+            return '/media/vendor/' . $mediaId . '/' . $variant;
+        }
+        
+        return null;
+    };
+
     return view('liveaboard-detail', [
         'property'          => $property,
         'listingDetails'    => $listingDetails,
@@ -1056,6 +1116,9 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
         'vendor'            => $vendor,
         'visitorResidency'  => $visitorResidency,
         'mvrUsdRate'        => $mvrUsdRate,
+        'rooms'             => $rooms,
+        'roomMediaByRoom'   => $roomMediaByRoom,
+        'mediaUrl'          => $mediaUrl,
     ]);
 });
 

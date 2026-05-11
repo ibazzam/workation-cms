@@ -744,120 +744,102 @@
     </section>
 
     <section id="cabins-section" class="section rooms-section" aria-label="Available cabins">
-        <h2>Available Cabins</h2>
-        @php
-            // Extract cabin and pricing data from listing details
-            $cabinCount = (int) ($listingDetails['cabin_count'] ?? 0);
-            $cabinTypes = (array) ($listingDetails['cabin_types'] ?? []);
-            $pricingMatrix = (array) ($pricingMatrix ?? []);
-            $journeyDays = (int) ($listingDetails['journey_days'] ?? 0);
-            $journeyDaysLabel = $journeyDays > 0 ? $journeyDays . '-day' : 'multi-day';
-            
-            // Determine visitor pricing (local vs foreign)
-            $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
-            $mvrUsdRate = (float) $mvrUsdRate;
-            
-            // Get base price
-            $basePriceNumeric = (float) ($property->base_price ?? 0);
-            if ($basePriceNumeric <= 0 && function_exists('workationDerivedListingBasePrice')) {
-                $basePriceNumeric = (float) workationDerivedListingBasePrice($property);
-            }
-            
-            // Determine pricing currency and format
-            $displayCurrency = $visitorIsLocal ? 'MVR' : 'USD';
-            $displayPrice = $basePriceNumeric;
-            if ($displayCurrency === 'USD' && $mvrUsdRate > 0) {
-                $displayPrice = $basePriceNumeric / $mvrUsdRate;
-            }
-            
-            $formattedPrice = number_format($displayPrice, 2);
-            $minPriceDisplay = $displayCurrency . ' ' . $formattedPrice;
-            
-            // Fallback cabin types if not defined
-            if (empty($cabinTypes)) {
-                $cabinTypes = [];
-                for ($i = 1; $i <= min($cabinCount, 12); $i++) {
-                    $cabinTypes[] = [
-                        'name' => 'Cabin ' . $i,
-                        'type' => 'Standard Cabin',
-                        'capacity' => 2,
-                        'description' => 'Comfortable cabin with all-inclusive amenities',
-                    ];
-                }
-            }
-        @endphp
-        
-        @if ($cabinCount > 0 && !empty($cabinTypes))
-            <div class="rooms-grid">
-                @foreach ($cabinTypes as $cabinIndex => $cabin)
-                    @php
-                        $cabinId = $cabinIndex + 1;
-                        $cabinName = trim((string) ($cabin['name'] ?? 'Cabin ' . $cabinId));
-                        $cabinType = trim((string) ($cabin['type'] ?? 'Standard Cabin'));
-                        $cabinCapacity = (int) ($cabin['capacity'] ?? 2);
-                        $cabinDescription = trim((string) ($cabin['description'] ?? ''));
-                    @endphp
-                    <article class="room-card" data-cabin-id="{{ $cabinId }}">
-                        <a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-media-link" title="Book {{ $cabinName }}">
-                            <div class="room-media" style="background: linear-gradient(135deg, #d9ebf4 0%, #f0f7fc 100%); display: flex; align-items: center; justify-content: center; min-height: 220px;">
+        <h2>Cabin Options</h2>
+        <div class="rooms-grid">
+            @forelse ($rooms as $room)
+                @php
+                    $roomId = (int) ($room->id ?? 0);
+                    $roomName = trim((string) ($room->name ?? 'Cabin'));
+                    $bedType = trim((string) ($room->bed_type ?? 'Standard Bed'));
+                    $maxOccupancy = max(1, (int) ($room->max_occupancy ?? 2));
+                    $roomMedia = $roomMediaByRoom->get($roomId, collect())->take(1);
+                    $roomThumb = $roomMedia->isNotEmpty() ? $roomMedia->first() : null;
+                    
+                    // Pricing
+                    $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
+                    $roomCurrency = $visitorIsLocal ? 'MVR' : 'USD';
+                    
+                    $defaultNightlyRate = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
+                    
+                    $roomOnlyNightlyRate = $visitorIsLocal
+                        ? (float) ($room->meal_plan_room_only_price_local ?? 0)
+                        : (float) ($room->meal_plan_room_only_price_usd ?? 0);
+                    
+                    if ($roomOnlyNightlyRate <= 0) {
+                        $roomOnlyNightlyRate = $defaultNightlyRate;
+                    }
+                    
+                    $roomPrice = number_format($roomOnlyNightlyRate, 2);
+                    
+                    // Amenities
+                    $amenitiesText = collect(preg_split('/[,\n]+/', (string) ($room->amenities ?? '')) ?: [])
+                        ->map(static fn ($item) => trim((string) $item))
+                        ->filter()->take(3)->values();
+                @endphp
+                <article class="room-card" data-room-id="{{ $roomId }}">
+                    <a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-media-link" title="Reserve {{ $roomName }}">
+                        <div class="room-media" style="background: linear-gradient(135deg, #d9ebf4 0%, #f0f7fc 100%); display: flex; align-items: center; justify-content: center; min-height: 220px;">
+                            @if ($roomThumb)
+                                <img src="{{ $roomThumb }}" alt="{{ $roomName }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                            @else
                                 <i class="fa-solid fa-door-open" style="font-size: 2.5rem; color: #0f6179; opacity: 0.3;"></i>
+                            @endif
+                        </div>
+                    </a>
+                    <div class="room-body">
+                        <h3><a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-name-link" title="Reserve {{ $roomName }}">{{ $roomName }}</a></h3>
+                        
+                        <div class="room-offer-table">
+                            <div class="room-offer-head">
+                                <span>Cabin Type</span>
+                                <span>Sleeps</span>
+                                <span>Price</span>
                             </div>
-                        </a>
-                        <div class="room-body">
-                            <h3><a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" class="room-name-link" title="Book {{ $cabinName }}">{{ $cabinName }}</a></h3>
-                            
-                            <div class="room-offer-table" aria-label="Cabin package pricing">
-                                <div class="room-offer-head">
-                                    <span>Package Option</span>
-                                    <span>Sleeps</span>
-                                    <span>{{ $journeyDaysLabel }} Price</span>
+                            <div class="room-offer-row">
+                                <div>
+                                    <span class="room-option-title">All Inclusive</span>
+                                    <span class="room-option-subtitle">Complete journey package with meals & transfers</span>
                                 </div>
-                                <div class="room-offer-row">
-                                    <div>
-                                        <span class="room-option-title">All Inclusive Package</span>
-                                        <span class="room-option-subtitle">Full {{ $journeyDaysLabel }} journey with meals, activities & transfers</span>
-                                    </div>
-                                    <div>
-                                        <span class="room-sleeps">
-                                            <span class="room-sleeps-icons">
-                                                @for ($i = 0; $i < min(2, $cabinCapacity); $i++)
-                                                    <i class="fa-solid fa-user"></i>
-                                                @endfor
-                                                @for ($i = 0; $i < max(0, $cabinCapacity - 2); $i++)
-                                                    <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
-                                                @endfor
-                                            </span>
-                                            <span style="font-size: 0.8rem; color: #3a5568;">Up to {{ $cabinCapacity }}</span>
+                                <div>
+                                    <span class="room-sleeps">
+                                        <span class="room-sleeps-icons">
+                                            @for ($i = 0; $i < min(2, $maxOccupancy); $i++)
+                                                <i class="fa-solid fa-user"></i>
+                                            @endfor
+                                            @for ($i = 0; $i < max(0, $maxOccupancy - 2); $i++)
+                                                <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
+                                            @endfor
                                         </span>
-                                    </div>
-                                    <div>
-                                        <div class="room-price-box">
-                                            <div>
-                                                <div class="room-price-now">{{ $displayCurrency }} {{ $formattedPrice }}</div>
-                                                <div class="room-price-summary">All inclusive per cabin</div>
-                                                <div class="room-price-summary-note">Includes meals, activities & transfers</div>
-                                            </div>
+                                        <span style="font-size: 0.8rem; color: #3a5568;">Up to {{ $maxOccupancy }}</span>
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="room-price-box">
+                                        <div>
+                                            <div class="room-price-now">{{ $roomCurrency }} {{ $roomPrice }}</div>
+                                            <div class="room-price-summary">Per person all-inclusive</div>
+                                            <div class="room-price-summary-note">Meals, activities & transfers included</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <ul class="room-side-details">
-                                <li><span class="room-side-dot"></span><span>{{ $cabinType }}</span></li>
-                                <li><span class="room-side-dot"></span><span>Up to {{ $cabinCapacity }} guests</span></li>
-                                <li><span class="room-side-dot"></span><span>Air conditioned</span></li>
-                                @if ($cabinDescription)
-                                    <li><span class="room-side-dot"></span><span>{{ $cabinDescription }}</span></li>
-                                @endif
-                                <li><a class="summary-review-link" href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}">View booking options</a></li>
-                            </ul>
                         </div>
-                    </article>
-                @endforeach
-            </div>
-        @else
-            <article class="room-card"><div class="room-body"><h3>Cabin Inventory</h3><span class="muted">Cabin details and availability will be published soon. All-inclusive journey pricing includes meals, activities, and transfers.</span></div></article>
-        @endif
+
+                        <ul class="room-side-details">
+                            <li><span class="room-side-dot"></span><span>{{ $bedType }}</span></li>
+                            <li><span class="room-side-dot"></span><span>Up to {{ $maxOccupancy }} guests</span></li>
+                            <li><span class="room-side-dot"></span><span>Air conditioned</span></li>
+                            @foreach ($amenitiesText as $amenity)
+                                <li><span class="room-side-dot"></span><span>{{ $amenity }}</span></li>
+                            @endforeach
+                            <li><a class="summary-review-link" href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}">Reserve cabin</a></li>
+                        </ul>
+                    </div>
+                </article>
+            @empty
+                <article class="room-card"><div class="room-body"><h3>Cabin Options</h3><span class="muted">Cabin inventory will be published soon. All-inclusive pricing includes meals, activities, and transfers.</span></div></article>
+            @endforelse
+        </div>
     </section>
 
     <section id="guest-reviews-section" class="section" aria-label="Guest reviews">

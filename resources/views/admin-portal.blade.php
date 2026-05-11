@@ -2611,6 +2611,17 @@
                                     <div class="small" style="margin-top:4px;">
                                         <a href="/portal/admin/listings/{{ $listing->id }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}" target="_blank" rel="noopener">Open Listing Preview</a>
                                     </div>
+                                    @if (strtolower((string) ($listing->listing_moderation_status ?? '')) === 'approved')
+                                        <div class="registration-actions" style="margin-top:8px;">
+                                            <form method="POST" action="/portal/admin/listings/{{ $listing->id }}/unapprove">
+                                                @csrf
+                                                <input type="hidden" name="listing_category" value="{{ (string) ($listing->listing_category ?: '') }}">
+                                                <label class="small" for="unapprove_listing_notes_{{ $listing->id }}">Unapprove reason (optional)</label>
+                                                <textarea id="unapprove_listing_notes_{{ $listing->id }}" name="admin_notes" placeholder="Why move this listing back to pending review?"></textarea>
+                                                <button class="btn-reject" type="submit" onclick="return confirm('Move this approved listing back to Pending Review?');">Unapprove Listing</button>
+                                            </form>
+                                        </div>
+                                    @endif
                                     @if (!empty($listing->listing_approved_at))
                                         <div class="small">Actioned: {{ \Illuminate\Support\Carbon::parse($listing->listing_approved_at)->format('Y-m-d H:i') }} by {{ $listing->approved_by_name ?: 'Unknown' }}</div>
                                     @endif

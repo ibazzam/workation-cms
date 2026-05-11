@@ -679,6 +679,71 @@ class VendorPropertyCompatibilityReader
         }
     }
 
+    /**
+     * Move a moderated listing back to pending_review (admin unapprove/reopen flow).
+     */
+    public static function reopenForReview(int $vendorPropertyId, ?string $adminNotes = null, ?string $categoryHint = null): void
+    {
+        $now = now();
+        $payload = [
+            'listing_moderation_status' => 'pending_review',
+            'listing_submitted_for_review_at' => $now,
+            'listing_admin_notes' => $adminNotes,
+            'listing_approved_at' => null,
+            'listing_approved_by_user_id' => null,
+            'updated_at' => $now,
+        ];
+
+        $tables = $categoryHint !== null
+            ? [self::categoryTableMap()[$categoryHint] ?? null]
+            : array_values(self::categoryTableMap());
+
+        foreach ($tables as $tableName) {
+            if ($tableName === null || !self::hasTable($tableName)) {
+                continue;
+            }
+            if (!self::hasColumn($tableName, 'listing_moderation_status')) {
+                continue;
+            }
+
+            $colPayload = array_filter(
+                $payload,
+                static fn ($key) => self::hasColumn($tableName, $key),
+                ARRAY_FILTER_USE_KEY
+            );
+
+            $affected = DB::table($tableName)
+                ->where(function ($query) use ($vendorPropertyId): void {
+                    $query->where('vendor_property_id', $vendorPropertyId)
+                        ->orWhere('id', $vendorPropertyId);
+                })
+                ->update($colPayload);
+
+            if ($affected > 0 && $categoryHint === null) {
+                break;
+            }
+        }
+
+        // Dual-write to vendor_properties during transition.
+        if (self::hasTable('vendor_properties') && self::hasColumn('vendor_properties', 'listing_moderation_status')) {
+            $vpPayload = ['listing_moderation_status' => 'pending_review', 'updated_at' => $now];
+            if (self::hasColumn('vendor_properties', 'listing_submitted_for_review_at')) {
+                $vpPayload['listing_submitted_for_review_at'] = $now;
+            }
+            if (self::hasColumn('vendor_properties', 'listing_admin_notes')) {
+                $vpPayload['listing_admin_notes'] = $adminNotes;
+            }
+            if (self::hasColumn('vendor_properties', 'listing_approved_at')) {
+                $vpPayload['listing_approved_at'] = null;
+            }
+            if (self::hasColumn('vendor_properties', 'listing_approved_by_user_id')) {
+                $vpPayload['listing_approved_by_user_id'] = null;
+            }
+
+            DB::table('vendor_properties')->where('id', $vendorPropertyId)->update($vpPayload);
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Private helpers
     // -----------------------------------------------------------------------

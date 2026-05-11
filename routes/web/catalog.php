@@ -769,37 +769,46 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             ->get();
 
         foreach ($mediaRows as $mediaRow) {
-            $rawPath = trim((string) ($mediaRow->file_path ?? ''));
-            if ($rawPath === '') {
-                continue;
+            $candidateStoredValues = [];
+            if (function_exists('mediaVariantUrl')) {
+                $candidateStoredValues[] = (string) (mediaVariantUrl($mediaRow, 'banner') ?? '');
+                $candidateStoredValues[] = (string) (mediaVariantUrl($mediaRow, 'thumb') ?? '');
             }
+            $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
 
-            $resolved = function_exists('portalManagedMediaUrlFromPath')
-                ? portalManagedMediaUrlFromPath($rawPath)
-                : null;
-
-            if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
-                $resolved = vendorMediaStorageUrlFromPath($rawPath);
-            }
-
-            if ($resolved === null || trim($resolved) === '') {
-                if (str_starts_with($rawPath, 'http://')) {
-                    $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
-                } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
-                    $resolved = $rawPath;
-                } elseif (str_starts_with($rawPath, '__public__/')) {
-                    $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
-                    $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
-                    $resolved = '/media/portal-public/' . $encodedPath;
-                } else {
-                    $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
-                    $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
-                    $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+            foreach ($candidateStoredValues as $rawPathCandidate) {
+                $rawPath = trim((string) $rawPathCandidate);
+                if ($rawPath === '') {
+                    continue;
                 }
-            }
 
-            if (is_string($resolved) && trim($resolved) !== '') {
-                $galleryMedia[] = trim($resolved);
+                $resolved = function_exists('portalManagedMediaUrlFromPath')
+                    ? portalManagedMediaUrlFromPath($rawPath)
+                    : null;
+
+                if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                    $resolved = vendorMediaStorageUrlFromPath($rawPath);
+                }
+
+                if ($resolved === null || trim((string) $resolved) === '') {
+                    if (str_starts_with($rawPath, 'http://')) {
+                        $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
+                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                        $resolved = $rawPath;
+                    } elseif (str_starts_with($rawPath, '__public__/')) {
+                        $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
+                        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
+                        $resolved = '/media/portal-public/' . $encodedPath;
+                    } else {
+                        $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
+                        $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
+                        $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                    }
+                }
+
+                if (is_string($resolved) && trim($resolved) !== '') {
+                    $galleryMedia[] = trim($resolved);
+                }
             }
         }
 

@@ -2729,6 +2729,9 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     }
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);
@@ -2792,6 +2795,49 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     return back()->with('portal_notice', 'Listing approved and is now open for bookings.');
 });
 
+Route::post('/portal/admin/listings/{listing}/unapprove', function (Request $request, int $listing) {
+    if (!canModerateListings()) {
+        abort(403);
+    }
+
+    $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
+
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    if (!$listingRow) {
+        return back()->withErrors(['listing' => 'Listing not found.']);
+    }
+
+    $currentStatus = strtolower(trim((string) ($listingRow->listing_moderation_status ?? '')));
+    if ($currentStatus !== 'approved') {
+        return back()->withErrors(['listing' => 'Only approved listings can be moved back to pending review.']);
+    }
+
+    $resolvedCategoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
+    $unapproveNotes = trim((string) ($request->input('admin_notes') ?? ''));
+    if ($unapproveNotes === '') {
+        $unapproveNotes = 'Listing moved back to pending review by admin.';
+    }
+
+    \App\Support\VendorPropertyCompatibilityReader::reopenForReview(
+        (int) ($listingRow->id ?? $listing),
+        $unapproveNotes,
+        $resolvedCategoryHint
+    );
+
+    portalAdminAuditLog('listing.unapproved', [
+        'target_identifier' => (string) ($listingRow->listing_name ?? $listingRow->name ?? ('listing_id:' . $listing)),
+        'target_role' => 'VENDOR',
+        'listing_id' => (int) ($listingRow->id ?? $listing),
+        'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
+        'listing_category' => $resolvedCategoryHint,
+    ]);
+
+    return back()->with('portal_notice', 'Listing moved back to pending review.');
+});
+
 Route::get('/portal/admin/listings/{listing}/preview', function (Request $request, int $listing) {
     if (!canModerateListings()) {
         abort(403);
@@ -2803,7 +2849,23 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
         return back()->withErrors(['listing' => 'Listing not found.']);
     }
 
-    return redirect('/property/' . (int) $listing . '?preview=admin');
+    $resolvedCategory = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
+    $listingId = (int) ($listingRow->id ?? $listing);
+
+    if ($resolvedCategory === 'accommodation') {
+        return redirect('/property/' . $listingId . '?preview=admin');
+    }
+
+    if ($resolvedCategory === 'sea_transport') {
+        return redirect('/sea-transport/' . $listingId . '?preview=admin');
+    }
+
+    $bookingSlugMap = [
+        'land_transport' => 'land-transport',
+    ];
+    $bookingCategory = $bookingSlugMap[$resolvedCategory] ?? $resolvedCategory;
+
+    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?preview=admin');
 });
 
 Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {
@@ -2817,6 +2879,9 @@ Route::post('/portal/admin/listings/{listing}/reject', function (Request $reques
     ]);
 
     $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
     $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
     if (!$listingRow) {
         return back()->withErrors(['listing' => 'Listing not found.']);

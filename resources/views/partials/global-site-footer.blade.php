@@ -2,6 +2,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
 @endonce
 
+@php
+    // Get dynamic branding info
+    $logoAndTagline = function_exists('workationLogoAndTaglineProfile') ? workationLogoAndTaglineProfile() : [];
+    $footerBrandLogo = trim((string) ($logoAndTagline['logo_url'] ?? ''));
+    $footerBrandName = trim((string) ($logoAndTagline['brand_name'] ?? 'Workation'));
+    $footerBrandLogoAlt = trim((string) ($logoAndTagline['logo_alt'] ?? 'Workation logo'));
+    $footerBrandTagline = trim((string) ($logoAndTagline['tagline'] ?? 'Maldives Travel Market'));
+@endphp
+
 <style>
     .wf-site-footer {
         margin-top: 28px;
@@ -214,8 +223,14 @@
     <div class="wf-footer-shell">
         <div class="wf-footer-top">
             <div class="wf-footer-brand-block">
-                <a class="wf-footer-brand" href="/">Workation</a>
-                <p class="wf-footer-kicker">Maldives Travel Market</p>
+                @if ($footerBrandLogo !== '')
+                    <a class="wf-footer-brand" href="/" title="{{ $footerBrandLogoAlt }}" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <img src="{{ $footerBrandLogo }}" alt="{{ $footerBrandLogoAlt }}" style="max-height: 36px; width: auto;">
+                    </a>
+                @else
+                    <a class="wf-footer-brand" href="/">{{ $footerBrandName }}</a>
+                @endif
+                <p class="wf-footer-kicker">{{ $footerBrandTagline }}</p>
             </div>
         </div>
 

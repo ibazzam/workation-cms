@@ -1058,3 +1058,113 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
         'mvrUsdRate'        => $mvrUsdRate,
     ]);
 });
+
+// Generic detail page route handler for land-transport, vehicle-rental, conference-room, remote-workspace
+foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_rental', 'conference-room' => 'conference_room', 'remote-workspace' => 'remote_workspace'] as $routePath => $categoryKey) {
+    Route::get('/' . $routePath . '/{id}', function (Request $request, int $id) use ($categoryKey) {
+        $table = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor($categoryKey);
+        $propertyQuery = DB::table($table)
+            ->where(function ($query) use ($id) {
+                $query->where('vendor_property_id', $id)
+                    ->orWhere('id', $id);
+            })
+            ->where('status', 'active');
+
+        if (Schema::hasColumn($table, 'listing_moderation_status')) {
+            $propertyQuery->where('listing_moderation_status', 'approved');
+        }
+
+        $property = $propertyQuery->first();
+
+        if (!$property) {
+            abort(404);
+        }
+
+        $rawDetails = $property->listing_details ?? '{}';
+        $listingDetails = is_string($rawDetails) ? (json_decode($rawDetails, true) ?? []) : (array) $rawDetails;
+        $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
+
+        // Resolve minimum price from pricing matrix
+        $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+
+        // Gallery media
+        $galleryMedia = [];
+        if (Schema::hasTable('vendor_listing_media')) {
+            $mediaEntityIds = array_values(array_unique(array_filter([
+                (int) ($property->id ?? 0),
+                (int) ($property->vendor_property_id ?? 0),
+            ], static fn (int $id): bool => $id > 0)));
+            $mediaRows = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', ['service', 'property', $categoryKey, 'transport', 'land_transport', 'vehicle_rental', 'conference_room', 'remote_workspace'])
+                ->whereIn('entity_id', $mediaEntityIds)
+                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->get();
+
+            foreach ($mediaRows as $mediaRow) {
+                $mediaId = (int) ($mediaRow->id ?? 0);
+                $candidateStoredValues = [];
+                if ($mediaId > 0) {
+                    $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
+                    $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
+                }
+                $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
+
+                foreach ($candidateStoredValues as $rawPathCandidate) {
+                    $rawPath = trim((string) $rawPathCandidate);
+                    if ($rawPath === '') {
+                        continue;
+                    }
+
+                    $resolved = function_exists('portalManagedMediaUrlFromPath')
+                        ? portalManagedMediaUrlFromPath($rawPath)
+                        : null;
+
+                    if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                        $resolved = vendorMediaStorageUrlFromPath($rawPath);
+                    }
+
+                    if ($resolved === null || trim((string) $resolved) === '') {
+                        if (str_starts_with($rawPath, 'http://')) {
+                            $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
+                        } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                            $resolved = $rawPath;
+                        } elseif (str_starts_with($rawPath, '__public__/')) {
+                            $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
+                            $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
+                            $resolved = '/media/portal-public/' . $encodedPath;
+                        } else {
+                            $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
+                            $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
+                            $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                        }
+                    }
+
+                    if (is_string($resolved) && trim($resolved) !== '') {
+                        $galleryMedia[] = trim($resolved);
+                    }
+                }
+            }
+
+            $galleryMedia = array_values(array_unique(array_filter($galleryMedia, static fn ($url): bool => is_string($url) && trim($url) !== '')));
+        }
+
+        // Determine view template based on category
+        $viewMap = [
+            'land_transport' => 'land-transport-detail',
+            'vehicle_rental' => 'vehicle-rental-detail',
+            'conference_room' => 'conference-room-detail',
+            'remote_workspace' => 'remote-workspace-detail',
+        ];
+        $viewName = $viewMap[$categoryKey] ?? $categoryKey . '-detail';
+
+        return view($viewName, [
+            'property'          => $property,
+            'listingDetails'    => $listingDetails,
+            'pricingMatrix'     => $pricingMatrix,
+            'minPrice'          => $minPrice,
+            'galleryMedia'      => $galleryMedia,
+            'categoryKey'       => $categoryKey,
+        ]);
+    });
+}

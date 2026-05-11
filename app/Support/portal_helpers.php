@@ -975,6 +975,58 @@ if (!function_exists('workationBrandingProfile')) {
     }
 }
 
+if (!function_exists('workationFaviconProfile')) {
+    function workationFaviconProfile(): array
+    {
+        static $faviconCache = null;
+        if (is_array($faviconCache)) {
+            return $faviconCache;
+        }
+
+        $defaults = [
+            'favicon_url' => trim((string) env('WORKATION_BRAND_FAVICON_URL', '')),
+        ];
+
+        $storedSettings = [];
+        if (Schema::hasTable('portal_finance_settings')) {
+            try {
+                $storedSettings = DB::table('portal_finance_settings')
+                    ->whereIn('setting_key', ['branding_favicon'])
+                    ->pluck('value_string', 'setting_key')
+                    ->all();
+            } catch (\Throwable $e) {
+                $storedSettings = [];
+            }
+        }
+
+        $faviconUrl = trim((string) ($storedSettings['branding_favicon'] ?? $defaults['favicon_url']));
+
+        if ($faviconUrl !== '' && !str_contains($faviconUrl, '://') && !str_starts_with($faviconUrl, 'data:') && function_exists('portalManagedMediaUrlFromPath')) {
+            $faviconUrl = portalManagedMediaUrlFromPath($faviconUrl) ?? $faviconUrl;
+        }
+
+        $faviconCache = [
+            'favicon_url' => $faviconUrl,
+        ];
+
+        return $faviconCache;
+    }
+}
+
+if (!function_exists('workationLogoAndTaglineProfile')) {
+    function workationLogoAndTaglineProfile(): array
+    {
+        $branding = workationBrandingProfile();
+
+        return [
+            'logo_url' => $branding['logo_url'] ?? '',
+            'logo_alt' => $branding['logo_alt'] ?? 'Logo',
+            'tagline' => $branding['tagline'] ?? 'Stay, work, and travel.',
+            'brand_name' => $branding['name'] ?? 'Workation',
+        ];
+    }
+}
+
 if (!function_exists('workationMessageContentFilter')) {
     /**
      * Inspect a user-supplied message for forbidden content (phone numbers —

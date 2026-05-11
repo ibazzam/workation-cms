@@ -26,6 +26,12 @@
 
     $headerMenuPanelId = 'customerMenuPanel_' . substr(md5((string) request()->path()), 0, 8);
     $headerLinksPanelId = 'customerLinksPanel_' . substr(md5((string) request()->path() . '_links'), 0, 8);
+
+    // Get dynamic branding info
+    $logoAndTagline = function_exists('workationLogoAndTaglineProfile') ? workationLogoAndTaglineProfile() : [];
+    $headerBrandLogo = trim((string) ($logoAndTagline['logo_url'] ?? ''));
+    $headerBrandName = trim((string) ($logoAndTagline['brand_name'] ?? 'Workation'));
+    $headerBrandLogoAlt = trim((string) ($logoAndTagline['logo_alt'] ?? 'Workation logo'));
 @endphp
 
 @if ($injectUniformHeaderStyles)
@@ -344,7 +350,13 @@
 <header class="header-bar uniform-header{{ $headerHideOnScroll ? '' : ' is-static' }}" data-uniform-header data-hide-on-scroll="{{ $headerHideOnScroll ? '1' : '0' }}" aria-label="Member header">
     <div class="uniform-header-main">
         <div class="uniform-header-brand-wrap">
-            <a class="uniform-header-brand" href="/">Workation</a>
+            @if ($headerBrandLogo !== '')
+                <a class="uniform-header-brand" href="/" title="{{ $headerBrandLogoAlt }}" style="display: inline-flex; align-items: center; gap: 8px;">
+                    <img src="{{ $headerBrandLogo }}" alt="{{ $headerBrandLogoAlt }}" style="max-height: 40px; width: auto;">
+                </a>
+            @else
+                <a class="uniform-header-brand" href="/">{{ $headerBrandName }}</a>
+            @endif
             <p class="uniform-header-subline">{{ $headerSubline }}</p>
         </div>
 

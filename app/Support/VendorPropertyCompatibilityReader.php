@@ -328,6 +328,9 @@ class VendorPropertyCompatibilityReader
                         return self::shapeDedicatedRow($row, $normalizedCategoryHint);
                     }
                 }
+
+                // Category-scoped lookups must not fall through to other tables.
+                return null;
             }
 
             foreach (self::categoryTableMap() as $categoryKey => $tableName) {
@@ -371,6 +374,9 @@ class VendorPropertyCompatibilityReader
                     return self::shapeDedicatedRow($row, $normalizedCategoryHint);
                 }
             }
+
+            // Category-scoped lookups must not fall through to other tables.
+            return null;
         }
 
         // Try all dedicated tables if no category hint.

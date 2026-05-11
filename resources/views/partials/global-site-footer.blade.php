@@ -225,7 +225,8 @@
             <div class="wf-footer-brand-block">
                 @if ($footerBrandLogo !== '')
                     <a class="wf-footer-brand" href="/" title="{{ $footerBrandLogoAlt }}" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <img src="{{ $footerBrandLogo }}" alt="{{ $footerBrandLogoAlt }}" style="max-height: 36px; width: auto;">
+                        <img src="{{ $footerBrandLogo }}" alt="{{ $footerBrandLogoAlt }}" style="max-height: 36px; width: auto;" onerror="this.style.display='none';var fb=this.parentElement.querySelector('[data-footer-brand-fallback]');if(fb){fb.style.display='inline';}">
+                        <span data-footer-brand-fallback style="display:none;">{{ $footerBrandName }}</span>
                     </a>
                 @else
                     <a class="wf-footer-brand" href="/">{{ $footerBrandName }}</a>

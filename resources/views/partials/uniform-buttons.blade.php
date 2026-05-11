@@ -194,9 +194,9 @@
     }
 
     body:not(.category-display-page) .header-bar {
-        background: #E2F7F2 !important;
-        border-bottom-color: rgba(143, 188, 178, 0.55) !important;
-        box-shadow: 0 10px 24px rgba(26, 93, 82, 0.1) !important;
+        background: #ffffff !important;
+        border-bottom-color: #d4e2ec !important;
+        box-shadow: 0 10px 24px rgba(22, 64, 93, 0.06) !important;
         backdrop-filter: none !important;
     }
 

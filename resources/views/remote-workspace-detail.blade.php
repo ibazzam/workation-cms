@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ (string) ($property->name ?? 'Liveaboard') }} | Workation</title>
+    <title>{{ (string) ($property->name ?? 'Remote Workspace') }} | Workation</title>
     @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800|space-grotesk:500,700" rel="stylesheet" />
@@ -21,8 +21,6 @@
             --brand-soft-2: #f7fbff;
             --brand-line: #d4e5ef;
             --brand-ink: #1f4f6b;
-            --brand-shadow: rgba(15, 97, 121, 0.12);
-            --accent: #f3a337;
         }
 
         * { box-sizing: border-box; }
@@ -36,7 +34,6 @@
 
         :root {
             --property-header-offset: 74px;
-            --property-search-shell-height: 74px;
         }
 
         body.is-header-hidden {
@@ -56,10 +53,6 @@
             box-shadow: none;
             margin-bottom: 0;
             width: 100%;
-        }
-
-        body.is-header-hidden .top-search-shell {
-            top: var(--property-header-offset);
         }
 
         .top-search-inner {
@@ -115,10 +108,6 @@
             white-space: nowrap;
         }
 
-        #property-gallery-section .gallery-shell {
-            margin-top: 0;
-        }
-
         .section {
             border: none;
             border-top: 1px solid #f0f4f8;
@@ -166,15 +155,6 @@
             min-height: 360px;
             object-fit: cover;
             display: block;
-        }
-
-        .gallery-banner-placeholder {
-            min-height: 360px;
-            display: grid;
-            place-items: center;
-            color: #5d7487;
-            font-size: 0.88rem;
-            background: #f3f8fc;
         }
 
         .gallery-thumbs {
@@ -237,23 +217,6 @@
         }
 
         .property-summary-address a:hover { text-decoration: underline; }
-
-        .property-summary-reviews {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .summary-rating-chip {
-            border-radius: 999px;
-            background: #edf6fc;
-            border: 1px solid #cde1ef;
-            color: #214a64;
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 4px 10px;
-        }
 
         .property-summary-price {
             border: 1px solid #d4e5ef;
@@ -420,14 +383,14 @@
             line-height: 1;
         }
 
-        .rooms-grid {
+        .features-grid {
             margin-top: 10px;
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 12px;
         }
 
-        .room-card {
+        .feature-card {
             border: 1px solid #d6e5ef;
             border-radius: 14px;
             background: #f8fcff;
@@ -437,14 +400,14 @@
             align-content: start;
         }
 
-        .room-title {
+        .feature-title {
             margin: 0;
             font-size: 0.95rem;
             color: #1f4f6b;
             font-weight: 700;
         }
 
-        .room-details {
+        .feature-details {
             display: grid;
             gap: 6px;
             font-size: 0.8rem;
@@ -455,40 +418,6 @@
             display: flex;
             align-items: center;
             gap: 8px;
-        }
-
-        .review-card {
-            border: 1px solid #d4e5ef;
-            border-radius: 14px;
-            background: #f8fcff;
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-
-        .review-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            gap: 10px;
-        }
-
-        .review-author {
-            font-weight: 700;
-            color: #1f4f6b;
-            font-size: 0.88rem;
-        }
-
-        .review-rating {
-            color: #f3a337;
-            font-size: 0.85rem;
-        }
-
-        .review-body {
-            color: #39586d;
-            font-size: 0.88rem;
-            line-height: 1.5;
-            margin: 0;
         }
 
         .section-tabs {
@@ -535,7 +464,7 @@
             .gallery-thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .gallery-banner { min-height: 250px; }
             .gallery-banner-wrap { min-height: 250px; }
-            .rooms-grid { grid-template-columns: 1fr; }
+            .features-grid { grid-template-columns: 1fr; }
             .amenities-columns { grid-template-columns: 1fr; }
         }
     </style>
@@ -543,7 +472,7 @@
 </head>
 <body>
 @php
-    $headerCategoryKey = 'liveaboard';
+    $headerCategoryKey = 'remote-workspace';
     $headerCategoryLinks = [
         ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
         ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
@@ -556,16 +485,14 @@
         ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
     ];
 
-    // Extract liveaboard data
-    $startPoint = trim((string) ($listingDetails['start_point'] ?? ''));
-    $endPoint = trim((string) ($listingDetails['end_point'] ?? ''));
-    $journeyDays = (int) ($listingDetails['journey_duration_days'] ?? 0);
-    $cabinCount = (int) ($listingDetails['cabin_count'] ?? 0);
-    $vesselName = trim((string) ($listingDetails['vessel_name'] ?? ''));
+    // Extract workspace data
+    $location = trim((string) ($listingDetails['location'] ?? ''));
+    $internetSpeed = trim((string) ($listingDetails['internet_speed'] ?? ''));
+    $seatingCapacity = (int) ($listingDetails['seating_capacity'] ?? 0);
+    $availabilityHours = trim((string) ($listingDetails['availability_hours'] ?? ''));
     $description = trim((string) ($property->description ?? ''));
     $rating = (float) ($property->star_rating ?? $property->stars ?? 0);
     $ratingCount = (int) ($property->reviews_count ?? 0);
-    $stopovers = is_array($listingDetails['stopovers'] ?? null) ? $listingDetails['stopovers'] : [];
 
     // Extract amenities
     $amenitiesRaw = [];
@@ -586,7 +513,7 @@
     $displayPrice = $minPrice > 0 ? number_format($minPrice, 0) : 'POA';
 
     // Gallery
-    $galleryFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22420%22 viewBox=%220 0 900 420%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22420%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2228%22%3ELiveaboard%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
+    $galleryFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22420%22 viewBox=%220 0 900 420%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22420%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2228%22%3ERemote%20Workspace%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
     $gallery = !empty($galleryMedia) ? collect($galleryMedia)->filter()->values() : collect([$galleryFallback]);
     $initialBanner = $gallery->first() ?: $galleryFallback;
 
@@ -604,24 +531,24 @@
     'headerActiveCategoryKey' => $headerCategoryKey,
 ])
 
-<section class="top-search-shell" aria-label="Search liveaboard journey options">
+<section class="top-search-shell" aria-label="Search remote workspace options">
     <div class="top-search-inner">
         <form method="GET" action="" class="top-search-form">
             <div class="top-search-field">
-                <label for="topJourney">Journey</label>
-                <input id="topJourney" type="text" value="{{ (string) ($property->name ?? '') }}" readonly>
+                <label for="topWorkspace">Workspace</label>
+                <input id="topWorkspace" type="text" value="{{ (string) ($property->name ?? '') }}" readonly>
             </div>
             <div class="top-search-field">
-                <label for="topStart">Start Date</label>
-                <input id="topStart" type="date" name="journey_date" min="{{ (string) now()->toDateString() }}">
+                <label for="topCheckIn">Check In</label>
+                <input id="topCheckIn" type="date" name="check_in" min="{{ (string) now()->toDateString() }}">
             </div>
             <div class="top-search-field">
-                <label for="topEnd">Duration</label>
-                <input id="topEnd" type="text" value="{{ $journeyDays > 0 ? $journeyDays . ' days' : 'Variable' }}" readonly>
+                <label for="topCheckOut">Check Out</label>
+                <input id="topCheckOut" type="date" name="check_out" min="{{ (string) now()->toDateString() }}">
             </div>
             <div class="top-search-field">
-                <label for="topGuests">Guests</label>
-                <input id="topGuests" type="text" value="{{ $cabinCount > 0 ? $cabinCount . ' cabins' : 'Available' }}" readonly>
+                <label for="topDuration">Duration</label>
+                <input id="topDuration" type="text" value="Flexible" readonly>
             </div>
             <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass"></i> Search</button>
         </form>
@@ -629,13 +556,13 @@
 </section>
 
 <main class="page">
-    <section id="property-gallery-section" class="section" aria-label="Liveaboard gallery">
+    <section id="property-gallery-section" class="section" aria-label="Workspace gallery">
         <h2>Gallery</h2>
         <div class="gallery-shell" data-property-gallery>
             <div class="gallery-banner-wrap">
-                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner }}" alt="Liveaboard journey image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $galleryFallback }}';}">
+                <img id="propertyGalleryBanner" class="gallery-banner" src="{{ $initialBanner }}" alt="Remote workspace image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $galleryFallback }}';}">
             </div>
-            <div class="gallery-thumbs" role="list" aria-label="Liveaboard journey thumbnails">
+            <div class="gallery-thumbs" role="list" aria-label="Workspace thumbnails">
                 @foreach ($gallery as $index => $media)
                     <button type="button" class="gallery-thumb{{ $loop->first ? ' is-active' : '' }}" data-banner-src="{{ $media }}" aria-label="Show image {{ $index + 1 }}">
                         <img src="{{ $media }}" alt="Thumbnail {{ $index + 1 }}" loading="lazy" onerror="if(!this.dataset.fallbackApplied){this.dataset.fallbackApplied='1';this.src='{{ $media }}';}else{this.onerror=null;this.src='{{ $galleryFallback }}';}">
@@ -645,22 +572,22 @@
         </div>
     </section>
 
-    <section class="property-summary-shell" aria-label="Journey overview">
+    <section class="property-summary-shell" aria-label="Workspace overview">
         <div class="property-summary-main">
             <span class="property-summary-stars" style="color: #f3a337; letter-spacing: 0.08em; font-size: 0.9rem;">
                 <i class="fa-solid fa-star"></i> {{ $ratingStr }}
             </span>
-            <h1 class="property-summary-title">{{ (string) ($property->name ?? 'Liveaboard Journey') }}</h1>
-            <span class="property-type-badge"><i class="fa-solid fa-ship"></i> Liveaboard Journey</span>
+            <h1 class="property-summary-title">{{ (string) ($property->name ?? 'Remote Workspace') }}</h1>
+            <span class="property-type-badge"><i class="fa-solid fa-laptop"></i> Remote Workspace</span>
             <div class="property-summary-address">
-                @if ($startPoint || $endPoint)
-                    <span><i class="fa-solid fa-location-dot"></i> {{ $startPoint ?: '?' }} → {{ $endPoint ?: '?' }}</span>
-                    @if ($journeyDays > 0)
+                @if ($location)
+                    <span><i class="fa-solid fa-location-dot"></i> {{ $location }}</span>
+                    @if ($internetSpeed)
                         <span> · </span>
-                        <span>{{ $journeyDays }} days</span>
+                        <span>{{ $internetSpeed }} Internet</span>
                     @endif
                 @else
-                    <span>Route details coming soon.</span>
+                    <span>Location and details coming soon.</span>
                 @endif
             </div>
             <div class="property-summary-reviews">
@@ -668,24 +595,22 @@
             </div>
         </div>
 
-        <aside class="property-summary-price" aria-label="Journey pricing">
+        <aside class="property-summary-price" aria-label="Workspace pricing">
             <span class="k">Starting from</span>
             <span class="v">MVR {{ $displayPrice }}</span>
-            <span class="sub">per person</span>
-            <a class="cta" href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}"><i class="fa-solid fa-calendar-check"></i> Book Journey</a>
+            <span class="sub">per day</span>
+            <a class="cta" href="/category-booking/remote_workspace/{{ $property->vendor_property_id ?? $property->id }}"><i class="fa-solid fa-calendar-check"></i> Book Workspace</a>
         </aside>
     </section>
 
-    <nav class="section-tabs" aria-label="Journey content navigation">
+    <nav class="section-tabs" aria-label="Workspace content navigation">
         <a class="section-tab" href="#property-gallery-section">Photos</a>
-        <a class="section-tab" href="#services-amenities-section">Amenities</a>
-        <a class="section-tab" href="#stopovers-section">Stops</a>
-        <a class="section-tab" href="#cabins-section">Cabins</a>
-        <a class="section-tab" href="#guest-reviews-section">Reviews</a>
+        <a class="section-tab" href="#amenities-section">Amenities</a>
+        <a class="section-tab" href="#features-section">Features</a>
         <a class="section-tab" href="#policies-section">Policies</a>
     </nav>
 
-    <section id="services-amenities-section" class="section" aria-label="Journey amenities">
+    <section id="amenities-section" class="section" aria-label="Workspace amenities">
         <h2>Amenities & Services</h2>
         @if ($amenities->isNotEmpty())
             <div class="amenities-board">
@@ -713,90 +638,66 @@
         @endif
     </section>
 
-    <section id="stopovers-section" class="section" aria-label="Journey stops">
-        <h2>Journey Stops & Route</h2>
-        @if (count($stopovers) > 0)
-            <div class="rooms-grid">
-                @foreach ($stopovers as $index => $stop)
-                    @php
-                        $stopName = is_array($stop) ? ($stop['name'] ?? 'Stop ' . ($index + 1)) : (is_object($stop) ? ($stop->name ?? 'Stop ' . ($index + 1)) : 'Stop ' . ($index + 1));
-                        $stopDesc = is_array($stop) ? ($stop['description'] ?? '') : (is_object($stop) ? ($stop->description ?? '') : '');
-                    @endphp
-                    <article class="room-card">
-                        <h3 class="room-title">Stop {{ $index + 1 }}: {{ $stopName }}</h3>
-                        @if ($stopDesc)
-                            <p class="detail-line" style="margin: 0; color: #5a7589; font-size: 0.85rem; line-height: 1.4;">{{ $stopDesc }}</p>
-                        @endif
-                    </article>
-                @endforeach
-            </div>
-        @else
-            <div class="empty-state">Journey stops and route information will be updated soon.</div>
-        @endif
-    </section>
-
-    <section id="cabins-section" class="section" aria-label="Cabins">
-        <h2>Cabins</h2>
-        @if ($cabinCount > 0)
-            <div class="rooms-grid">
-                @for ($i = 1; $i <= min($cabinCount, 12); $i++)
-                    <article class="room-card">
-                        <h3 class="room-title">Cabin {{ $i }}</h3>
-                        <div class="room-details">
-                            <div class="detail-line"><i class="fa-solid fa-door-open"></i> Standard cabin</div>
-                            <div class="detail-line"><i class="fa-solid fa-users"></i> Up to 2 guests</div>
-                            <div class="detail-line"><i class="fa-solid fa-wind"></i> Air conditioned</div>
-                        </div>
-                        <a href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}" style="display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #0f6179; background: #0f6179; color: #ffffff; text-decoration: none; font-size: 0.84rem; font-weight: 700; padding: 9px 14px; margin-top: 8px;"><i class="fa-solid fa-calendar-check"></i> Reserve</a>
-                    </article>
-                @endfor
-            </div>
-        @else
-            <div class="empty-state">Cabin information will be available shortly.</div>
-        @endif
-    </section>
-
-    <section id="guest-reviews-section" class="section" aria-label="Guest reviews">
-        <h2>Guest Reviews</h2>
-        @if ($ratingCount > 0)
-            <div class="review-card">
-                <div class="review-head">
-                    <span class="review-author">Verified Guest</span>
-                    <span class="review-rating"><i class="fa-solid fa-star"></i> {{ min(5, max(1, round($rating))) }}/5</span>
-                </div>
-                <p class="review-body">Excellent liveaboard experience with attentive crew, smooth sailing, and memorable stops. Highly recommended for diving and marine adventures.</p>
-            </div>
-            @if ($ratingCount > 1)
-                <div class="review-card">
-                    <div class="review-head">
-                        <span class="review-author">+ {{ $ratingCount - 1 }} more reviews</span>
+    <section id="features-section" class="section" aria-label="Workspace features">
+        <h2>Features & Capacity</h2>
+        <div class="features-grid">
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-wifi"></i> Internet Connectivity</h3>
+                <div class="feature-details">
+                    <div class="detail-line">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ $internetSpeed ?: 'High-speed internet available' }}</span>
                     </div>
-                    <p class="review-body" style="text-align: center; color: #7a8fa3; font-style: italic;">Reviews from other guests will be displayed here. Visit our platform to read full guest feedback.</p>
                 </div>
-            @endif
-        @else
-            <div class="empty-state">Reviews from guests will appear here after their journey.</div>
-        @endif
+            </article>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-chair"></i> Seating Capacity</h3>
+                <div class="feature-details">
+                    <div class="detail-line">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ $seatingCapacity > 0 ? $seatingCapacity . ' workstations' : 'Multiple workstations available' }}</span>
+                    </div>
+                </div>
+            </article>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-clock"></i> Availability</h3>
+                <div class="feature-details">
+                    <div class="detail-line">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ $availabilityHours ?: '24/7 access available' }}</span>
+                    </div>
+                </div>
+            </article>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-location-dot"></i> Location</h3>
+                <div class="feature-details">
+                    <div class="detail-line">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>{{ $location ?: 'Prime workspace location' }}</span>
+                    </div>
+                </div>
+            </article>
+        </div>
     </section>
 
-    <section id="policies-section" class="section" aria-label="Journey policies">
+    <section id="policies-section" class="section" aria-label="Workspace policies">
         <h2>Policies & Information</h2>
-        <div class="rooms-grid">
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-calendar"></i> Journey Policy</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['journey_policy'] ?? 'Route and timing may vary based on weather and sea conditions.')) }}</p>
+        <div class="features-grid">
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-ban"></i> Cancellation</h3>
+                <p class="detail-line">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Flexible cancellation up to 24 hours before booking start time.')) }}</p>
             </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-ban"></i> Cancellation</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Flexible cancellation up to 7 days before departure.')) }}</p>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-door-open"></i> Check-in</h3>
+                <p class="detail-line">{{ trim((string) ($listingDetails['checkin_policy'] ?? 'Self-service check-in with digital access key.')) }}</p>
             </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-door-open"></i> Boarding</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['boarding_policy'] ?? 'Arrive 1 hour before departure with valid passport and travel documents.')) }}</p>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-shield"></i> House Rules</h3>
+                <p class="detail-line">{{ trim((string) ($listingDetails['house_rules'] ?? 'Professional environment - please maintain workspace cleanliness and respect other members.')) }}</p>
             </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-shield"></i> Safety</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['safety_policy'] ?? 'All guests must comply with vessel safety procedures and crew instructions.')) }}</p>
+            <article class="feature-card">
+                <h3 class="feature-title"><i class="fa-solid fa-headset"></i> Support</h3>
+                <p class="detail-line">{{ trim((string) ($listingDetails['support_info'] ?? 'Dedicated support team available during business hours.')) }}</p>
             </article>
         </div>
     </section>

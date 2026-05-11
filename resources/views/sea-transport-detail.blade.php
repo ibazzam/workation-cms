@@ -71,6 +71,17 @@
             background: #fff;
             cursor: pointer;
         }
+        .gallery-thumb.is-fallback {
+            border-color: #cfe1ed;
+            background: linear-gradient(135deg, #e8f3fa 0%, #d9eaf6 100%);
+            position: relative;
+        }
+        .gallery-thumb.is-fallback::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.55), rgba(255,255,255,0));
+        }
         .gallery-thumb.is-active { border-color: var(--brand); }
         .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
@@ -327,21 +338,34 @@
         ['key' => 'conference-room', 'icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
     ];
 
-    $stImageFallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1400' height='700' viewBox='0 0 1400 700'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%23d7ebf8'/%3E%3Cstop offset='100%25' stop-color='%23c7deef'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1400' height='700' fill='url(%23g)'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23406582' font-family='Arial' font-size='34'%3ENo image%3C/text%3E%3C/svg%3E";
+    $imageUrl = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%221200%22 height=%22600%22 viewBox=%220 0 1200 600%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%25%22 y1=%220%25%22 x2=%22100%25%22 y2=%22100%25%22%3E%3Cstop offset=%220%25%22 stop-color=%230f6179%22/%3E%3Cstop offset=%22100%25%22 stop-color=%231d7bb5%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%221200%22 height=%22600%22 fill=%22url(%23g)%22/%3E%3C/svg%3E";
 
-    $galleryItems = [];
+    $gallery = collect();
     if (is_string($heroUrl ?? '') && trim((string) $heroUrl) !== '') {
-        $galleryItems[] = trim((string) $heroUrl);
+        $gallery->push(trim((string) $heroUrl));
     }
     if (!empty($galleryMedia) && is_array($galleryMedia)) {
         foreach ($galleryMedia as $galleryUrl) {
-            if (is_string($galleryUrl) && trim($galleryUrl) !== '' && !in_array(trim($galleryUrl), $galleryItems, true)) {
-                $galleryItems[] = trim($galleryUrl);
+            if (is_string($galleryUrl) && trim($galleryUrl) !== '') {
+                $gallery->push(trim($galleryUrl));
             }
         }
     }
-    if ($galleryItems === []) {
-        $galleryItems[] = $stImageFallback;
+
+    $gallery = $gallery
+        ->map(static function ($url) {
+            $value = trim((string) $url);
+            if (str_starts_with($value, 'http://')) {
+                return 'https://' . ltrim(substr($value, 7), '/');
+            }
+            return $value;
+        })
+        ->filter(static fn ($url) => str_starts_with($url, 'https://') || str_starts_with($url, '/'))
+        ->unique()
+        ->values();
+
+    if ($gallery->isEmpty()) {
+        $gallery = collect([$imageUrl]);
     }
 
     $amenitiesRaw = [];
@@ -365,14 +389,8 @@
 @endphp
 
 @include('partials.customer-uniform-header', [
-    'injectUniformHeaderStyles'  => true,
-    'injectUniformHeaderScripts' => true,
-    'headerNeedsSpacer'          => false,
-    'headerHideOnScroll'         => true,
-    'headerShowSearch'           => false,
-    'headerCategoryLinks'        => $headerCategoryLinks,
-    'headerActiveCategoryKey'    => 'sea-transport',
-    'headerContinueUrl'          => request()->fullUrl(),
+    'headerCategoryLinks' => $headerCategoryLinks,
+    'headerActiveCategoryKey' => 'sea-transport',
 ])
 
 <main class="page">
@@ -387,11 +405,11 @@
     <section class="section" aria-label="Gallery">
         <h2>Photo Gallery</h2>
         <div class="gallery-shell" data-gallery>
-            <img id="galleryHero" class="gallery-hero" src="{{ $galleryItems[0] }}" alt="Sea transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $stImageFallback }}';}">
+            <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Sea transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
             <div class="gallery-thumbs" role="list">
-                @foreach ($galleryItems as $index => $image)
+                @foreach ($gallery as $index => $image)
                     <button type="button" class="gallery-thumb{{ $index === 0 ? ' is-active' : '' }}" data-src="{{ $image }}" aria-label="Image {{ $index + 1 }}">
-                        <img src="{{ $image }}" alt="Thumbnail {{ $index + 1 }}" loading="lazy" onerror="if(!this.dataset.fb){this.dataset.fb='1';this.src='{{ $stImageFallback }}';}">
+                        <img src="{{ $image }}" alt="Thumbnail {{ $index + 1 }}" loading="lazy" onerror="this.onerror=null;this.style.display='none';this.closest('.gallery-thumb').classList.add('is-fallback');">
                     </button>
                 @endforeach
             </div>

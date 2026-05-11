@@ -2795,6 +2795,49 @@ Route::post('/portal/admin/listings/{listing}/approve', function (Request $reque
     return back()->with('portal_notice', 'Listing approved and is now open for bookings.');
 });
 
+Route::post('/portal/admin/listings/{listing}/unapprove', function (Request $request, int $listing) {
+    if (!canModerateListings()) {
+        abort(403);
+    }
+
+    $categoryHint = vendorPortalCanonicalCategory((string) $request->input('listing_category', ''));
+    if ($categoryHint === null) {
+        return back()->withErrors(['listing' => 'Missing listing category context. Refresh the admin page and try again.']);
+    }
+
+    $listingRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listing, $categoryHint);
+    if (!$listingRow) {
+        return back()->withErrors(['listing' => 'Listing not found.']);
+    }
+
+    $currentStatus = strtolower(trim((string) ($listingRow->listing_moderation_status ?? '')));
+    if ($currentStatus !== 'approved') {
+        return back()->withErrors(['listing' => 'Only approved listings can be moved back to pending review.']);
+    }
+
+    $resolvedCategoryHint = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
+    $unapproveNotes = trim((string) ($request->input('admin_notes') ?? ''));
+    if ($unapproveNotes === '') {
+        $unapproveNotes = 'Listing moved back to pending review by admin.';
+    }
+
+    \App\Support\VendorPropertyCompatibilityReader::reopenForReview(
+        (int) ($listingRow->id ?? $listing),
+        $unapproveNotes,
+        $resolvedCategoryHint
+    );
+
+    portalAdminAuditLog('listing.unapproved', [
+        'target_identifier' => (string) ($listingRow->listing_name ?? $listingRow->name ?? ('listing_id:' . $listing)),
+        'target_role' => 'VENDOR',
+        'listing_id' => (int) ($listingRow->id ?? $listing),
+        'vendor_id' => (int) ($listingRow->vendor_user_id ?? 0),
+        'listing_category' => $resolvedCategoryHint,
+    ]);
+
+    return back()->with('portal_notice', 'Listing moved back to pending review.');
+});
+
 Route::get('/portal/admin/listings/{listing}/preview', function (Request $request, int $listing) {
     if (!canModerateListings()) {
         abort(403);

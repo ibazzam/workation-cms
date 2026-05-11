@@ -762,17 +762,19 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport', 'room'])
+            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport', 'room', 'liveaboard'])
             ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get();
 
         foreach ($mediaRows as $mediaRow) {
+            $mediaId = (int) ($mediaRow->id ?? 0);
             $candidateStoredValues = [];
-            if (function_exists('mediaVariantUrl')) {
-                $candidateStoredValues[] = (string) (mediaVariantUrl($mediaRow, 'banner') ?? '');
-                $candidateStoredValues[] = (string) (mediaVariantUrl($mediaRow, 'thumb') ?? '');
+            // Use /media/vendor/{id}/{variant} route format directly
+            if ($mediaId > 0) {
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
             }
             $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
 
@@ -884,6 +886,171 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
         'stopSequence'      => $stopSequence,
         'fromPriceLocal'    => $fromPriceLocal,
         'fromPriceForeign'  => $fromPriceForeign,
+        'heroUrl'           => $heroUrl,
+        'galleryMedia'      => $galleryMedia,
+        'vendor'            => $vendor,
+        'visitorResidency'  => $visitorResidency,
+        'mvrUsdRate'        => $mvrUsdRate,
+    ]);
+});
+
+Route::get('/liveaboard/{id}', function (Request $request, int $id) {
+    $laTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor('liveaboard');
+    $propertyQuery = DB::table($laTable)
+        ->where(function ($query) use ($id) {
+            $query->where('vendor_property_id', $id)
+                ->orWhere('id', $id);
+        })
+        ->where('status', 'active');
+
+    if (Schema::hasColumn($laTable, 'listing_moderation_status')) {
+        $propertyQuery->where('listing_moderation_status', 'approved');
+    }
+
+    $property = $propertyQuery->first();
+
+    if (!$property) {
+        abort(404);
+    }
+
+    $rawDetails = $property->listing_details ?? '{}';
+    $listingDetails = is_string($rawDetails) ? (json_decode($rawDetails, true) ?? []) : (array) $rawDetails;
+    $stopovers = is_array($listingDetails['stopovers'] ?? null) ? $listingDetails['stopovers'] : [];
+    $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
+
+    // Resolve minimum price from pricing matrix
+    $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+
+    // Gallery media
+    $galleryMedia = [];
+    if (Schema::hasTable('vendor_listing_media')) {
+        $mediaEntityIds = array_values(array_unique(array_filter([
+            (int) ($property->id ?? 0),
+            (int) ($property->vendor_property_id ?? 0),
+        ], static fn (int $id): bool => $id > 0)));
+        $mediaRows = DB::table('vendor_listing_media')
+            ->whereIn('entity_type', ['service', 'property', 'liveaboard', 'transport', 'sea_transport'])
+            ->whereIn('entity_id', $mediaEntityIds)
+            ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->get();
+
+        foreach ($mediaRows as $mediaRow) {
+            $mediaId = (int) ($mediaRow->id ?? 0);
+            $candidateStoredValues = [];
+            // Use /media/vendor/{id}/{variant} route format directly
+            if ($mediaId > 0) {
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
+            }
+            $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
+
+            foreach ($candidateStoredValues as $rawPathCandidate) {
+                $rawPath = trim((string) $rawPathCandidate);
+                if ($rawPath === '') {
+                    continue;
+                }
+
+                $resolved = function_exists('portalManagedMediaUrlFromPath')
+                    ? portalManagedMediaUrlFromPath($rawPath)
+                    : null;
+
+                if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                    $resolved = vendorMediaStorageUrlFromPath($rawPath);
+                }
+
+                if ($resolved === null || trim((string) $resolved) === '') {
+                    if (str_starts_with($rawPath, 'http://')) {
+                        $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
+                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                        $resolved = $rawPath;
+                    } elseif (str_starts_with($rawPath, '__public__/')) {
+                        $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
+                        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
+                        $resolved = '/media/portal-public/' . $encodedPath;
+                    } else {
+                        $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
+                        $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
+                        $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                    }
+                }
+
+                if (is_string($resolved) && trim($resolved) !== '') {
+                    $galleryMedia[] = trim($resolved);
+                }
+            }
+        }
+
+        $galleryMedia = array_values(array_unique(array_filter($galleryMedia, static fn ($url): bool => is_string($url) && trim($url) !== '')));
+
+        if ($galleryMedia === []) {
+            foreach (['gallery_media', 'gallery_images', 'gallery', 'images', 'media_urls', 'media'] as $mediaKey) {
+                $mediaValue = $listingDetails[$mediaKey] ?? null;
+                if (is_string($mediaValue)) {
+                    $decoded = json_decode($mediaValue, true);
+                    $mediaValue = is_array($decoded) ? $decoded : [$mediaValue];
+                }
+                if (!is_array($mediaValue)) {
+                    continue;
+                }
+
+                foreach ($mediaValue as $candidateUrl) {
+                    if (!is_string($candidateUrl)) {
+                        continue;
+                    }
+
+                    $candidateUrl = trim($candidateUrl);
+                    if ($candidateUrl === '') {
+                        continue;
+                    }
+
+                    $resolved = function_exists('portalManagedMediaUrlFromPath')
+                        ? (portalManagedMediaUrlFromPath($candidateUrl) ?? $candidateUrl)
+                        : $candidateUrl;
+
+                    if ($resolved !== '' && !in_array($resolved, $galleryMedia, true)) {
+                        $galleryMedia[] = $resolved;
+                    }
+                }
+
+                if ($galleryMedia !== []) {
+                    break;
+                }
+            }
+        }
+    }
+
+    $heroUrl = $galleryMedia[0] ?? '';
+    if ($heroUrl === '') {
+        $fallbackHero = trim((string) (
+            $listingDetails['image_url']
+            ?? $listingDetails['featured_image']
+            ?? $listingDetails['banner_image']
+            ?? ''
+        ));
+        if ($fallbackHero !== '') {
+            $heroUrl = function_exists('portalManagedMediaUrlFromPath')
+                ? (portalManagedMediaUrlFromPath($fallbackHero) ?? $fallbackHero)
+                : $fallbackHero;
+            $galleryMedia = [$heroUrl];
+        }
+    }
+
+    // Vendor/operator
+    $vendor = DB::table('users')->where('id', $property->vendor_user_id ?? 0)->first();
+
+    $visitorResidency = function_exists('workationDetectVisitorResidency')
+        ? workationDetectVisitorResidency($request)
+        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? ''))) === 'MV' ? 'local_resident' : 'foreign_national');
+
+    $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
+
+    return view('liveaboard-detail', [
+        'property'          => $property,
+        'listingDetails'    => $listingDetails,
+        'stopovers'         => $stopovers,
+        'pricingMatrix'     => $pricingMatrix,
+        'minPrice'          => $minPrice,
         'heroUrl'           => $heroUrl,
         'galleryMedia'      => $galleryMedia,
         'vendor'            => $vendor,

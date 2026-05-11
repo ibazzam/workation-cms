@@ -1404,6 +1404,155 @@
             display: none;
         }
 
+        /* ── Liveaboard: grid cards (similar to accommodation) ── */
+        .page.category-liveaboard .catalog-results-layout {
+            display: block;
+            height: auto;
+        }
+
+        .page.category-liveaboard .catalog-results-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 14px;
+            height: auto;
+        }
+
+        .page.category-liveaboard .card {
+            display: flex;
+            flex-direction: column;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--surface);
+            overflow: hidden;
+            transition: box-shadow 0.22s ease, transform 0.22s ease;
+            box-shadow: 0 2px 8px rgba(15, 97, 121, 0.12);
+        }
+
+        .page.category-liveaboard .card:hover {
+            box-shadow: 0 4px 12px rgba(15, 97, 121, 0.28);
+        }
+
+        .page.category-liveaboard .card-link-liveaboard {
+            display: contents;
+        }
+
+        .page.category-liveaboard .card-link-liveaboard img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            display: block;
+            background: #d6e8f3;
+        }
+
+        .page.category-liveaboard .card-body-liveaboard {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            flex: 1 1 auto;
+            padding: 14px;
+        }
+
+        .page.category-liveaboard .card-main {
+            min-width: 0;
+            display: grid;
+            gap: 6px;
+            align-content: start;
+            flex: 1 1 auto;
+        }
+
+        .page.category-liveaboard .card-type-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #0f6179;
+            background: #eef6fb;
+            padding: 3px 8px;
+            border-radius: 5px;
+            width: fit-content;
+        }
+
+        .page.category-liveaboard .card h3 {
+            font-size: 0.96rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .page.category-liveaboard .card-route {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #0f6179;
+        }
+
+        .page.category-liveaboard .card-badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .page.category-liveaboard .card-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .page.category-liveaboard .card-badge-days {
+            background: #f0f8f5;
+            color: #2d7a6b;
+        }
+
+        .page.category-liveaboard .card-badge-review {
+            background: #fff8f0;
+            color: #b85c1d;
+        }
+
+        .page.category-liveaboard .card-badge-cabins {
+            background: #eef5ff;
+            color: #1f4f8a;
+        }
+
+        .page.category-liveaboard .card-badge-status {
+            background: #f0f8f5;
+            color: #2d7a6b;
+        }
+
+        .page.category-liveaboard .card-side {
+            display: grid;
+            gap: 8px;
+            margin-top: 8px;
+            align-items: start;
+        }
+
+        .page.category-liveaboard .card-price {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1a2f43;
+        }
+
+        .page.category-liveaboard .card-action-btn {
+            font-size: 0.78rem;
+            padding: 8px 12px;
+            align-self: flex-start;
+        }
+
+        .page.category-liveaboard .catalog-map-panel {
+            display: none;
+        }
+
         .page.category-default .catalog-results-layout {
             display: block;
             height: auto;
@@ -3298,52 +3447,57 @@
                                 $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
-                                $laStopoversJson = htmlspecialchars(json_encode($laStopovers), ENT_QUOTES, 'UTF-8');
-                                $laPricingJson   = htmlspecialchars(json_encode($laPricing), ENT_QUOTES, 'UTF-8');
+                                $laViewUrl   = '/liveaboard/' . $propertyId;
+                                $laReviewScore = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->rating ?? 0))));
+                                $laReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
+                                $laReviewBadge = $laReviewCount > 0 ? (($laReviewScore > 0 ? $laReviewScore : 'N/A') . ' (' . $laReviewCount . ')') : '';
                             @endphp
-                            <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                            <div class="card-body">
-                                <div class="card-main-col">
-                                    <span class="card-type-chip"><i class="fa-solid fa-ship" aria-hidden="true"></i> Liveaboard / Safari</span>
-                                    <h3>{{ (string) ($property->name ?? 'Safari Vessel') }}</h3>
-                                    @if ($laStart !== '' || $laEnd !== '')
-                                        <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
-                                            {{ $laStart !== '' ? $laStart : '?' }}
-                                            <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
-                                            {{ $laEnd !== '' ? $laEnd : '?' }}
-                                        </span>
-                                    @endif
-                                    @if ($laDays > 0)
-                                        <span class="card-duration"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $laDays }}-day journey</span>
-                                    @endif
-                                    @if (count($laStopovers) > 0)
-                                        <span class="card-stopovers"><i class="fa-solid fa-map-pin" aria-hidden="true"></i>
-                                            {{ count($laStopovers) }} stopover{{ count($laStopovers) > 1 ? 's' : '' }}:
-                                            {{ implode(', ', array_column($laStopovers, 'name')) }}
-                                        </span>
-                                    @endif
-                                    @if ($laVessel !== '')
-                                        <span class="card-vessel"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $laVessel }}</span>
-                                    @endif
-                                    @if ($laCabins > 0)
-                                        <span class="card-cabins"><i class="fa-solid fa-bed" aria-hidden="true"></i> {{ $laCabins }} cabins</span>
-                                    @endif
-                                </div>
-                                <div class="card-meta-right">
-                                    <div class="card-price">
-                                        @if ($laMinPrice > 0)
-                                            <span class="price-local">From MVR {{ number_format($laMinPrice, 2) }}</span>
-                                        @else
-                                            <span>Price on request</span>
+                            <a class="card-link card-link-liveaboard" href="{{ $laViewUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                                <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                <div class="card-body card-body-liveaboard">
+                                    <div class="card-main">
+                                        <span class="card-type-chip"><i class="fa-solid fa-ship" aria-hidden="true"></i> Liveaboard / Safari</span>
+                                        <h3>{{ (string) ($property->name ?? 'Safari Vessel') }}</h3>
+                                        @if ($laStart !== '' || $laEnd !== '')
+                                            <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
+                                                {{ $laStart !== '' ? $laStart : '?' }}
+                                                <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
+                                                {{ $laEnd !== '' ? $laEnd : '?' }}
+                                            </span>
                                         @endif
+                                        <div class="card-badges-row">
+                                            @if ($laDays > 0)
+                                                <span class="card-badge card-badge-days">
+                                                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $laDays }}-day
+                                                </span>
+                                            @endif
+                                            @if ($laCabins > 0)
+                                                <span class="card-badge card-badge-cabins">
+                                                    <i class="fa-solid fa-bed" aria-hidden="true"></i> {{ $laCabins }} {{ $laCabins === 1 ? 'room' : 'rooms' }}
+                                                </span>
+                                            @endif
+                                            @if ($laReviewBadge !== '')
+                                                <span class="card-badge card-badge-review">
+                                                    <i class="fa-solid fa-star" aria-hidden="true"></i> {{ $laReviewBadge }}
+                                                </span>
+                                            @endif
+                                            <span class="card-badge card-badge-status">
+                                                <i class="fa-solid fa-check-circle" aria-hidden="true"></i> Available
+                                            </span>
+                                        </div>
                                     </div>
-                                    <button type="button"
-                                        class="card-action-btn card-action-btn-primary"
-                                        onclick="openBoardingPointModal({{ $propertyId }}, '{{ e((string) ($property->name ?? '')) }}', {{ $laStopoversJson }}, {{ $laPricingJson }}, '{{ e($laStart) }}', '{{ e($laEnd) }}')">
-                                        Choose Journey <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                                    </button>
+                                    <div class="card-side">
+                                        <div class="card-price">
+                                            @if ($laMinPrice > 0)
+                                                From {{ $visitorIsLocal ? 'MVR' : 'USD' }} {{ number_format($laMinPrice, 2) }}
+                                            @else
+                                                Price on request
+                                            @endif
+                                        </div>
+                                        <span class="card-action-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                                    </div>
                                 </div>
-                            </div>
+                            </a>
                             @else
                             <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 @php

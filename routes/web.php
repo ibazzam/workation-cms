@@ -447,6 +447,7 @@ if (!function_exists('workationBuildReservationDocumentData')) {
         return [
             'document_type' => $documentType,
             'generated_at' => now()->format('Y-m-d H:i:s'),
+            'branding' => workationBrandingProfile(),
             'reservation_id' => (int) ($reservationRow->id ?? 0),
             'booking_reference' => 'RSV-' . str_pad((string) ((int) ($reservationRow->id ?? 0)), 6, '0', STR_PAD_LEFT),
             'customer_name' => (string) ($reservationRow->customer_name ?? 'Guest Customer'),
@@ -1063,12 +1064,25 @@ if (!function_exists('sendPortalPasswordResetFallbackMail')) {
         $name = trim((string) $displayName);
         $greeting = $name !== '' ? "Hi {$name}," : 'Hello,';
 
-        Mail::raw(
-            "{$greeting}\n\nWe received a request to reset your {$portalLabel} account password on Workation.\n\nUse the link below to set a new password. This link expires in 60 minutes:\n\n{$resetUrl}\n\nIf you did not request a password reset, you can safely ignore this email. Your password will not change.\n\n— Workation Support",
-            static function ($message) use ($email, $portalLabel) {
-                $message->to($email)->subject('Reset Your ' . $portalLabel . ' Password | Workation');
-            }
-        );
+        workationSendBrandedMail($email, 'Reset Your ' . $portalLabel . ' Password | Workation', [
+            'preheader' => 'Reset your ' . $portalLabel . ' password securely.',
+            'headline' => 'Password reset request',
+            'intro' => 'We received a request to reset your ' . $portalLabel . ' account password on Workation.',
+            'statusLabel' => 'Action required',
+            'statusTone' => 'warning',
+            'bodyLines' => [
+                $greeting,
+                'Use the link below to set a new password. This link expires in 60 minutes.',
+                'If you did not request a password reset, you can safely ignore this email.',
+            ],
+            'metaRows' => [
+                'Portal' => $portalLabel,
+                'Reset link' => $resetUrl,
+                'Expires' => '60 minutes',
+            ],
+            'ctaUrl' => $resetUrl,
+            'ctaLabel' => 'Reset Password',
+        ]);
 
         return true;
     }
@@ -1352,21 +1366,27 @@ if (!function_exists('sendCustomerPortalRegistrationNotification')) {
             ? url('/portal/customer/verify-email?email=' . rawurlencode($recipient) . '&token=' . rawurlencode($verificationToken))
             : '';
 
-        $body = "Hi {$displayName},\n\nYour Workation member account has been created successfully.";
-        if ($verificationUrl !== '') {
-            $body .= "\n\nBefore signing in, verify your email address using this secure link:\n{$verificationUrl}\n\nThis link expires in 24 hours.";
-        } else {
-            $body .= "\n\nYou can now sign in to your customer portal and start booking experiences.";
-        }
-        $body .= "\n\nIf you did not create this account, please contact support immediately.";
-
         try {
-            Mail::raw(
-                $body,
-                static function ($message) use ($recipient) {
-                    $message->to($recipient)->subject('Workation Member Account Verification');
-                }
-            );
+            workationSendBrandedMail($recipient, 'Workation Member Account Verification', [
+                'preheader' => 'Verify your customer account to start booking.',
+                'headline' => 'Welcome to Workation',
+                'intro' => 'Your Workation member account has been created successfully.',
+                'statusLabel' => 'Verify email',
+                'statusTone' => 'info',
+                'bodyLines' => array_values(array_filter([
+                    'Hi ' . $displayName . ',',
+                    $verificationUrl !== ''
+                        ? 'Before signing in, verify your email address using the secure link below.'
+                        : 'You can now sign in to your customer portal and start booking experiences.',
+                    'If you did not create this account, please contact support immediately.',
+                ])),
+                'metaRows' => $verificationUrl !== '' ? [
+                    'Verification link' => $verificationUrl,
+                    'Expires' => '24 hours',
+                ] : [],
+                'ctaUrl' => $verificationUrl,
+                'ctaLabel' => 'Verify Email Address',
+            ]);
         } catch (\Throwable $e) {
             Log::warning('Failed to send customer portal registration email.', [
                 'email' => $recipient,

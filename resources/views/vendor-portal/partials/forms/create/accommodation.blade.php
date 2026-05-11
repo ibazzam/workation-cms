@@ -61,7 +61,7 @@
                     <input id="property_max_guests" name="max_guests" class="ops-input" type="number" min="0" max="10000" value="{{ old('max_guests') }}">
                 </div>
                 <div class="ops-field">
-                    <label for="property_capacity_value">{{ $accommodationListingCategory === 'liveaboard' ? 'Capacity (total cabins)' : 'Capacity (total units/rooms)' }}</label>
+                    <label for="property_capacity_value">{{ $accommodationListingCategory === 'liveaboard' ? 'Capacity (total rooms)' : 'Capacity (total units/rooms)' }}</label>
                     <input id="property_capacity_value" name="capacity_value" class="ops-input" type="number" min="1" max="20000" value="{{ old('capacity_value') }}" placeholder="Total bookable units">
                 </div>
                 <div class="ops-field">
@@ -169,7 +169,7 @@
                         <input id="liveaboard_registration_no" name="registration_no" class="ops-input" type="text" maxlength="60" value="{{ old('registration_no') }}">
                     </div>
                     <div class="ops-field">
-                        <label for="liveaboard_cabin_count">Cabin Count</label>
+                        <label for="liveaboard_cabin_count">Room Count</label>
                         <input id="liveaboard_cabin_count" name="cabin_count" class="ops-input" type="number" min="1" max="500" value="{{ old('cabin_count') }}" placeholder="e.g. 8">
                     </div>
                     <div class="ops-field ops-field-wide">

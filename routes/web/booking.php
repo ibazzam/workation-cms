@@ -1176,7 +1176,7 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $propertyMedia = collect();
     if (Schema::hasTable('vendor_listing_media')) {
-        $propertyMediaEntityIds = collect([
+        $preferredPropertyMediaEntityIds = collect([
             (int) ($propertyRow->vendor_property_id ?? 0),
             (int) ($propertyRow->dedicated_row_id ?? 0),
             (int) ($propertyRow->property_id ?? 0),
@@ -1187,11 +1187,21 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->filter(static fn (int $id): bool => $id > 0)
             ->unique()
             ->values();
-        if ($propertyMediaEntityIds->isEmpty()) {
-            $propertyMediaEntityIds = collect([(int) ($propertyRow->id ?? 0)])
+
+        $strictPropertyMediaEntityIds = $preferredPropertyMediaEntityIds;
+        $canonicalPropertyRowId = (int) ($propertyRow->id ?? 0);
+        if ($canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
+            $strictPropertyMediaEntityIds = $strictPropertyMediaEntityIds->push($canonicalPropertyRowId);
+        }
+        if ($strictPropertyMediaEntityIds->isEmpty()) {
+            $strictPropertyMediaEntityIds = collect([$canonicalPropertyRowId])
                 ->filter(static fn (int $id): bool => $id > 0)
                 ->values();
         }
+
+        $fallbackPropertyMediaEntityIds = $preferredPropertyMediaEntityIds->isNotEmpty()
+            ? $preferredPropertyMediaEntityIds
+            : $strictPropertyMediaEntityIds;
 
         $bookingMediaTypeMap = [
             'accommodation' => ['property'],
@@ -1207,12 +1217,26 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             'restaurant' => ['restaurant'],
             'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
         ];
+        $bookingMediaFallbackTypeMap = [
+            'liveaboard' => ['property', 'service'],
+            'sea_transport' => ['property', 'service'],
+            'marine_transport' => ['property', 'service'],
+            'land_transport' => ['property', 'service'],
+            'vehicle_rental' => ['property', 'service'],
+            'conference_room' => ['property', 'service'],
+            'remote_workspace' => ['property', 'service'],
+            'water_sports' => ['property', 'service'],
+            'excursion' => ['property', 'service'],
+            'restaurant' => ['property', 'service'],
+            'resort_day_visit' => ['property', 'service'],
+        ];
         $bookingMediaTypes = $bookingMediaTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
+        $bookingFallbackMediaTypes = $bookingMediaFallbackTypeMap[$dbCategoryKey] ?? [];
         $bookingVendorUserId = (int) ($propertyRow->vendor_user_id ?? 0);
 
         $propertyMediaQuery = DB::table('vendor_listing_media')
             ->whereIn('entity_type', $bookingMediaTypes)
-            ->whereIn('entity_id', $propertyMediaEntityIds->isNotEmpty() ? $propertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)]);
+            ->whereIn('entity_id', $strictPropertyMediaEntityIds->isNotEmpty() ? $strictPropertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)]);
 
         if ($bookingVendorUserId > 0) {
             $propertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
@@ -1223,6 +1247,22 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
+
+        if ($propertyMedia->isEmpty() && !empty($bookingFallbackMediaTypes)) {
+            $fallbackPropertyMediaQuery = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', $bookingFallbackMediaTypes)
+                ->whereIn('entity_id', $fallbackPropertyMediaEntityIds->isNotEmpty() ? $fallbackPropertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)]);
+
+            if ($bookingVendorUserId > 0) {
+                $fallbackPropertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
+            }
+
+            $propertyMedia = $fallbackPropertyMediaQuery
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+        }
     }
 
     $extractStringList = static function ($value): array {

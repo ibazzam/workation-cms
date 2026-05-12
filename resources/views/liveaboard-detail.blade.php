@@ -552,6 +552,21 @@
 
         .room-name-link:hover { text-decoration: underline; }
 
+        .room-details-link-prominent {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 800;
+            color: #0f6179;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            letter-spacing: 0.01em;
+        }
+
+        .room-details-link-prominent:hover {
+            color: #0b4f66;
+        }
+
         .room-offer-table {
             border: 1px solid #d8e7f1;
             border-radius: 11px;
@@ -1022,6 +1037,10 @@
 
     $ratingStr = $rating > 0 ? number_format($rating, 1) : 'N/A';
     $ratingLabel = $ratingCount === 1 ? 'review' : 'reviews';
+    $bookingPropertyId = (int) ($property->vendor_property_id ?? 0);
+    if ($bookingPropertyId <= 0) {
+        $bookingPropertyId = (int) ($property->id ?? 0);
+    }
 @endphp
 
 @include('partials.customer-uniform-header', [
@@ -1282,6 +1301,45 @@
                         ->map(static fn ($item) => trim((string) $item))
                         ->filter()->values();
 
+                    $packagePax = max(1, min(4, (int) (
+                        $room->package_person_count
+                        ?? $room->package_occupancy
+                        ?? $room->price_basis_persons
+                        ?? 1
+                    )));
+
+                    $amenityLookup = $amenitiesText
+                        ->map(static fn ($item) => strtolower(trim((string) $item)))
+                        ->filter(static fn ($item) => $item !== '')
+                        ->values();
+
+                    $roomHighlights = collect([
+                        [
+                            'label' => $bedType !== '' ? \Illuminate\Support\Str::headline(str_replace('_', ' ', $bedType)) : 'Queen',
+                            'icon' => 'fa-solid fa-bed',
+                        ],
+                        [
+                            'label' => 'Up to ' . $maxOccupancy . ' guests',
+                            'icon' => 'fa-solid fa-users',
+                        ],
+                    ]);
+
+                    if ($amenityLookup->contains(static fn ($item) => str_contains($item, 'air') && str_contains($item, 'condition'))) {
+                        $roomHighlights->push(['label' => 'Air conditioned', 'icon' => 'fa-solid fa-snowflake']);
+                    } elseif ($amenityLookup->contains(static fn ($item) => str_contains($item, 'sea_view') || str_contains($item, 'sea view'))) {
+                        $roomHighlights->push(['label' => 'Sea view', 'icon' => 'fa-solid fa-water']);
+                    } elseif ($amenityLookup->contains(static fn ($item) => str_contains($item, 'smart_tv') || str_contains($item, 'smart tv') || $item === 'tv')) {
+                        $roomHighlights->push(['label' => 'Smart TV', 'icon' => 'fa-solid fa-tv']);
+                    } elseif ($amenityLookup->contains(static fn ($item) => str_contains($item, 'mini_bar') || str_contains($item, 'mini bar'))) {
+                        $roomHighlights->push(['label' => 'Mini bar', 'icon' => 'fa-solid fa-martini-glass-citrus']);
+                    }
+
+                    $roomHighlights = $roomHighlights
+                        ->filter(static fn ($item) => is_array($item) && trim((string) ($item['label'] ?? '')) !== '')
+                        ->unique(static fn ($item) => strtolower(trim((string) ($item['label'] ?? ''))))
+                        ->take(3)
+                        ->values();
+
                     $roomDescription = trim((string) ($room->description ?? ''));
                 @endphp
                 <article class="room-card cabin-room-card" data-room-id="{{ $roomId }}" data-room-name="{{ $roomName }}" data-room-bed="{{ $bedType }}" data-room-description="{{ $roomDescription }}" data-room-currency="{{ $roomCurrency }}" data-room-images='@json($roomImages->all())' data-room-amenities='@json($amenitiesText->all())'>
@@ -1317,11 +1375,8 @@
                                     <div>
                                         <span class="room-sleeps">
                                             <span class="room-sleeps-icons">
-                                                @for ($i = 0; $i < min(2, $maxOccupancy); $i++)
+                                                @for ($i = 0; $i < $packagePax; $i++)
                                                     <i class="fa-solid fa-user"></i>
-                                                @endfor
-                                                @for ($i = 0; $i < max(0, $maxOccupancy - 2); $i++)
-                                                    <i class="fa-solid fa-child-reaching room-sleeps-child"></i>
                                                 @endfor
                                             </span>
                                         </span>
@@ -1331,7 +1386,7 @@
                                             <div>
                                                 <div class="room-price-now">{{ $roomCurrency }} {{ $ratePrice }}</div>
                                                 <div class="room-price-summary">Per person</div>
-                                                <div class="room-price-summary-note">Journey package rate</div>
+                                                <div class="room-price-summary-note">All-inclusive package: room, meals, transfer</div>
                                             </div>
                                             <button type="button" class="reserve-btn" data-quick-reserve-btn data-room-id="{{ $roomId }}" data-room-name="{{ $roomName }}" data-meal-plan="{{ (string) ($rateOption['meal_plan'] ?? 'Room Only') }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">Reserve</button>
                                         </div>
@@ -1347,13 +1402,10 @@
                         </div>
 
                         <ul class="room-side-details">
-                            <li><span class="room-side-dot"></span><span>{{ $bedType }}</span></li>
-                            <li><span class="room-side-dot"></span><span>Up to {{ $maxOccupancy }} guests</span></li>
-                            <li><span class="room-side-dot"></span><span>Air conditioned</span></li>
-                            @foreach ($amenitiesText->take(3) as $amenity)
-                                <li><span class="room-side-dot"></span><span>{{ $amenity }}</span></li>
+                            @foreach ($roomHighlights as $highlight)
+                                <li><i class="{{ (string) ($highlight['icon'] ?? 'fa-solid fa-circle-check') }}" aria-hidden="true" style="color:#1f6f95; width:14px;"></i><span>{{ (string) ($highlight['label'] ?? '') }}</span></li>
                             @endforeach
-                            <li><a class="room-name-link" href="#" data-open-room-modal="{{ $roomId }}">Room Details</a></li>
+                            <li><a class="room-name-link room-details-link-prominent" href="#" data-open-room-modal="{{ $roomId }}"><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>Room Details</a></li>
                         </ul>
                     </div>
                 </article>
@@ -1366,7 +1418,7 @@
     <form id="liveaboardQuickReserveForm" method="POST" action="/booking/reserve-category" style="display:none;">
         @csrf
         <input type="hidden" name="category_key" value="liveaboard">
-        <input type="hidden" name="property_id" value="{{ (int) ($property->vendor_property_id ?? $property->id ?? 0) }}">
+        <input type="hidden" name="property_id" value="{{ $bookingPropertyId }}">
         <input type="hidden" name="service_start_date" id="quickReserveStartDate" value="{{ trim((string) request()->query('journey_date', now()->toDateString())) }}">
         <input type="hidden" name="service_end_date" id="quickReserveEndDate" value="{{ trim((string) request()->query('journey_date', now()->toDateString())) }}">
         <input type="hidden" name="adults" value="1">
@@ -1721,6 +1773,18 @@
                     .replace(/\b\w/g, (char) => char.toUpperCase());
             }
 
+            function amenityIconClass(token) {
+                const normalized = String(token || '').toLowerCase().trim();
+                if (normalized.includes('air') && normalized.includes('condition')) return 'fa-solid fa-snowflake';
+                if (normalized.includes('sea view') || normalized.includes('sea_view') || normalized.includes('ocean')) return 'fa-solid fa-water';
+                if (normalized.includes('tv')) return 'fa-solid fa-tv';
+                if (normalized.includes('mini bar') || normalized.includes('mini_bar') || normalized.includes('bar')) return 'fa-solid fa-martini-glass-citrus';
+                if (normalized.includes('housekeeping') || normalized.includes('clean')) return 'fa-solid fa-broom';
+                if (normalized.includes('safety')) return 'fa-solid fa-shield';
+                if (normalized.includes('wifi') || normalized.includes('wi-fi') || normalized.includes('internet')) return 'fa-solid fa-wifi';
+                return 'fa-solid fa-circle-check';
+            }
+
             function buildRoomData(roomCard) {
                 const roomId = roomCard.dataset.roomId || '';
                 const roomName = roomCard.dataset.roomName || 'Cabin';
@@ -1780,7 +1844,7 @@
                 const amenitiesEl = clone.querySelector('[data-amenities]');
                 if (amenitiesEl) {
                     const amenities = roomData.roomAmenities.length > 0 ? roomData.roomAmenities : ['Air conditioned cabin', 'Onboard housekeeping', 'Safety equipment'];
-                    amenitiesEl.innerHTML = `<ul class="room-side-details">${amenities.map((item) => `<li><span class="room-side-dot"></span><span>${titleCaseToken(item)}</span></li>`).join('')}</ul>`;
+                    amenitiesEl.innerHTML = `<ul class="room-side-details">${amenities.map((item) => `<li><i class="${amenityIconClass(item)}" aria-hidden="true" style="color:#1f6f95; width:14px;"></i><span>${titleCaseToken(item)}</span></li>`).join('')}</ul>`;
                 }
 
                 const selectBtn = clone.querySelector('[data-select-btn]');

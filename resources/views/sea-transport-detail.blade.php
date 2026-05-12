@@ -258,8 +258,9 @@
             font-weight: 700;
         }
 
-        .booking-field input,
-        .booking-field textarea {
+            .booking-field input,
+            .booking-field select,
+            .booking-field textarea {
             width: 100%;
             border: 1px solid #bfe0f1;
             border-radius: 10px;
@@ -756,7 +757,7 @@
             </section>
 
             <section id="routes-section" class="block" aria-label="Route fare cards" style="margin-top:12px;">
-                <h2 class="block-title">Available Equipment</h2>
+                <h2 class="block-title">Available Routes</h2>
                 @if ($routeCollection->isNotEmpty())
                     <div class="equipment-grid">
                         @foreach ($routeCollection as $legIdx => $leg)
@@ -843,15 +844,41 @@
                 <input type="hidden" name="boarding_point" id="bookingBoarding" value="">
                 <input type="hidden" name="disembark_point" id="bookingDisembark" value="">
                 <input type="hidden" name="guest_residency" id="bookingResidency" value="{{ $visitorResidency === 'local_resident' ? 'local_resident' : 'foreign_national' }}">
+                <input type="hidden" name="return_route_code" id="bookingReturnRouteCode" value="">
+                <input type="hidden" name="return_boarding_point" id="bookingReturnBoarding" value="">
+                <input type="hidden" name="return_disembark_point" id="bookingReturnDisembark" value="">
 
                 <div class="booking-field">
-                    <label for="bookingTravelDate">Activity Date</label>
+                    <label for="bookingTravelDate">Travel Date</label>
                     <input id="bookingTravelDate" type="date" name="travel_date" min="{{ date('Y-m-d') }}" required>
                 </div>
 
                 <div class="booking-field">
-                    <label for="bookingAdults">Guests</label>
+                    <label for="bookingAdults">Passengers</label>
                     <input id="bookingAdults" type="number" name="adults" min="1" step="1" value="1" required>
+                </div>
+
+                <div class="booking-field">
+                    <label for="bookingResidencySelect">Guest Type</label>
+                    <select id="bookingResidencySelect">
+                        <option value="local_resident" {{ $visitorResidency === 'local_resident' ? 'selected' : '' }}>Local</option>
+                        <option value="foreign_national" {{ $visitorResidency !== 'local_resident' ? 'selected' : '' }}>Foreign</option>
+                    </select>
+                </div>
+
+                <div class="booking-field">
+                    <label for="bookingTripType">Trip Type</label>
+                    <select id="bookingTripType" name="trip_type">
+                        <option value="one_way" selected>One-way</option>
+                        <option value="round_trip">Round-trip</option>
+                    </select>
+                </div>
+
+                <div class="booking-field" id="bookingReturnRouteWrap" style="display:none;">
+                    <label for="bookingReturnRouteSelect">Return Route</label>
+                    <select id="bookingReturnRouteSelect">
+                        <option value="">Select return route</option>
+                    </select>
                 </div>
 
                 <div class="booking-field">
@@ -868,7 +895,7 @@
                     <span>Order Total</span>
                     <strong id="bookingOrderTotal">{{ $visitorResidency === 'local_resident' ? 'MVR' : 'USD' }} 0.00</strong>
                 </div>
-                <p class="booking-note"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing adjusted for your guest nationality at checkout.</p>
+                <p class="booking-note"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing follows selected guest type and may be adjusted at checkout.</p>
 
                 <div class="booking-field">
                     <label for="serviceNotes">Additional Request (Optional)</label>
@@ -910,10 +937,28 @@
         const bookingRouteCode = document.getElementById('bookingRouteCode');
         const bookingBoarding = document.getElementById('bookingBoarding');
         const bookingDisembark = document.getElementById('bookingDisembark');
+        const bookingReturnRouteCode = document.getElementById('bookingReturnRouteCode');
+        const bookingReturnBoarding = document.getElementById('bookingReturnBoarding');
+        const bookingReturnDisembark = document.getElementById('bookingReturnDisembark');
         const bookingAdults = document.getElementById('bookingAdults');
         const bookingResidency = document.getElementById('bookingResidency');
+        const bookingResidencySelect = document.getElementById('bookingResidencySelect');
+        const bookingTripType = document.getElementById('bookingTripType');
+        const bookingReturnRouteWrap = document.getElementById('bookingReturnRouteWrap');
+        const bookingReturnRouteSelect = document.getElementById('bookingReturnRouteSelect');
+        const routeCards = Array.from(document.querySelectorAll('[data-route-card]'));
         let selectedRoute = null;
-        const defaultDisplayCurrency = bookingResidency && bookingResidency.value === 'local_resident' ? 'MVR' : 'USD';
+        let selectedReturnRoute = null;
+        const selectedResidency = function () {
+            if (bookingResidencySelect && bookingResidencySelect.value) {
+                return bookingResidencySelect.value;
+            }
+            return bookingResidency && bookingResidency.value ? bookingResidency.value : 'foreign_national';
+        };
+
+        const defaultDisplayCurrency = function () {
+            return selectedResidency() === 'local_resident' ? 'MVR' : 'USD';
+        };
 
         const formatMoney = function (amount, currency) {
             return currency + ' ' + (amount || 0).toLocaleString(undefined, {
@@ -926,7 +971,7 @@
             const localFare = parseFloat(card.dataset.localFare || '0') || 0;
             const foreignFare = parseFloat(card.dataset.foreignFare || '0') || 0;
             const fallbackFare = parseFloat(card.dataset.fallbackFare || '0') || 0;
-            const residency = bookingResidency && bookingResidency.value === 'local_resident' ? 'local' : 'foreign';
+            const residency = selectedResidency() === 'local_resident' ? 'local' : 'foreign';
 
             if (residency === 'local' && localFare > 0) {
                 return { amount: localFare, currency: 'MVR' };
@@ -943,33 +988,165 @@
             return { amount: fallbackFare, currency: 'MVR' };
         };
 
+        const routeKeyFromCard = function (card) {
+            if (!card) {
+                return '';
+            }
+            const code = String(card.dataset.routeCode || '').trim();
+            const boarding = String(card.dataset.boarding || '').trim();
+            const disembark = String(card.dataset.disembark || '').trim();
+            return [code, boarding, disembark].join('||');
+        };
+
+        const routeLabelFromCard = function (card) {
+            if (!card) {
+                return 'Route';
+            }
+            const name = (card.querySelector('.route-name') || { textContent: 'Route' }).textContent.trim();
+            const code = String(card.dataset.routeCode || '').trim();
+            return code !== '' ? `${name} (${code})` : name;
+        };
+
+        const toRouteSelection = function (card, qty) {
+            if (!card) {
+                return null;
+            }
+            const price = resolveUnitPrice(card);
+            return {
+                key: routeKeyFromCard(card),
+                code: card.dataset.routeCode || '',
+                boarding: card.dataset.boarding || '',
+                disembark: card.dataset.disembark || '',
+                qty: qty,
+                unitPrice: price.amount,
+                currency: price.currency,
+                name: routeLabelFromCard(card),
+                card: card,
+            };
+        };
+
+        const findReturnCandidate = function (outbound) {
+            if (!outbound || !outbound.card) {
+                return null;
+            }
+
+            const outboundBoarding = String(outbound.card.dataset.boarding || '').trim();
+            const outboundDisembark = String(outbound.card.dataset.disembark || '').trim();
+            const reverse = routeCards.find((card) => {
+                const cardBoarding = String(card.dataset.boarding || '').trim();
+                const cardDisembark = String(card.dataset.disembark || '').trim();
+                return cardBoarding === outboundDisembark && cardDisembark === outboundBoarding;
+            });
+
+            if (reverse) {
+                return reverse;
+            }
+
+            return routeCards.find((card) => routeKeyFromCard(card) !== outbound.key) || null;
+        };
+
+        const populateReturnRoutes = function () {
+            if (!bookingReturnRouteSelect) {
+                return;
+            }
+
+            bookingReturnRouteSelect.innerHTML = '<option value="">Select return route</option>';
+            if (!selectedRoute) {
+                return;
+            }
+
+            routeCards.forEach((card) => {
+                const key = routeKeyFromCard(card);
+                if (key === '' || key === selectedRoute.key) {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = routeLabelFromCard(card);
+                bookingReturnRouteSelect.appendChild(option);
+            });
+        };
+
+        const syncReturnHiddenFields = function () {
+            if (!bookingReturnRouteCode || !bookingReturnBoarding || !bookingReturnDisembark) {
+                return;
+            }
+
+            if (selectedReturnRoute) {
+                bookingReturnRouteCode.value = selectedReturnRoute.code;
+                bookingReturnBoarding.value = selectedReturnRoute.boarding;
+                bookingReturnDisembark.value = selectedReturnRoute.disembark;
+                return;
+            }
+
+            bookingReturnRouteCode.value = '';
+            bookingReturnBoarding.value = '';
+            bookingReturnDisembark.value = '';
+        };
+
+        const isRoundTrip = function () {
+            return bookingTripType && bookingTripType.value === 'round_trip';
+        };
+
         const renderOrder = function () {
             if (!selectedRoute) {
                 bookingOrderBox.classList.add('is-empty');
                 bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-basket-shopping" aria-hidden="true"></i><br>Add route from the list on the left</div>';
-                bookingOrderTotal.textContent = defaultDisplayCurrency + ' 0.00';
+                bookingOrderTotal.textContent = defaultDisplayCurrency() + ' 0.00';
                 if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
+                syncReturnHiddenFields();
                 return;
             }
 
             const qty = parseInt(bookingAdults && bookingAdults.value ? bookingAdults.value : String(selectedRoute.qty), 10) || 1;
-            const total = selectedRoute.unitPrice * qty;
+            const outboundTotal = selectedRoute.unitPrice * qty;
+            const tripModeRound = isRoundTrip();
+
+            if (tripModeRound && !selectedReturnRoute) {
+                bookingOrderBox.classList.remove('is-empty');
+                bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-rotate" aria-hidden="true"></i><br>Select return route to continue</div>';
+                bookingOrderTotal.textContent = formatMoney(outboundTotal, selectedRoute.currency);
+                if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
+                syncReturnHiddenFields();
+                return;
+            }
+
+            let total = outboundTotal;
+            if (tripModeRound && selectedReturnRoute) {
+                total += selectedReturnRoute.unitPrice * qty;
+            }
 
             bookingOrderBox.classList.remove('is-empty');
-            bookingOrderBox.innerHTML =
+            let orderHtml =
                 '<div class="order-row">'
                 + '<div>'
-                + '<div class="order-name">' + selectedRoute.name + '</div>'
+                + '<div class="order-name">Outbound: ' + selectedRoute.name + '</div>'
                 + '<div class="order-sub">' + qty + ' passenger' + (qty > 1 ? 's' : '') + '</div>'
                 + '</div>'
-                + '<div class="order-price">' + formatMoney(total, selectedRoute.currency) + '</div>'
+                + '<div class="order-price">' + formatMoney(outboundTotal, selectedRoute.currency) + '</div>'
                 + '</div>';
+
+            if (tripModeRound && selectedReturnRoute) {
+                const returnTotal = selectedReturnRoute.unitPrice * qty;
+                orderHtml +=
+                    '<div class="order-row">'
+                    + '<div>'
+                    + '<div class="order-name">Return: ' + selectedReturnRoute.name + '</div>'
+                    + '<div class="order-sub">' + qty + ' passenger' + (qty > 1 ? 's' : '') + '</div>'
+                    + '</div>'
+                    + '<div class="order-price">' + formatMoney(returnTotal, selectedReturnRoute.currency) + '</div>'
+                    + '</div>';
+            }
+
+            bookingOrderBox.innerHTML = orderHtml;
 
             bookingOrderTotal.textContent = formatMoney(total, selectedRoute.currency);
             if (bookingSubmitBtn) bookingSubmitBtn.disabled = false;
+            syncReturnHiddenFields();
         };
 
-        document.querySelectorAll('[data-route-card]').forEach(function (card) {
+        routeCards.forEach(function (card) {
             const qtyInput = card.querySelector('[data-qty-input]');
             card.querySelectorAll('[data-step]').forEach(function (btn) {
                 btn.addEventListener('click', function () {
@@ -981,21 +1158,26 @@
 
             const addBtn = card.querySelector('[data-add-route]');
             addBtn.addEventListener('click', function () {
-                const price = resolveUnitPrice(card);
-                selectedRoute = {
-                    code: card.dataset.routeCode || '',
-                    boarding: card.dataset.boarding || '',
-                    disembark: card.dataset.disembark || '',
-                    qty: parseInt(qtyInput.value || '1', 10) || 1,
-                    unitPrice: price.amount,
-                    currency: price.currency,
-                    name: (card.querySelector('.route-name') || { textContent: 'Route' }).textContent.trim()
-                };
+                const qty = parseInt(qtyInput.value || '1', 10) || 1;
+                selectedRoute = toRouteSelection(card, qty);
+                selectedReturnRoute = null;
 
                 if (bookingRouteCode) bookingRouteCode.value = selectedRoute.code;
                 if (bookingBoarding) bookingBoarding.value = selectedRoute.boarding;
                 if (bookingDisembark) bookingDisembark.value = selectedRoute.disembark;
                 if (bookingAdults) bookingAdults.value = selectedRoute.qty;
+                if (bookingResidency) bookingResidency.value = selectedResidency();
+
+                populateReturnRoutes();
+                if (isRoundTrip()) {
+                    const candidate = findReturnCandidate(selectedRoute);
+                    if (candidate) {
+                        selectedReturnRoute = toRouteSelection(candidate, qty);
+                        if (bookingReturnRouteSelect && selectedReturnRoute) {
+                            bookingReturnRouteSelect.value = selectedReturnRoute.key;
+                        }
+                    }
+                }
 
                 renderOrder();
             });
@@ -1003,6 +1185,71 @@
 
         if (bookingAdults) {
             bookingAdults.addEventListener('change', renderOrder);
+        }
+
+        if (bookingResidencySelect) {
+            bookingResidencySelect.addEventListener('change', function () {
+                if (bookingResidency) {
+                    bookingResidency.value = bookingResidencySelect.value;
+                }
+
+                if (selectedRoute) {
+                    selectedRoute = toRouteSelection(selectedRoute.card, parseInt(bookingAdults?.value || '1', 10) || 1);
+                }
+                if (selectedReturnRoute) {
+                    selectedReturnRoute = toRouteSelection(selectedReturnRoute.card, parseInt(bookingAdults?.value || '1', 10) || 1);
+                }
+
+                renderOrder();
+            });
+        }
+
+        if (bookingTripType) {
+            bookingTripType.addEventListener('change', function () {
+                if (bookingReturnRouteWrap) {
+                    bookingReturnRouteWrap.style.display = isRoundTrip() ? '' : 'none';
+                }
+
+                if (!isRoundTrip()) {
+                    selectedReturnRoute = null;
+                    if (bookingReturnRouteSelect) {
+                        bookingReturnRouteSelect.value = '';
+                    }
+                    renderOrder();
+                    return;
+                }
+
+                populateReturnRoutes();
+                if (selectedRoute && !selectedReturnRoute) {
+                    const candidate = findReturnCandidate(selectedRoute);
+                    if (candidate) {
+                        selectedReturnRoute = toRouteSelection(candidate, parseInt(bookingAdults?.value || '1', 10) || 1);
+                        if (bookingReturnRouteSelect && selectedReturnRoute) {
+                            bookingReturnRouteSelect.value = selectedReturnRoute.key;
+                        }
+                    }
+                }
+                renderOrder();
+            });
+        }
+
+        if (bookingReturnRouteSelect) {
+            bookingReturnRouteSelect.addEventListener('change', function () {
+                const selectedKey = String(bookingReturnRouteSelect.value || '');
+                if (selectedKey === '') {
+                    selectedReturnRoute = null;
+                    renderOrder();
+                    return;
+                }
+
+                const card = routeCards.find((item) => routeKeyFromCard(item) === selectedKey) || null;
+                selectedReturnRoute = card ? toRouteSelection(card, parseInt(bookingAdults?.value || '1', 10) || 1) : null;
+                renderOrder();
+            });
+        }
+
+        if (bookingReturnRouteWrap) {
+            bookingReturnRouteWrap.style.display = isRoundTrip() ? '' : 'none';
         }
     });
 </script>

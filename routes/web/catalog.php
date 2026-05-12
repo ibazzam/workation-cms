@@ -106,7 +106,7 @@ $resolveReviewStats = static function (array $lookupIds, ?string $categoryKey = 
     });
 };
 
-Route::get('/catalog/{category}', function (Request $request, string $category) {
+Route::get('/catalog/{category}', function (Request $request, string $category) use ($resolveReviewStats) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],
         'land-transport' => ['label' => 'Land Transport', 'subtitle' => 'Cars, vans, and local ground transfers.', 'hero_image_url' => ''],
@@ -196,6 +196,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $sort = strtolower(trim((string) $request->query('sort', 'recommended')));
     $originPointFilter = trim((string) $request->query('origin_point', ''));
     $destinationPointFilter = trim((string) $request->query('destination_point', ''));
+    $visitorResidency = function_exists('workationDetectVisitorResidency')
+        ? workationDetectVisitorResidency($request)
+        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? ''))) === 'MV'
+            ? 'local_resident'
+            : 'foreign_national');
     $travelDate = trim((string) $request->query('travel_date', ''));
     $tripTypeFilter = trim((string) $request->query('trip_type', 'one_way'));
     $guestTypeFilter = trim((string) $request->query('guest_type', $visitorResidency === 'local_resident' ? 'local_resident' : 'foreign_national'));
@@ -203,11 +208,6 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $liveaboardStartPoint = trim((string) $request->query('start_point', ''));
     $liveaboardEndPoint = trim((string) $request->query('end_point', ''));
     $liveaboardDate = trim((string) $request->query('journey_date', ''));
-    $visitorResidency = function_exists('workationDetectVisitorResidency')
-        ? workationDetectVisitorResidency($request)
-        : (strtoupper(trim((string) ($request->header('CF-IPCountry') ?? $request->header('X-Country-Code') ?? $request->header('X-GeoIP-Country') ?? ''))) === 'MV'
-            ? 'local_resident'
-            : 'foreign_national');
     $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
 
     // For island-specific categories (restaurant, vehicle_rental), fall back to

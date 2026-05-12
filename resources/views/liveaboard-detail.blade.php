@@ -115,6 +115,18 @@
             white-space: nowrap;
         }
 
+        #property-gallery-section {
+            padding: 12px;
+            background: #ffffff;
+            border: 1px solid #d4e5ef !important;
+            border-radius: 14px;
+            margin-top: 0;
+        }
+
+        #property-gallery-section > h2 {
+            display: none;
+        }
+
         #property-gallery-section .gallery-shell {
             margin-top: 0;
         }
@@ -142,6 +154,33 @@
 
         .section:first-of-type h2 {
             padding-top: 0;
+        }
+
+        #services-amenities-section,
+        #stopovers-section,
+        #cabins-section,
+        #guest-reviews-section,
+        #policies-section,
+        #similar-liveaboards-section {
+            border: 1px solid #d4e5ef;
+            border-radius: 16px;
+            background: #ffffff;
+            padding: 14px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        #services-amenities-section h2,
+        #stopovers-section h2,
+        #cabins-section h2,
+        #guest-reviews-section h2,
+        #policies-section h2,
+        #similar-liveaboards-section h2 {
+            margin: 0;
+            padding-top: 0;
+            padding-bottom: 0;
         }
 
         .gallery-shell {
@@ -718,16 +757,41 @@
         .room-details-gallery {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            grid-auto-rows: 156px;
             gap: 10px;
+            align-content: start;
         }
 
         .room-details-gallery img {
             width: 100%;
-            height: 180px;
+            height: 100%;
             object-fit: cover;
             border-radius: 10px;
             border: 1px solid #d6e7f3;
             background: #f2f8fc;
+        }
+
+        .room-details-gallery img:first-child {
+            grid-column: 1 / -1;
+            grid-row: span 2;
+        }
+
+        .room-details-sidebar {
+            display: grid;
+            gap: 14px;
+            align-content: start;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding-right: 12px;
+        }
+
+        .room-details-header {
+            display: grid;
+            gap: 10px;
+            padding: 14px;
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            background: #f7fbff;
         }
 
         .room-details-title {
@@ -799,27 +863,57 @@
         }
 
         .section-tabs {
+            margin-top: 0;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            gap: 8px;
             flex-wrap: wrap;
-            margin: 20px 0 0 0;
-            padding-bottom: 12px;
-            border-bottom: 1px solid #f0f4f8;
+            border: 1px solid #d6e5ef;
+            border-radius: 12px;
+            background: #f8fcff;
+            padding: 8px;
+            position: sticky;
+            top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+            z-index: 58;
+            backdrop-filter: blur(3px);
         }
 
         .section-tab {
             text-decoration: none;
-            color: #1f4f6b;
+            color: #2c4f66;
+            border: 1px solid #d3e2ec;
+            border-radius: 999px;
+            background: #ffffff;
+            padding: 6px 11px;
+            font-size: 0.8rem;
             font-weight: 700;
-            font-size: 0.9rem;
-            padding: 8px 0;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
         }
 
+        .section-tab.is-active,
         .section-tab:hover {
+            border-color: #0f6179;
             color: #0f6179;
-            border-bottom-color: #0f6179;
+            background: #eef7fc;
+        }
+
+        .policies-grid {
+            display: grid;
+            grid-template-columns: minmax(140px, 0.45fr) minmax(0, 1fr);
+            gap: 10px 14px;
+            align-items: start;
+        }
+
+        .policy-label {
+            color: #35586e;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+        }
+
+        .policy-value {
+            color: #3f6075;
+            font-size: 0.86rem;
+            line-height: 1.65;
         }
 
         .empty-state {
@@ -835,6 +929,12 @@
         @media (max-width: 1024px) {
             .gallery-shell { grid-template-columns: 1fr; }
             .property-summary-shell { grid-template-columns: 1fr; }
+            .section-tabs {
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+            }
+            body.is-header-hidden .section-tabs {
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+            }
         }
 
         @media (max-width: 768px) {
@@ -853,6 +953,20 @@
             .room-offer-row > div:first-child { border-top: 0; }
             .room-details-content { grid-template-columns: 1fr; }
             .room-details-gallery img { height: 140px; }
+            .room-details-gallery img:first-child {
+                grid-column: auto;
+                grid-row: span 1;
+            }
+            .section-tabs {
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+            body.is-header-hidden .section-tabs {
+                top: calc(var(--property-header-offset) + var(--property-search-shell-height));
+            }
+            .section-tab { flex: 0 0 auto; }
+            .policies-grid { grid-template-columns: 1fr; }
         }
     </style>
     @include('partials.uniform-buttons')
@@ -863,7 +977,7 @@
     $headerCategoryLinks = [
         ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
         ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
-        ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Live Aboard', 'url' => '/catalog/liveaboard'],
+        ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Liveaboard', 'url' => '/catalog/liveaboard'],
         ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
         ['key' => 'sea-transport', 'icon' => 'fa-solid fa-ferry', 'title' => 'Sea Transport', 'url' => '/catalog/sea-transport'],
         ['key' => 'land-transport', 'icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
@@ -929,7 +1043,7 @@
             </div>
             <div class="top-search-field">
                 <label for="topStart">Start Date</label>
-                <input id="topStart" type="date" name="journey_date" min="{{ (string) now()->toDateString() }}">
+                <input id="topStart" type="date" name="journey_date" min="{{ (string) now()->toDateString() }}" value="{{ trim((string) request()->query('journey_date', now()->toDateString())) }}">
             </div>
             <div class="top-search-field">
                 <label for="topEnd">Duration</label>
@@ -996,14 +1110,14 @@
             <span class="k">Starting from</span>
             <span class="v">MVR {{ $displayPrice }}</span>
             <span class="sub">per person</span>
-            <a class="cta" href="/category-booking/liveaboard/{{ $property->vendor_property_id ?? $property->id }}"><i class="fa-solid fa-calendar-check"></i> Book Journey</a>
+            <a class="cta" href="#cabins-section"><i class="fa-solid fa-calendar-check"></i> Book Journey</a>
         </aside>
     </section>
 
-    <nav class="section-tabs" aria-label="Journey content navigation">
+    <nav class="section-tabs" aria-label="Journey content navigation" data-section-nav>
         <a class="section-tab" href="#property-gallery-section">Photos</a>
         <a class="section-tab" href="#services-amenities-section">Amenities</a>
-        <a class="section-tab" href="#stopovers-section">Stops</a>
+        <a class="section-tab" href="#stopovers-section">Trip Route &amp; Schedule</a>
         <a class="section-tab" href="#cabins-section">Cabins</a>
         <a class="section-tab" href="#guest-reviews-section">Reviews</a>
         <a class="section-tab" href="#policies-section">Policies</a>
@@ -1037,25 +1151,52 @@
         @endif
     </section>
 
-    <section id="stopovers-section" class="section" aria-label="Journey stops">
-        <h2>Journey Stops & Route</h2>
-        @if (count($stopovers) > 0)
+    <section id="stopovers-section" class="section" aria-label="Trip route and schedule">
+        <h2>Trip Route &amp; Schedule</h2>
+        @php
+            $tripRouteItems = collect($listingDetails['route_schedules'] ?? [])->filter(static fn ($item) => is_array($item))->values();
+            $tripStopItems = collect($stopovers ?? [])->values();
+        @endphp
+        @if ($tripRouteItems->isNotEmpty() || $tripStopItems->isNotEmpty())
             <div class="rooms-grid">
-                @foreach ($stopovers as $index => $stop)
+                @foreach ($tripRouteItems as $idx => $leg)
+                    @php
+                        $origin = trim((string) ($leg['origin'] ?? 'Departure'));
+                        $destination = trim((string) ($leg['destination'] ?? 'Destination'));
+                        $dep = trim((string) ($leg['dep_time'] ?? ''));
+                        $arr = trim((string) ($leg['arr_time'] ?? ''));
+                        $routeCode = trim((string) ($leg['route_code'] ?? ''));
+                    @endphp
+                    <article class="room-card">
+                        <h3 class="room-title">Leg {{ $idx + 1 }}: {{ $origin }} → {{ $destination }}</h3>
+                        <p class="detail-line" style="margin: 0; color: #5a7589; font-size: 0.85rem; line-height: 1.4;">
+                            @if ($dep !== '' || $arr !== '')
+                                {{ $dep !== '' ? ('Departure: ' . $dep) : 'Departure: TBD' }}{{ $arr !== '' ? (' · Arrival: ' . $arr) : '' }}
+                            @else
+                                Schedule time will be confirmed by the operator.
+                            @endif
+                            @if ($routeCode !== '')
+                                {{ ' · Route ' . $routeCode }}
+                            @endif
+                        </p>
+                    </article>
+                @endforeach
+
+                @foreach ($tripStopItems as $index => $stop)
                     @php
                         $stopName = is_array($stop) ? ($stop['name'] ?? 'Stop ' . ($index + 1)) : (is_object($stop) ? ($stop->name ?? 'Stop ' . ($index + 1)) : 'Stop ' . ($index + 1));
                         $stopDesc = is_array($stop) ? ($stop['description'] ?? '') : (is_object($stop) ? ($stop->description ?? '') : '');
                     @endphp
                     <article class="room-card">
                         <h3 class="room-title">Stop {{ $index + 1 }}: {{ $stopName }}</h3>
-                        @if ($stopDesc)
-                            <p class="detail-line" style="margin: 0; color: #5a7589; font-size: 0.85rem; line-height: 1.4;">{{ $stopDesc }}</p>
-                        @endif
+                        <p class="detail-line" style="margin: 0; color: #5a7589; font-size: 0.85rem; line-height: 1.4;">
+                            {{ $stopDesc !== '' ? $stopDesc : 'Scenic stop during the journey route.' }}
+                        </p>
                     </article>
                 @endforeach
             </div>
         @else
-            <div class="empty-state">Journey stops and route information will be updated soon.</div>
+            <div class="empty-state">Trip route and journey schedule will be published soon.</div>
         @endif
     </section>
 
@@ -1121,7 +1262,7 @@
                         [
                             'meal_plan' => 'All Inclusive',
                             'title' => 'All Inclusive',
-                            'subtitle' => 'Journey package with meals & transfers',
+                            'subtitle' => 'Journey package with meals & services',
                             'nightly' => $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0),
                             'icon' => 'fa-solid fa-champagne-glasses',
                         ],
@@ -1142,7 +1283,6 @@
                         ->filter()->values();
 
                     $roomDescription = trim((string) ($room->description ?? ''));
-                    $roomLinkBase = '/category-booking/liveaboard/' . ($property->vendor_property_id ?? $property->id);
                 @endphp
                 <article class="room-card cabin-room-card" data-room-id="{{ $roomId }}" data-room-name="{{ $roomName }}" data-room-bed="{{ $bedType }}" data-room-description="{{ $roomDescription }}" data-room-currency="{{ $roomCurrency }}" data-room-images='@json($roomImages->all())' data-room-amenities='@json($amenitiesText->all())'>
                     <a href="#" class="room-media-link" data-open-room-modal="{{ $roomId }}" title="View {{ $roomName }} details">
@@ -1168,11 +1308,6 @@
                                 @php
                                     $nightlyRateRaw = (float) ($rateOption['nightly'] ?? 0);
                                     $ratePrice = number_format($nightlyRateRaw, 2);
-                                    $reserveLink = $roomLinkBase . '?' . http_build_query([
-                                        'room_id' => $roomId,
-                                        'meal_plan' => (string) ($rateOption['meal_plan'] ?? 'Room Only'),
-                                        'guest_residency' => $visitorResidency ?? 'foreign_national',
-                                    ]);
                                 @endphp
                                 <div class="room-offer-row{{ $rateIndex > 0 ? ' is-hidden' : '' }}">
                                     <div class="room-choices">
@@ -1198,7 +1333,7 @@
                                                 <div class="room-price-summary">Per person</div>
                                                 <div class="room-price-summary-note">Journey package rate</div>
                                             </div>
-                                            <a class="reserve-btn" href="{{ $reserveLink }}">Reserve</a>
+                                            <button type="button" class="reserve-btn" data-quick-reserve-btn data-room-id="{{ $roomId }}" data-room-name="{{ $roomName }}" data-meal-plan="{{ (string) ($rateOption['meal_plan'] ?? 'Room Only') }}" data-nightly-rate="{{ number_format($nightlyRateRaw, 2, '.', '') }}">Reserve</button>
                                         </div>
                                     </div>
                                 </div>
@@ -1223,10 +1358,25 @@
                     </div>
                 </article>
             @empty
-                <article class="room-card"><div class="room-body"><h3>Cabin Options</h3><span class="muted">Cabin inventory will be published soon. All-inclusive pricing includes meals, activities, and transfers.</span></div></article>
+                <article class="room-card"><div class="room-body"><h3>Cabin Options</h3><span class="muted">Cabin inventory will be published soon. All-inclusive pricing includes meals, activities, and journey logistics.</span></div></article>
             @endforelse
         </div>
     </section>
+
+    <form id="liveaboardQuickReserveForm" method="POST" action="/booking/reserve-category" style="display:none;">
+        @csrf
+        <input type="hidden" name="category_key" value="liveaboard">
+        <input type="hidden" name="property_id" value="{{ (int) ($property->vendor_property_id ?? $property->id ?? 0) }}">
+        <input type="hidden" name="service_start_date" id="quickReserveStartDate" value="{{ trim((string) request()->query('journey_date', now()->toDateString())) }}">
+        <input type="hidden" name="service_end_date" id="quickReserveEndDate" value="{{ trim((string) request()->query('journey_date', now()->toDateString())) }}">
+        <input type="hidden" name="adults" value="1">
+        <input type="hidden" name="children" value="0">
+        <input type="hidden" name="infants" value="0">
+        <input type="hidden" name="guest_residency" value="{{ (string) ($visitorResidency ?? 'foreign_national') }}">
+        <input type="hidden" name="boarding_point" value="{{ $startPoint !== '' ? $startPoint : 'Departure Point' }}">
+        <input type="hidden" name="disembark_point" value="{{ $endPoint !== '' ? $endPoint : 'Destination Point' }}">
+        <input type="hidden" name="service_notes" id="quickReserveServiceNotes" value="">
+    </form>
 
     <section id="guest-reviews-section" class="section" aria-label="Guest reviews">
         <h2>Guest Reviews</h2>
@@ -1251,25 +1401,20 @@
         @endif
     </section>
 
-    <section id="policies-section" class="section" aria-label="Journey policies">
-        <h2>Policies & Information</h2>
-        <div class="rooms-grid">
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-calendar"></i> Journey Policy</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['journey_policy'] ?? 'Route and timing may vary based on weather and sea conditions.')) }}</p>
-            </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-ban"></i> Cancellation</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Flexible cancellation up to 7 days before departure.')) }}</p>
-            </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-door-open"></i> Boarding</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['boarding_policy'] ?? 'Arrive 1 hour before departure with valid passport and travel documents.')) }}</p>
-            </article>
-            <article class="room-card">
-                <h3 class="room-title"><i class="fa-solid fa-shield"></i> Safety</h3>
-                <p class="detail-line">{{ trim((string) ($listingDetails['safety_policy'] ?? 'All guests must comply with vessel safety procedures and crew instructions.')) }}</p>
-            </article>
+    <section id="policies-section" class="section policies-section" aria-label="Journey policies">
+        <h2>Journey Policies</h2>
+        <div class="policies-grid">
+            <div class="policy-label">Journey Policy</div>
+            <div class="policy-value">{{ trim((string) ($listingDetails['journey_policy'] ?? 'Route and timing may vary based on weather and sea conditions.')) }}</div>
+
+            <div class="policy-label">Cancellation</div>
+            <div class="policy-value">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Flexible cancellation up to 7 days before departure.')) }}</div>
+
+            <div class="policy-label">Boarding</div>
+            <div class="policy-value">{{ trim((string) ($listingDetails['boarding_policy'] ?? 'Arrive 1 hour before departure with valid passport and travel documents.')) }}</div>
+
+            <div class="policy-label">Safety</div>
+            <div class="policy-value">{{ trim((string) ($listingDetails['safety_policy'] ?? 'All guests must comply with vessel safety procedures and crew instructions.')) }}</div>
         </div>
     </section>
 
@@ -1349,32 +1494,177 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const gallery = document.querySelector('[data-property-gallery]');
-        if (!gallery) return;
+        (function () {
+            const gallery = document.querySelector('[data-property-gallery]');
+            if (!gallery) {
+                return;
+            }
 
-        const banner = gallery.querySelector('#propertyGalleryBanner');
-        const thumbs = gallery.querySelectorAll('.gallery-thumb');
+            const banner = gallery.querySelector('#propertyGalleryBanner');
+            const thumbs = gallery.querySelectorAll('.gallery-thumb');
+            if (!banner || thumbs.length === 0) {
+                return;
+            }
 
-        thumbs.forEach(thumb => {
-            thumb.addEventListener('click', () => {
-                const newSrc = thumb.dataset.bannerSrc;
-                thumbs.forEach(t => t.classList.remove('is-active'));
-                thumb.classList.add('is-active');
-                banner.src = newSrc;
+            thumbs.forEach((thumb) => {
+                thumb.addEventListener('click', () => {
+                    const newSrc = thumb.dataset.bannerSrc;
+                    thumbs.forEach((t) => t.classList.remove('is-active'));
+                    thumb.classList.add('is-active');
+                    if (newSrc) {
+                        banner.src = newSrc;
+                    }
+                });
             });
-        });
+        })();
 
-        // Smooth scroll for section tabs
-        document.querySelectorAll('.section-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                const href = tab.getAttribute('href');
-                const target = document.querySelector(href);
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
+        (function () {
+            const root = document.documentElement;
+            const topSearchShell = document.querySelector('.top-search-shell');
+            const sectionTabs = document.querySelector('.section-tabs');
+
+            const syncStickyMetrics = () => {
+                if (!topSearchShell) {
+                    return;
                 }
+
+                const shellHeight = Math.max(0, Math.ceil(topSearchShell.getBoundingClientRect().height));
+                if (shellHeight > 0) {
+                    root.style.setProperty('--property-search-shell-height', `${shellHeight}px`);
+                }
+
+                if (sectionTabs) {
+                    sectionTabs.style.setProperty('scroll-margin-top', 'calc(var(--property-header-offset) + var(--property-search-shell-height) + 12px)');
+                }
+            };
+
+            syncStickyMetrics();
+            window.addEventListener('resize', syncStickyMetrics);
+            window.addEventListener('load', syncStickyMetrics);
+        })();
+
+        (function () {
+            const root = document.documentElement;
+            const nav = document.querySelector('[data-section-nav]');
+            if (!nav) {
+                return;
+            }
+
+            const links = Array.from(nav.querySelectorAll('.section-tab[href^="#"]'));
+            if (links.length === 0) {
+                return;
+            }
+
+            const targets = links
+                .map((link) => {
+                    const id = String(link.getAttribute('href') || '').replace('#', '');
+                    const el = id ? document.getElementById(id) : null;
+                    return el ? { link, el } : null;
+                })
+                .filter(Boolean);
+
+            if (targets.length === 0) {
+                return;
+            }
+
+            const activate = (activeLink) => {
+                links.forEach((link) => {
+                    link.classList.toggle('is-active', link === activeLink);
+                });
+            };
+
+            const sync = () => {
+                const headerOffset = parseInt(getComputedStyle(root).getPropertyValue('--property-header-offset'), 10) || 0;
+                const shellHeight = parseInt(getComputedStyle(root).getPropertyValue('--property-search-shell-height'), 10) || 0;
+                const marker = window.scrollY + headerOffset + shellHeight + 48;
+                let current = targets[0];
+                for (const entry of targets) {
+                    if (entry.el.offsetTop <= marker) {
+                        current = entry;
+                    } else {
+                        break;
+                    }
+                }
+                activate(current.link);
+            };
+
+            links.forEach((link) => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = String(link.getAttribute('href') || '').replace('#', '');
+                    const target = targetId ? document.getElementById(targetId) : null;
+                    if (!target) {
+                        return;
+                    }
+
+                    const headerOffset = parseInt(getComputedStyle(root).getPropertyValue('--property-header-offset'), 10) || 0;
+                    const shellHeight = parseInt(getComputedStyle(root).getPropertyValue('--property-search-shell-height'), 10) || 0;
+                    const targetY = Math.max(0, target.getBoundingClientRect().top + window.scrollY - headerOffset - shellHeight - 16);
+                    window.scrollTo({ top: targetY, behavior: 'smooth' });
+                    activate(link);
+                });
             });
-        });
+
+            window.addEventListener('scroll', sync, { passive: true });
+            window.addEventListener('resize', sync);
+            sync();
+        })();
+
+        (function () {
+            const reserveButtons = document.querySelectorAll('[data-quick-reserve-btn]');
+            const quickReserveForm = document.getElementById('liveaboardQuickReserveForm');
+            const startInput = document.getElementById('topStart');
+            const startDateField = document.getElementById('quickReserveStartDate');
+            const endDateField = document.getElementById('quickReserveEndDate');
+            const serviceNotesField = document.getElementById('quickReserveServiceNotes');
+            const journeyDays = Number(@json((int) ($journeyDays ?? 0)));
+            const today = @json((string) now()->toDateString());
+
+            if (!quickReserveForm || reserveButtons.length === 0) {
+                return;
+            }
+
+            const toDateOnly = (value) => {
+                const normalized = String(value || '').trim();
+                return normalized.length >= 10 ? normalized.slice(0, 10) : normalized;
+            };
+
+            const addDays = (dateString, days) => {
+                const normalized = toDateOnly(dateString);
+                if (normalized === '') {
+                    return normalized;
+                }
+                const date = new Date(normalized + 'T00:00:00');
+                if (Number.isNaN(date.getTime())) {
+                    return normalized;
+                }
+                date.setDate(date.getDate() + Math.max(0, days));
+                return date.toISOString().slice(0, 10);
+            };
+
+            reserveButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const startDate = toDateOnly(startInput?.value || today || '');
+                    const endDate = addDays(startDate, journeyDays > 1 ? (journeyDays - 1) : 0);
+
+                    if (startDateField) {
+                        startDateField.value = startDate;
+                    }
+                    if (endDateField) {
+                        endDateField.value = endDate;
+                    }
+
+                    const roomName = String(button.dataset.roomName || 'Cabin').trim();
+                    const mealPlan = String(button.dataset.mealPlan || 'Room Only').trim();
+                    const nightlyRate = String(button.dataset.nightlyRate || '').trim();
+                    if (serviceNotesField) {
+                        serviceNotesField.value = `Room: ${roomName} | Plan: ${mealPlan}${nightlyRate !== '' ? (' | Rate: ' + nightlyRate) : ''}`;
+                    }
+
+                    quickReserveForm.submit();
+                });
+            });
+        })();
 
         // Room Rate Expansion
         document.querySelectorAll('[data-expand-toggle]').forEach((btn) => {

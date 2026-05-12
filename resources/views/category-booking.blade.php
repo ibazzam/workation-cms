@@ -1842,7 +1842,7 @@
                                 @if ($categoryKey === 'water_sports' && !empty($rentalItems) && count($rentalItems) > 0)
                                     <div class="ws-cart-totals" id="wsCartTotals">
                                         <span class="ws-cart-totals-label">Order Total</span>
-                                        <strong class="ws-cart-totals-amount" id="wsCartTotal">MVR 0.00</strong>
+                                        <strong class="ws-cart-totals-amount" id="wsCartTotal">{{ ($visitorResidency ?? 'foreign_national') === 'local_resident' ? 'MVR' : 'USD' }} 0.00</strong>
                                     </div>
                                     <p class="ws-cart-nationality-note"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing adjusted for your guest nationality at checkout.</p>
                                 @else
@@ -2076,16 +2076,24 @@
                 const cartInput   = document.getElementById('wsCartItemsInput');
                 const adultsInput = document.getElementById('wsAdultsHidden');
                 const submitBtn   = document.getElementById('bookingSubmitBtn');
+                const guestResidencyInput = document.getElementById('guestResidencyInput');
 
                 let cart = []; // [{id, name, duration, qty, priceLocal, priceForeign}]
 
                 const fmt = (n) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const currentResidency = () => (
+                    guestResidencyInput && guestResidencyInput.value === 'local_resident'
+                        ? 'local_resident'
+                        : 'foreign_national'
+                );
+                const primaryCurrency = () => (currentResidency() === 'local_resident' ? 'MVR' : 'USD');
+                const secondaryCurrency = () => (primaryCurrency() === 'MVR' ? 'USD' : 'MVR');
 
                 function renderCart() {
                     if (cart.length === 0) {
                         cartEmpty.style.display = '';
                         cartItems.style.display = 'none';
-                        cartTotal.textContent = 'MVR 0.00';
+                        cartTotal.textContent = primaryCurrency() + ' 0.00';
                         cartInput.value = '[]';
                         if (adultsInput) adultsInput.value = '1';
                         if (submitBtn) submitBtn.disabled = true;
@@ -2095,7 +2103,7 @@
                     cartItems.style.display = '';
                     cartItems.innerHTML = '';
 
-                    let totalMvr = 0;
+                    let totalPrimary = 0;
                     let totalQty = 0;
 
                     cart.forEach(function (item, idx) {
@@ -2117,15 +2125,18 @@
                             totalQty += item.qty;
                         }
 
-                        totalMvr += lineMvr;
+                        var linePrimary = primaryCurrency() === 'MVR' ? (lineMvr > 0 ? lineMvr : lineUsd) : (lineUsd > 0 ? lineUsd : lineMvr);
+                        var lineSecondary = secondaryCurrency() === 'MVR' ? lineMvr : lineUsd;
+                        totalPrimary += linePrimary;
+
                         const row = document.createElement('div');
                         row.className = 'ws-cart-row';
                         row.innerHTML =
                             '<div>' +
                                 '<div class="ws-cart-row-name">' + escHtml(item.name) + '</div>' +
                                 '<div class="ws-cart-row-meta">' + meta + '</div>' +
-                                '<div class="ws-cart-row-price">MVR ' + fmt(lineMvr) +
-                                    (lineUsd > 0 ? ' <span style="font-weight:400;font-size:0.76rem;color:#5f7488;">≈ USD ' + fmt(lineUsd) + '</span>' : '') +
+                                '<div class="ws-cart-row-price">' + primaryCurrency() + ' ' + fmt(linePrimary) +
+                                    (lineSecondary > 0 ? ' <span style="font-weight:400;font-size:0.76rem;color:#5f7488;">≈ ' + secondaryCurrency() + ' ' + fmt(lineSecondary) + '</span>' : '') +
                                 '</div>' +
                             '</div>' +
                             '<button type="button" class="ws-cart-remove-btn" data-remove-idx="' + idx + '" aria-label="Remove ' + escHtml(item.name) + '">' +
@@ -2134,7 +2145,7 @@
                         cartItems.appendChild(row);
                     });
 
-                    cartTotal.textContent = 'MVR ' + fmt(totalMvr);
+                    cartTotal.textContent = primaryCurrency() + ' ' + fmt(totalPrimary);
                     cartInput.value = JSON.stringify(cart);
                     if (adultsInput) adultsInput.value = String(Math.max(1, totalQty));
                     if (submitBtn) submitBtn.disabled = false;
@@ -2245,6 +2256,7 @@
                     });
                 });
 
+                guestResidencyInput?.addEventListener('change', renderCart);
                 renderCart();
             })();
 

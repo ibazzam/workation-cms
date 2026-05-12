@@ -1018,7 +1018,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'service', 'property'])
+            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport'])
             ->whereIn('entity_id', $mediaEntityIds);
 
         if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {

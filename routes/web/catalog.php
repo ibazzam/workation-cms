@@ -1192,8 +1192,9 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
             (int) ($property->id ?? 0),
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
         $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'liveaboard', 'transport', 'sea_transport'])
+            ->whereIn('entity_type', $seaMediaTypes)
             ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
@@ -1444,8 +1445,15 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 (int) ($property->id ?? 0),
                 (int) ($property->vendor_property_id ?? 0),
             ], static fn (int $id): bool => $id > 0)));
+            $genericMediaTypeMap = [
+                'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'transport', 'vehicle'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+            ];
+            $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey];
             $mediaRows = DB::table('vendor_listing_media')
-                ->whereIn('entity_type', ['service', 'property', $categoryKey, 'transport', 'land_transport', 'vehicle_rental', 'conference_room', 'remote_workspace'])
+                ->whereIn('entity_type', $mediaEntityTypes)
                 ->whereIn('entity_id', $mediaEntityIds)
                 ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
                 ->orderBy('id')

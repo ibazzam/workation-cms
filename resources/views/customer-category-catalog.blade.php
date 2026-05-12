@@ -1415,6 +1415,23 @@
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 14px;
             height: auto;
+            margin-top: 20px;
+        }
+
+        .page.category-liveaboard .catalog-grid {
+            display: block;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .page.category-liveaboard .catalog-section-title {
+            display: block;
+            grid-column: 1 / -1;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            margin-top: 0;
         }
 
         .page.category-liveaboard .card {
@@ -1547,6 +1564,16 @@
             font-size: 0.78rem;
             padding: 8px 12px;
             align-self: flex-start;
+            border-radius: 8px;
+            background: #0f6179;
+            color: #ffffff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .page.category-liveaboard .card-action-btn:hover {
+            background: #0d4d5f;
         }
 
         .page.category-liveaboard .catalog-map-panel {
@@ -1977,6 +2004,39 @@
         }
 
         .page.category-sea-transport .catalog-map-panel {
+            display: none;
+        }
+
+        /* Land Transport Category Styling */
+        .page.category-land-transport .catalog-results-layout {
+            display: block;
+            height: auto;
+        }
+
+        .page.category-land-transport .catalog-results-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            height: auto;
+            margin-top: 20px;
+        }
+
+        .page.category-land-transport .catalog-grid {
+            display: block;
+            border: none;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        .page.category-land-transport .catalog-section-title {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .page.category-land-transport .catalog-map-panel {
             display: none;
         }
 
@@ -3806,6 +3866,9 @@
                                         </div>
                                     </div>
                                     <div class="card-side">
+                                        @if ($primaryDisplayPrice > 0)
+                                            <div class="card-price">From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}</div>
+                                        @endif
                                         <span class="card-action-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>
                                 </div>

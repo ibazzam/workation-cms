@@ -346,6 +346,46 @@
                     @endif
                 </div>
             </section>
+
+            <nav class="section-tabs">
+                <a class="section-tab" href="#amenities-section">Amenities</a>
+                <a class="section-tab" href="#policies-section">Policies</a>
+            </nav>
+
+            <section id="amenities-section" class="section">
+                <h2>Service Features</h2>
+                @if ($amenities->isNotEmpty())
+                    <div class="amenities-grid">
+                        @foreach ($amenities as $amenity)
+                            <div class="amenity-item"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ $amenity }}</div>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="empty-note">Service features will be published shortly.</div>
+                @endif
+            </section>
+
+            <section id="policies-section" class="section">
+                <h2>Service Policies</h2>
+                <div class="policies-grid">
+                    <article class="policy-card">
+                        <div class="policy-label">Booking Policy</div>
+                        <div class="policy-value">{{ trim((string) ($listingDetails['booking_policy'] ?? 'Book your transfer in advance for best availability.')) }}</div>
+                    </article>
+                    <article class="policy-card">
+                        <div class="policy-label">Cancellation</div>
+                        <div class="policy-value">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Free cancellation up to 24 hours before transfer.')) }}</div>
+                    </article>
+                    <article class="policy-card">
+                        <div class="policy-label">Pickup & Dropoff</div>
+                        <div class="policy-value">{{ trim((string) ($listingDetails['pickup_policy'] ?? 'Flexible pickup times available. Hotel transfers included.')) }}</div>
+                    </article>
+                    <article class="policy-card">
+                        <div class="policy-label">Driver Policy</div>
+                        <div class="policy-value">{{ trim((string) ($listingDetails['driver_policy'] ?? 'Professional, licensed drivers with local knowledge.')) }}</div>
+                    </article>
+                </div>
+            </section>
         </div>
 
         <aside class="detail-sidebar booking-sidebar-card">
@@ -355,46 +395,6 @@
             <a class="booking-btn" href="/category-booking/land-transport/{{ $property->vendor_property_id ?? $property->id }}"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Book Transfer</a>
         </aside>
     </div>
-
-    <nav class="section-tabs">
-        <a class="section-tab" href="#amenities-section">Amenities</a>
-        <a class="section-tab" href="#policies-section">Policies</a>
-    </nav>
-
-    <section id="amenities-section" class="section">
-        <h2>Service Features</h2>
-        @if ($amenities->isNotEmpty())
-            <div class="amenities-grid">
-                @foreach ($amenities as $amenity)
-                    <div class="amenity-item"><i class="fa-solid fa-check" aria-hidden="true"></i> {{ $amenity }}</div>
-                @endforeach
-            </div>
-        @else
-            <div class="empty-note">Service features will be published shortly.</div>
-        @endif
-    </section>
-
-    <section id="policies-section" class="section">
-        <h2>Service Policies</h2>
-        <div class="policies-grid">
-            <article class="policy-card">
-                <div class="policy-label">Booking Policy</div>
-                <div class="policy-value">{{ trim((string) ($listingDetails['booking_policy'] ?? 'Book your transfer in advance for best availability.')) }}</div>
-            </article>
-            <article class="policy-card">
-                <div class="policy-label">Cancellation</div>
-                <div class="policy-value">{{ trim((string) ($listingDetails['cancellation_policy'] ?? 'Free cancellation up to 24 hours before transfer.')) }}</div>
-            </article>
-            <article class="policy-card">
-                <div class="policy-label">Pickup & Dropoff</div>
-                <div class="policy-value">{{ trim((string) ($listingDetails['pickup_policy'] ?? 'Flexible pickup times available. Hotel transfers included.')) }}</div>
-            </article>
-            <article class="policy-card">
-                <div class="policy-label">Driver Policy</div>
-                <div class="policy-value">{{ trim((string) ($listingDetails['driver_policy'] ?? 'Professional, licensed drivers with local knowledge.')) }}</div>
-            </article>
-        </div>
-    </section>
 </main>
 
 @include('partials.global-site-footer')

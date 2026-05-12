@@ -777,16 +777,16 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
             $mediaEntityTypeMap = [
                 'accommodation' => ['property'],
-                'liveaboard' => ['liveaboard', 'property', 'service'],
-                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
-                'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
-                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
-                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
-                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
-                'water_sports' => ['water_sports', 'water-sports', 'activity', 'property', 'service'],
-                'excursion' => ['excursion', 'activity', 'property', 'service'],
-                'restaurant' => ['restaurant', 'property', 'service'],
-                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit', 'property', 'service'],
+                'liveaboard' => ['liveaboard'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+                'water_sports' => ['water_sports', 'water-sports', 'activity'],
+                'excursion' => ['excursion', 'activity'],
+                'restaurant' => ['restaurant'],
+                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
             ];
             $mediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
             $mediaVendorUserIds = $catalogProperties
@@ -1014,9 +1014,18 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
     $galleryMedia = [];
     if (Schema::hasTable('vendor_listing_media')) {
         $mediaEntityIds = array_values(array_unique(array_filter([
-            (int) ($property->id ?? 0),
             (int) ($property->vendor_property_id ?? 0),
+            (int) ($property->dedicated_row_id ?? 0),
+            (int) ($property->property_id ?? 0),
+            (int) ($property->legacy_property_id ?? 0),
+            (int) ($property->source_property_id ?? 0),
+            (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
+        if ($mediaEntityIds === []) {
+            $mediaEntityIds = array_values(array_unique(array_filter([
+                (int) ($property->id ?? 0),
+            ], static fn (int $id): bool => $id > 0)));
+        }
         $mediaQuery = DB::table('vendor_listing_media')
             ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport'])
             ->whereIn('entity_id', $mediaEntityIds);
@@ -1464,9 +1473,18 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
         $galleryMedia = [];
         if (Schema::hasTable('vendor_listing_media')) {
             $mediaEntityIds = array_values(array_unique(array_filter([
-                (int) ($property->id ?? 0),
                 (int) ($property->vendor_property_id ?? 0),
+                (int) ($property->dedicated_row_id ?? 0),
+                (int) ($property->property_id ?? 0),
+                (int) ($property->legacy_property_id ?? 0),
+                (int) ($property->source_property_id ?? 0),
+                (int) ($property->parent_property_id ?? 0),
             ], static fn (int $id): bool => $id > 0)));
+            if ($mediaEntityIds === []) {
+                $mediaEntityIds = array_values(array_unique(array_filter([
+                    (int) ($property->id ?? 0),
+                ], static fn (int $id): bool => $id > 0)));
+            }
             $genericMediaTypeMap = [
                 'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
                 'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'transport', 'vehicle', 'property', 'service'],

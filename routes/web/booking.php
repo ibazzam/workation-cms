@@ -1176,11 +1176,22 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $propertyMedia = collect();
     if (Schema::hasTable('vendor_listing_media')) {
-        $propertyMediaEntityIds = collect(workationPropertyLookupIds($propertyRow))
-            ->map(static fn ($id) => (int) $id)
+        $propertyMediaEntityIds = collect([
+            (int) ($propertyRow->vendor_property_id ?? 0),
+            (int) ($propertyRow->dedicated_row_id ?? 0),
+            (int) ($propertyRow->property_id ?? 0),
+            (int) ($propertyRow->legacy_property_id ?? 0),
+            (int) ($propertyRow->source_property_id ?? 0),
+            (int) ($propertyRow->parent_property_id ?? 0),
+        ])
             ->filter(static fn (int $id): bool => $id > 0)
             ->unique()
             ->values();
+        if ($propertyMediaEntityIds->isEmpty()) {
+            $propertyMediaEntityIds = collect([(int) ($propertyRow->id ?? 0)])
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->values();
+        }
 
         $bookingMediaTypeMap = [
             'accommodation' => ['property'],

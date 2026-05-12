@@ -257,6 +257,10 @@
 
     $minPrice = (float) ($minPrice ?? 0);
     $displayPrice = $minPrice > 0 ? ('MVR ' . number_format($minPrice, 0)) : 'Price on request';
+    $heroReviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? $property->star_rating ?? $property->stars ?? 0);
+    $heroReviewScore = $heroReviewScoreRaw > 0 ? number_format($heroReviewScoreRaw, 1) : 'N/A';
+    $heroReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
+    $heroReviewLabel = $heroReviewCount === 1 ? 'review' : 'reviews';
 @endphp
 
 @include('partials.customer-uniform-header', [
@@ -301,6 +305,7 @@
                 @if ($availabilityHours !== '')
                     <span><i class="fa-solid fa-clock" aria-hidden="true"></i> {{ $availabilityHours }}</span>
                 @endif
+                <span class="summary-chip"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $heroReviewScore }} · {{ number_format($heroReviewCount) }} {{ $heroReviewLabel }}</span>
             </div>
             @if ($description !== '')
                 <p style="margin:10px 0 0; color:#4b6578; line-height:1.5;">{{ \Illuminate\Support\Str::words($description, 70) }}</p>

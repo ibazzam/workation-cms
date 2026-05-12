@@ -409,6 +409,48 @@
             gap: 10px;
         }
 
+        .equipment-card.is-selected {
+            border-color: #0f6179;
+            box-shadow: 0 0 0 2px rgba(15, 97, 121, 0.12);
+            background: #f5fbff;
+        }
+
+        .route-sections-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .route-mode-btn {
+            border: 1px solid #cfe1ed;
+            background: #f7fbff;
+            color: #1f4f6b;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .route-mode-btn.is-active {
+            border-color: #0f6179;
+            background: #0f6179;
+            color: #ffffff;
+        }
+
+        .route-subtitle {
+            margin: 2px 0 10px;
+            color: #4f7188;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .is-hidden-route {
+            display: none !important;
+        }
+
         .route-name {
             margin: 0;
             font-size: 1rem;
@@ -639,6 +681,10 @@
 
     $defaultPrice = $visitorResidency === 'local_resident' ? (float) ($fromPriceLocal ?? 0) : (float) ($fromPriceForeign ?? 0);
     $defaultCurrency = $visitorResidency === 'local_resident' ? 'MVR' : 'USD';
+    $heroReviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? $property->star_rating ?? $property->stars ?? 0);
+    $heroReviewScore = $heroReviewScoreRaw > 0 ? number_format($heroReviewScoreRaw, 1) : 'N/A';
+    $heroReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
+    $heroReviewLabel = $heroReviewCount === 1 ? 'review' : 'reviews';
 @endphp
 
 @include('partials.customer-uniform-header', [
@@ -715,6 +761,7 @@
                     @if (!empty($listingDetails['total_seats']))
                         <span class="hero-chip"><i class="fa-solid fa-users" aria-hidden="true"></i> {{ (int) $listingDetails['total_seats'] }} seats</span>
                     @endif
+                    <span class="hero-chip"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $heroReviewScore }} · {{ number_format($heroReviewCount) }} {{ $heroReviewLabel }}</span>
                 </div>
             </section>
 
@@ -759,7 +806,13 @@
             <section id="routes-section" class="block" aria-label="Route fare cards" style="margin-top:12px;">
                 <h2 class="block-title">Available Routes</h2>
                 @if ($routeCollection->isNotEmpty())
-                    <div class="equipment-grid">
+                    <div class="route-sections-switch" aria-label="Choose trip mode">
+                        <button type="button" class="route-mode-btn is-active" data-trip-mode="one_way">One-way</button>
+                        <button type="button" class="route-mode-btn" data-trip-mode="round_trip">Round-trip</button>
+                    </div>
+
+                    <p class="route-subtitle">Select your outbound leg.</p>
+                    <div class="equipment-grid" id="outboundRoutesGrid">
                         @foreach ($routeCollection as $legIdx => $leg)
                             @php
                                 $legCode = (string) ($leg['route_code'] ?? '');
@@ -809,10 +862,70 @@
                                         <input type="number" min="1" step="1" value="1" data-qty-input aria-label="Quantity">
                                         <button type="button" data-step="+1" aria-label="Increase quantity">+</button>
                                     </div>
-                                    <button type="button" class="equipment-add-btn" data-add-route><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Add</button>
+                                    <button type="button" class="equipment-add-btn" data-add-route><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Select</button>
                                 </div>
                             </article>
                         @endforeach
+                    </div>
+
+                    <div id="returnRoutesWrap" style="display:none; margin-top:12px;">
+                        <p class="route-subtitle">Select your return leg.</p>
+                        <div id="noReturnLegMessage" class="empty-note" style="display:none; margin-bottom:10px;">No return leg was found on this specific vessel.</div>
+                        <div class="equipment-grid" id="returnRoutesGrid">
+                            @foreach ($routeCollection as $legIdx => $leg)
+                                @php
+                                    $legCode = (string) ($leg['route_code'] ?? '');
+                                    $legOrigin = trim((string) ($leg['origin'] ?? 'Departure'));
+                                    $legDest = trim((string) ($leg['destination'] ?? 'Destination'));
+                                    $legDep = trim((string) ($leg['dep_time'] ?? ''));
+                                    $legArr = trim((string) ($leg['arr_time'] ?? ''));
+                                    $legDays = is_array($leg['days'] ?? null) ? implode(', ', $leg['days']) : '';
+                                    $localFare = (float) ($leg['local_adult'] ?? $fromPriceLocal ?? 0);
+                                    $foreignFare = (float) ($leg['foreign_adult'] ?? $fromPriceForeign ?? 0);
+                                    $fallbackFare = $localFare > 0 ? $localFare : $foreignFare;
+                                @endphp
+                                <article class="equipment-card" data-return-route-card
+                                    data-route-code="{{ $legCode }}"
+                                    data-boarding="{{ e($legOrigin) }}"
+                                    data-disembark="{{ e($legDest) }}"
+                                    data-local-fare="{{ $localFare }}"
+                                    data-foreign-fare="{{ $foreignFare }}"
+                                    data-fallback-fare="{{ $fallbackFare }}">
+                                    <div style="display:flex; justify-content:space-between; align-items:start; gap:8px;">
+                                        <h3 class="route-name">{{ $legOrigin }} → {{ $legDest }}</h3>
+                                        <span style="background:#e8f4f8; color:#0f6179; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:600; white-space:nowrap;">return</span>
+                                    </div>
+                                    <div class="route-meta">
+                                        @if ($legDep !== '' || $legArr !== '')
+                                            <span><i class="fa-solid fa-clock" aria-hidden="true"></i> {{ $legDep !== '' ? ('Dep ' . $legDep) : '' }}{{ $legDep !== '' && $legArr !== '' ? ' · ' : '' }}{{ $legArr !== '' ? ('Arr ' . $legArr) : '' }}</span>
+                                        @endif
+                                        @if ($legDays !== '')
+                                            <span><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $legDays }}</span>
+                                        @endif
+                                    </div>
+                                    <div style="border-top:1px solid var(--line); padding-top:8px; margin-top:4px;">
+                                        <p style="margin:0 0 4px; font-size:0.85rem; color:var(--muted);">Price per passenger</p>
+                                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:baseline;">
+                                            @if ($localFare > 0)
+                                                <strong style="color:var(--ink);">MVR {{ number_format($localFare, 2) }}</strong>
+                                            @endif
+                                            @if ($foreignFare > 0)
+                                                <span style="color:var(--muted); font-size:0.85rem;">≈ USD {{ number_format($foreignFare, 2) }}</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="equipment-add-row">
+                                        <span class="equipment-stepper-label">Qty</span>
+                                        <div class="equipment-stepper">
+                                            <button type="button" data-return-step="-1" aria-label="Decrease quantity">−</button>
+                                            <input type="number" min="1" step="1" value="1" data-return-qty-input aria-label="Quantity">
+                                            <button type="button" data-return-step="+1" aria-label="Increase quantity">+</button>
+                                        </div>
+                                        <button type="button" class="equipment-add-btn" data-add-return-route><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Select</button>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
                     </div>
                 @else
                     <div class="empty-note">No route schedules are available yet for this service.</div>
@@ -874,11 +987,17 @@
                     </select>
                 </div>
 
+                <div class="booking-field" id="bookingReturnDateWrap" style="display:none;">
+                    <label for="bookingReturnDate">Return Date</label>
+                    <input id="bookingReturnDate" type="date" name="return_date" min="{{ date('Y-m-d') }}">
+                </div>
+
                 <div class="booking-field" id="bookingReturnRouteWrap" style="display:none;">
                     <label for="bookingReturnRouteSelect">Return Route</label>
                     <select id="bookingReturnRouteSelect">
                         <option value="">Select return route</option>
                     </select>
+                    <small id="bookingNoReturnMessage" style="display:none; color:#a85a3d; font-weight:700;">No return leg was found on this specific vessel.</small>
                 </div>
 
                 <div class="booking-field">
@@ -944,9 +1063,17 @@
         const bookingResidency = document.getElementById('bookingResidency');
         const bookingResidencySelect = document.getElementById('bookingResidencySelect');
         const bookingTripType = document.getElementById('bookingTripType');
+        const bookingReturnDateWrap = document.getElementById('bookingReturnDateWrap');
+        const bookingReturnDate = document.getElementById('bookingReturnDate');
         const bookingReturnRouteWrap = document.getElementById('bookingReturnRouteWrap');
         const bookingReturnRouteSelect = document.getElementById('bookingReturnRouteSelect');
+        const bookingNoReturnMessage = document.getElementById('bookingNoReturnMessage');
+        const bookingTravelDate = document.getElementById('bookingTravelDate');
         const routeCards = Array.from(document.querySelectorAll('[data-route-card]'));
+        const returnRouteCards = Array.from(document.querySelectorAll('[data-return-route-card]'));
+        const routeModeButtons = Array.from(document.querySelectorAll('[data-trip-mode]'));
+        const returnRoutesWrap = document.getElementById('returnRoutesWrap');
+        const noReturnLegMessage = document.getElementById('noReturnLegMessage');
         let selectedRoute = null;
         let selectedReturnRoute = null;
         const selectedResidency = function () {
@@ -1007,6 +1134,70 @@
             return code !== '' ? `${name} (${code})` : name;
         };
 
+        const updateCardSelectionStyles = function () {
+            routeCards.forEach((card) => {
+                card.classList.toggle('is-selected', selectedRoute && routeKeyFromCard(card) === selectedRoute.key);
+            });
+            returnRouteCards.forEach((card) => {
+                card.classList.toggle('is-selected', selectedReturnRoute && routeKeyFromCard(card) === selectedReturnRoute.key);
+            });
+        };
+
+        const refreshReturnRouteCards = function () {
+            if (!returnRoutesWrap) {
+                return;
+            }
+
+            let visibleReverseCount = 0;
+
+            returnRouteCards.forEach((card) => {
+                card.classList.remove('is-hidden-route');
+                if (!selectedRoute) {
+                    card.classList.add('is-hidden-route');
+                    return;
+                }
+                const outboundBoarding = String(selectedRoute.boarding || '').trim();
+                const outboundDisembark = String(selectedRoute.disembark || '').trim();
+                const returnBoarding = String(card.dataset.boarding || '').trim();
+                const returnDisembark = String(card.dataset.disembark || '').trim();
+                const isReverse = returnBoarding === outboundDisembark && returnDisembark === outboundBoarding;
+                const isSameLeg = routeKeyFromCard(card) === selectedRoute.key;
+                if (isSameLeg || (!isReverse && outboundBoarding !== '' && outboundDisembark !== '')) {
+                    card.classList.add('is-hidden-route');
+                    return;
+                }
+
+                visibleReverseCount += 1;
+            });
+
+            if (noReturnLegMessage) {
+                noReturnLegMessage.style.display = (isRoundTrip() && selectedRoute && visibleReverseCount === 0) ? '' : 'none';
+            }
+            if (bookingNoReturnMessage) {
+                bookingNoReturnMessage.style.display = (isRoundTrip() && selectedRoute && visibleReverseCount === 0) ? '' : 'none';
+            }
+        };
+
+        const reverseRouteCardsForSelection = function (outbound) {
+            if (!outbound) {
+                return [];
+            }
+
+            const outboundBoarding = String(outbound.boarding || '').trim();
+            const outboundDisembark = String(outbound.disembark || '').trim();
+            if (outboundBoarding === '' || outboundDisembark === '') {
+                return [];
+            }
+
+            return returnRouteCards.filter((card) => {
+                const returnBoarding = String(card.dataset.boarding || '').trim();
+                const returnDisembark = String(card.dataset.disembark || '').trim();
+                const isSameLeg = routeKeyFromCard(card) === outbound.key;
+                const isReverse = returnBoarding === outboundDisembark && returnDisembark === outboundBoarding;
+                return !isSameLeg && isReverse;
+            });
+        };
+
         const toRouteSelection = function (card, qty) {
             if (!card) {
                 return null;
@@ -1026,23 +1217,8 @@
         };
 
         const findReturnCandidate = function (outbound) {
-            if (!outbound || !outbound.card) {
-                return null;
-            }
-
-            const outboundBoarding = String(outbound.card.dataset.boarding || '').trim();
-            const outboundDisembark = String(outbound.card.dataset.disembark || '').trim();
-            const reverse = routeCards.find((card) => {
-                const cardBoarding = String(card.dataset.boarding || '').trim();
-                const cardDisembark = String(card.dataset.disembark || '').trim();
-                return cardBoarding === outboundDisembark && cardDisembark === outboundBoarding;
-            });
-
-            if (reverse) {
-                return reverse;
-            }
-
-            return routeCards.find((card) => routeKeyFromCard(card) !== outbound.key) || null;
+            const reverseCards = reverseRouteCardsForSelection(outbound);
+            return reverseCards.length > 0 ? reverseCards[0] : null;
         };
 
         const populateReturnRoutes = function () {
@@ -1055,9 +1231,9 @@
                 return;
             }
 
-            routeCards.forEach((card) => {
+            reverseRouteCardsForSelection(selectedRoute).forEach((card) => {
                 const key = routeKeyFromCard(card);
-                if (key === '' || key === selectedRoute.key) {
+                if (key === '') {
                     return;
                 }
 
@@ -1102,13 +1278,35 @@
             const qty = parseInt(bookingAdults && bookingAdults.value ? bookingAdults.value : String(selectedRoute.qty), 10) || 1;
             const outboundTotal = selectedRoute.unitPrice * qty;
             const tripModeRound = isRoundTrip();
+            const hasReverse = reverseRouteCardsForSelection(selectedRoute).length > 0;
+
+            if (tripModeRound && bookingReturnDate && String(bookingReturnDate.value || '').trim() === '') {
+                bookingOrderBox.classList.remove('is-empty');
+                bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-calendar-days" aria-hidden="true"></i><br>Select return date to continue</div>';
+                bookingOrderTotal.textContent = formatMoney(outboundTotal, selectedRoute.currency);
+                if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
+                syncReturnHiddenFields();
+                updateCardSelectionStyles();
+                return;
+            }
 
             if (tripModeRound && !selectedReturnRoute) {
+                if (!hasReverse) {
+                    bookingOrderBox.classList.remove('is-empty');
+                    bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-circle-exclamation" aria-hidden="true"></i><br>No return leg was found on this specific vessel.</div>';
+                    bookingOrderTotal.textContent = formatMoney(outboundTotal, selectedRoute.currency);
+                    if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
+                    syncReturnHiddenFields();
+                    updateCardSelectionStyles();
+                    return;
+                }
+
                 bookingOrderBox.classList.remove('is-empty');
                 bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-rotate" aria-hidden="true"></i><br>Select return route to continue</div>';
                 bookingOrderTotal.textContent = formatMoney(outboundTotal, selectedRoute.currency);
                 if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
                 syncReturnHiddenFields();
+                updateCardSelectionStyles();
                 return;
             }
 
@@ -1144,6 +1342,7 @@
             bookingOrderTotal.textContent = formatMoney(total, selectedRoute.currency);
             if (bookingSubmitBtn) bookingSubmitBtn.disabled = false;
             syncReturnHiddenFields();
+            updateCardSelectionStyles();
         };
 
         routeCards.forEach(function (card) {
@@ -1169,22 +1368,56 @@
                 if (bookingResidency) bookingResidency.value = selectedResidency();
 
                 populateReturnRoutes();
-                if (isRoundTrip()) {
-                    const candidate = findReturnCandidate(selectedRoute);
-                    if (candidate) {
-                        selectedReturnRoute = toRouteSelection(candidate, qty);
-                        if (bookingReturnRouteSelect && selectedReturnRoute) {
-                            bookingReturnRouteSelect.value = selectedReturnRoute.key;
-                        }
-                    }
-                }
+                refreshReturnRouteCards();
 
+                renderOrder();
+            });
+        });
+
+        returnRouteCards.forEach(function (card) {
+            const qtyInput = card.querySelector('[data-return-qty-input]');
+            card.querySelectorAll('[data-return-step]').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const step = parseInt(btn.getAttribute('data-return-step'), 10) || 0;
+                    const current = parseInt(qtyInput.value || '1', 10) || 1;
+                    qtyInput.value = Math.max(1, current + step);
+                });
+            });
+
+            const addBtn = card.querySelector('[data-add-return-route]');
+            addBtn.addEventListener('click', function () {
+                const qty = parseInt((bookingAdults && bookingAdults.value) || qtyInput.value || '1', 10) || 1;
+                selectedReturnRoute = toRouteSelection(card, qty);
+                if (bookingReturnRouteSelect && selectedReturnRoute) {
+                    bookingReturnRouteSelect.value = selectedReturnRoute.key;
+                }
                 renderOrder();
             });
         });
 
         if (bookingAdults) {
             bookingAdults.addEventListener('change', renderOrder);
+        }
+
+        if (bookingReturnDate) {
+            bookingReturnDate.addEventListener('change', renderOrder);
+            bookingReturnDate.addEventListener('input', renderOrder);
+        }
+
+        if (bookingTravelDate && bookingReturnDate) {
+            const syncReturnDateMin = function () {
+                const travel = String(bookingTravelDate.value || '').trim();
+                if (travel !== '') {
+                    bookingReturnDate.min = travel;
+                    if (String(bookingReturnDate.value || '').trim() !== '' && bookingReturnDate.value < travel) {
+                        bookingReturnDate.value = travel;
+                    }
+                }
+            };
+
+            bookingTravelDate.addEventListener('change', syncReturnDateMin);
+            bookingTravelDate.addEventListener('input', syncReturnDateMin);
+            syncReturnDateMin();
         }
 
         if (bookingResidencySelect) {
@@ -1206,8 +1439,24 @@
 
         if (bookingTripType) {
             bookingTripType.addEventListener('change', function () {
+                routeModeButtons.forEach((btn) => {
+                    btn.classList.toggle('is-active', btn.dataset.tripMode === bookingTripType.value);
+                });
+
+                if (bookingReturnDateWrap) {
+                    bookingReturnDateWrap.style.display = isRoundTrip() ? '' : 'none';
+                }
+                if (bookingReturnDate) {
+                    bookingReturnDate.required = isRoundTrip();
+                    if (!isRoundTrip()) {
+                        bookingReturnDate.value = '';
+                    }
+                }
                 if (bookingReturnRouteWrap) {
                     bookingReturnRouteWrap.style.display = isRoundTrip() ? '' : 'none';
+                }
+                if (returnRoutesWrap) {
+                    returnRoutesWrap.style.display = isRoundTrip() ? '' : 'none';
                 }
 
                 if (!isRoundTrip()) {
@@ -1220,18 +1469,20 @@
                 }
 
                 populateReturnRoutes();
-                if (selectedRoute && !selectedReturnRoute) {
-                    const candidate = findReturnCandidate(selectedRoute);
-                    if (candidate) {
-                        selectedReturnRoute = toRouteSelection(candidate, parseInt(bookingAdults?.value || '1', 10) || 1);
-                        if (bookingReturnRouteSelect && selectedReturnRoute) {
-                            bookingReturnRouteSelect.value = selectedReturnRoute.key;
-                        }
-                    }
-                }
+                refreshReturnRouteCards();
                 renderOrder();
             });
         }
+
+        routeModeButtons.forEach((btn) => {
+            btn.addEventListener('click', function () {
+                if (!bookingTripType) {
+                    return;
+                }
+                bookingTripType.value = String(btn.dataset.tripMode || 'one_way');
+                bookingTripType.dispatchEvent(new Event('change'));
+            });
+        });
 
         if (bookingReturnRouteSelect) {
             bookingReturnRouteSelect.addEventListener('change', function () {
@@ -1251,6 +1502,17 @@
         if (bookingReturnRouteWrap) {
             bookingReturnRouteWrap.style.display = isRoundTrip() ? '' : 'none';
         }
+        if (bookingReturnDateWrap) {
+            bookingReturnDateWrap.style.display = isRoundTrip() ? '' : 'none';
+        }
+        if (bookingReturnDate) {
+            bookingReturnDate.required = isRoundTrip();
+        }
+        if (returnRoutesWrap) {
+            returnRoutesWrap.style.display = isRoundTrip() ? '' : 'none';
+        }
+        refreshReturnRouteCards();
+        updateCardSelectionStyles();
     });
 </script>
 </body>

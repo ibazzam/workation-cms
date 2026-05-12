@@ -1924,6 +1924,11 @@
             padding-left: 16px;
         }
 
+        .page.category-sea-transport .st-card-review {
+            margin: 0;
+            justify-content: flex-end;
+        }
+
         .page.category-sea-transport .st-card-seats {
             display: inline-flex;
             align-items: center;
@@ -1982,6 +1987,134 @@
             display: none;
         }
 
+        .page .card-link.land-transport-card-link {
+            display: grid;
+            grid-template-columns: 220px minmax(0, 1fr);
+            align-items: stretch;
+            gap: 0;
+            border: 1px solid #d7e3ea;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .page .card-link.land-transport-card-link > img {
+            width: 220px;
+            min-width: 220px;
+            height: 100%;
+            min-height: 172px;
+            object-fit: cover;
+            border-radius: 0;
+            background: #dce9f3;
+        }
+
+        .page .land-transport-card-body {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            padding: 16px;
+        }
+
+        .page .land-transport-card-main {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            min-width: 0;
+        }
+
+        .page .land-transport-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            width: fit-content;
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #edf4fb;
+            color: #1f5470;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .page .land-transport-name {
+            margin: 0;
+            font-size: 1.03rem;
+            line-height: 1.25;
+            color: #15293b;
+            font-weight: 800;
+        }
+
+        .page .land-transport-route {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #35586d;
+            font-size: 0.84rem;
+            font-weight: 600;
+        }
+
+        .page .land-transport-specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+        }
+
+        .page .land-transport-spec {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            border: 1px solid #d7e6f1;
+            background: #f8fbfe;
+            color: #20465c;
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+
+        .page .land-transport-card-side {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            text-align: right;
+            flex: 0 0 auto;
+        }
+
+        .page .land-transport-card-side .card-review {
+            margin: 0;
+            justify-content: flex-end;
+        }
+
+        .page .land-transport-price {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f3650;
+            white-space: nowrap;
+        }
+
+        .page .land-transport-price-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: #486277;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .page .land-transport-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 9px 15px;
+            border-radius: 10px;
+            background: #0f6179;
+            color: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
         @media (max-width: 680px) {
             .page.category-sea-transport .st-card-link {
                 grid-template-columns: 118px minmax(0, 1fr);
@@ -2005,6 +2138,33 @@
                 flex-wrap: wrap;
                 align-items: center;
                 gap: 8px;
+            }
+
+            .page .card-link.land-transport-card-link {
+                grid-template-columns: 122px minmax(0, 1fr);
+            }
+
+            .page .card-link.land-transport-card-link > img {
+                width: 122px;
+                min-width: 122px;
+                min-height: 128px;
+            }
+
+            .page .land-transport-card-body {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 12px;
+            }
+
+            .page .land-transport-card-side {
+                align-items: flex-start;
+                text-align: left;
+            }
+
+            .page .land-transport-card-side .card-review,
+            .page.category-sea-transport .st-card-review {
+                justify-content: flex-start;
             }
         }
 
@@ -2695,7 +2855,62 @@
                 </div>
             @endif
 
-            @if ($categoryKey === 'marine-transport' || $categoryKey === 'land-transport')
+            @if ($categoryKey === 'land-transport')
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="origin_point">Pick-up Location</label>
+                        <select id="origin_point" name="origin_point">
+                            <option value="">All pick-up locations</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['origin_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-long">
+                        <label for="destination_point">Drop-off Location</label>
+                        <select id="destination_point" name="destination_point">
+                            <option value="">All drop-off locations</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['destination_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-date"><label for="travel_date">Pick-up Date</label><input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}"></div>
+                    <div class="field field-date"><label for="return_date">Drop-off Date</label><input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="pickup_datetime">Pick-up Time</label><input id="pickup_datetime" name="pickup_datetime" type="time" value="{{ $filters['pickup_datetime'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="dropoff_datetime">Drop-off Time</label><input id="dropoff_datetime" name="dropoff_datetime" type="time" value="{{ $filters['dropoff_datetime'] ?? '' }}"></div>
+                    <div class="field field-short"><label for="adults">No. of Pax</label><input id="adults" name="adults" type="number" min="1" value="{{ $filters['adults'] ?? 2 }}"></div>
+                    <div class="field field-medium">
+                        <label for="vehicle_type">Vehicle Type</label>
+                        <select id="vehicle_type" name="vehicle_type">
+                            <option value="">All vehicle types</option>
+                            <option value="sedan" {{ ($filters['vehicle_type'] ?? '') === 'sedan' ? 'selected' : '' }}>Sedan</option>
+                            <option value="suv" {{ ($filters['vehicle_type'] ?? '') === 'suv' ? 'selected' : '' }}>SUV</option>
+                            <option value="van" {{ ($filters['vehicle_type'] ?? '') === 'van' ? 'selected' : '' }}>Van</option>
+                            <option value="bus" {{ ($filters['vehicle_type'] ?? '') === 'bus' ? 'selected' : '' }}>Bus</option>
+                            <option value="luxury" {{ ($filters['vehicle_type'] ?? '') === 'luxury' ? 'selected' : '' }}>Luxury</option>
+                        </select>
+                    </div>
+                    <div class="field field-medium">
+                        <label for="transmission">Transmission</label>
+                        <select id="transmission" name="transmission">
+                            <option value="">Any transmission</option>
+                            <option value="automatic" {{ ($filters['transmission'] ?? '') === 'automatic' ? 'selected' : '' }}>Automatic</option>
+                            <option value="manual" {{ ($filters['transmission'] ?? '') === 'manual' ? 'selected' : '' }}>Manual</option>
+                        </select>
+                    </div>
+                    <div class="field field-medium"><label for="supplier">Supplier</label><input id="supplier" name="supplier" type="text" value="{{ $filters['supplier'] ?? '' }}" placeholder="Company or vendor"></div>
+                    <div class="field field-medium">
+                        <label for="sort">Sort</label>
+                        <select id="sort" name="sort">
+                            <option value="recommended" {{ ($filters['sort'] ?? '') === 'recommended' ? 'selected' : '' }}>Recommended</option>
+                            <option value="price_low_high" {{ ($filters['sort'] ?? '') === 'price_low_high' ? 'selected' : '' }}>Price Low to High</option>
+                            <option value="price_high_low" {{ ($filters['sort'] ?? '') === 'price_high_low' ? 'selected' : '' }}>Price High to Low</option>
+                            <option value="highest_reviews" {{ ($filters['sort'] ?? '') === 'highest_reviews' ? 'selected' : '' }}>Highest Reviews</option>
+                        </select>
+                    </div>
+                </div>
+            @elseif ($categoryKey === 'marine-transport')
                 <div class="grid">
                     <div class="field field-long">
                         <label for="origin_point">From</label>
@@ -2911,22 +3126,52 @@
                     </div>
                 </div>
             @elseif ($categoryKey === 'sea_transport')
-                <div class="grid">
-                    <div class="field field-long">
-                        <label for="st_origin">From</label>
-                        <input id="st_origin" name="origin_point" type="text" value="{{ $filters['origin_point'] ?? '' }}" placeholder="Departure point">
-                    </div>
-                    <div class="field field-long">
-                        <label for="st_destination">To</label>
-                        <input id="st_destination" name="destination_point" type="text" value="{{ $filters['destination_point'] ?? '' }}" placeholder="Arrival point">
-                    </div>
-                    <div class="field field-date">
-                        <label for="st_travel_date">Travel Date</label>
-                        <input id="st_travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}">
+                <div class="grid" style="margin-bottom: 8px;">
+                    <div class="field field-medium">
+                        <label for="st_trip_type">Trip Type</label>
+                        <select id="st_trip_type" name="trip_type">
+                            <option value="one_way" {{ ($filters['trip_type'] ?? 'one_way') === 'one_way' ? 'selected' : '' }}>One-way</option>
+                            <option value="round_trip" {{ ($filters['trip_type'] ?? '') === 'round_trip' ? 'selected' : '' }}>Round-trip</option>
+                        </select>
                     </div>
                     <div class="field field-short">
-                        <label for="st_seats">Seats</label>
-                        <input id="st_seats" name="seats" type="number" min="1" max="100" value="{{ $filters['seats'] ?? 1 }}">
+                        <label for="st_passengers">Passengers</label>
+                        <input id="st_passengers" name="seats" type="number" min="1" max="100" value="{{ $filters['seats'] ?? 1 }}">
+                    </div>
+                    <div class="field field-medium">
+                        <label for="st_guest_type">Nationality / Guest Type</label>
+                        <select id="st_guest_type" name="guest_type">
+                            <option value="local_resident" {{ ($filters['guest_type'] ?? '') === 'local_resident' ? 'selected' : '' }}>Local</option>
+                            <option value="foreign_national" {{ ($filters['guest_type'] ?? '') !== 'local_resident' ? 'selected' : '' }}>Foreign</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid">
+                    <div class="field field-long">
+                        <label for="origin_point">From</label>
+                        <select id="origin_point" name="origin_point">
+                            <option value="">All origins</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['origin_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-long">
+                        <label for="destination_point">To</label>
+                        <select id="destination_point" name="destination_point">
+                            <option value="">All destinations</option>
+                            @foreach (($transportDestinationOptions ?? collect()) as $destinationOption)
+                                <option value="{{ $destinationOption }}" {{ ($filters['destination_point'] ?? '') === $destinationOption ? 'selected' : '' }}>{{ $destinationOption }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="field field-date">
+                        <label for="travel_date">Departure Date</label>
+                        <input id="travel_date" name="travel_date" type="date" value="{{ $filters['travel_date'] ?? '' }}">
+                    </div>
+                    <div class="field field-date" id="st_return_date_wrap" style="{{ ($filters['trip_type'] ?? 'one_way') === 'round_trip' ? '' : 'display:none;' }}">
+                        <label for="return_date">Return Date</label>
+                        <input id="return_date" name="return_date" type="date" value="{{ $filters['return_date'] ?? '' }}">
                     </div>
                 </div>
             @elseif ($categoryKey === 'liveaboard')
@@ -3171,9 +3416,11 @@
                             $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
                             $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                             $reviewCount = (int) ($property->reviews_count ?? 0);
-                            $detailUrl = $categoryKey === 'accommodation'
-                                ? ('/property/' . $propertyId)
-                                : ('/category-booking/' . $categoryKey . '/' . $propertyId);
+                            $detailUrl = match ($categoryKey) {
+                                'accommodation' => '/property/' . $propertyId,
+                                'land-transport' => '/land-transport/' . $propertyId,
+                                default => '/category-booking/' . $categoryKey . '/' . $propertyId,
+                            };
                             $includesBreakfast = (bool) (
                                 $property->breakfast_included
                                 ?? $property->includes_breakfast
@@ -3352,6 +3599,56 @@
                                     </div>
                                 </div>
                             </a>
+                            @elseif ($categoryKey === 'land-transport')
+                            @php
+                                $ltVehicleType = trim((string) ($propertyDetails['vehicle_type'] ?? $propertyDetails['transport_type'] ?? $propertyDetails['service_type'] ?? 'Vehicle'));
+                                $ltTransmission = trim((string) ($propertyDetails['transmission'] ?? $propertyDetails['gearbox_type'] ?? ''));
+                                $ltSeats = (int) ($propertyDetails['seat_capacity'] ?? $propertyDetails['seats'] ?? $propertyDetails['max_passengers'] ?? 0);
+                                $ltBags = (int) ($propertyDetails['luggage_capacity'] ?? $propertyDetails['bags'] ?? 0);
+                                $ltPickup = trim((string) ($propertyDetails['pickup_point'] ?? $propertyDetails['origin_point'] ?? $propertyDetails['departure_point'] ?? $property->island ?? ''));
+                                $ltDropoff = trim((string) ($propertyDetails['dropoff_point'] ?? $propertyDetails['destination_point'] ?? $propertyDetails['arrival_point'] ?? $property->city ?? ''));
+                                $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
+                                    ? (string) $thumbUrl
+                                    : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                            @endphp
+                            <a class="card-link land-transport-card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                                <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
+                                <div class="land-transport-card-body">
+                                    <div class="land-transport-card-main">
+                                        <span class="land-transport-type"><i class="fa-solid fa-car-side" aria-hidden="true"></i> {{ $ltVehicleType !== '' ? $ltVehicleType : 'Vehicle' }}</span>
+                                        <h3 class="land-transport-name">{{ (string) ($property->name ?? 'Land Transport') }}</h3>
+                                        @if ($ltPickup !== '' || $ltDropoff !== '')
+                                            <span class="land-transport-route"><i class="fa-solid fa-route" aria-hidden="true"></i> {{ $ltPickup !== '' ? $ltPickup : 'Pick-up' }} to {{ $ltDropoff !== '' ? $ltDropoff : 'Drop-off' }}</span>
+                                        @endif
+                                        <div class="land-transport-specs">
+                                            @if ($ltTransmission !== '')
+                                                <span class="land-transport-spec"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ ucfirst($ltTransmission) }}</span>
+                                            @endif
+                                            @if ($ltSeats > 0)
+                                                <span class="land-transport-spec"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ $ltSeats }} seats</span>
+                                            @endif
+                                            @if ($ltBags > 0)
+                                                <span class="land-transport-spec"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ $ltBags }} bags</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="land-transport-card-side">
+                                        <div class="card-review">
+                                            <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                            <span>{{ number_format($reviewCount) }} reviews</span>
+                                        </div>
+                                        <div class="land-transport-price">
+                                            @if ($primaryDisplayPrice > 0)
+                                                From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}
+                                                <small class="land-transport-price-sub">Total estimate</small>
+                                            @else
+                                                Price on request
+                                            @endif
+                                        </div>
+                                        <span class="land-transport-cta">View Preferred Vehicle <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                                    </div>
+                                </div>
+                            </a>
                             @elseif ($categoryKey === 'sea_transport')
                             @php
                                 $stDeparture    = trim((string) ($propertyDetails['departure_point'] ?? ''));
@@ -3411,6 +3708,10 @@
                                         </div>
                                     </div>
                                     <div class="st-card-right">
+                                        <div class="card-review st-card-review">
+                                            <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                            <span>{{ number_format($reviewCount) }} reviews</span>
+                                        </div>
                                         @if ($stTotalSeats > 0)
                                             <span class="st-card-seats {{ $stSeatsLimited ? 'is-limited' : '' }}">
                                                 <i class="fa-solid fa-chair" aria-hidden="true"></i>
@@ -3450,7 +3751,7 @@
                                 $laViewUrl   = '/liveaboard/' . $propertyId;
                                 $laReviewScore = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->rating ?? 0))));
                                 $laReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
-                                $laReviewBadge = $laReviewCount > 0 ? (($laReviewScore > 0 ? $laReviewScore : 'N/A') . ' (' . $laReviewCount . ')') : '';
+                                $laReviewBadge = ($laReviewScore > 0 ? $laReviewScore : 'N/A') . ' (' . $laReviewCount . ')';
                             @endphp
                             <a class="card-link card-link-liveaboard" href="{{ $laViewUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
@@ -3476,11 +3777,9 @@
                                                     <i class="fa-solid fa-bed" aria-hidden="true"></i> {{ $laCabins }} {{ $laCabins === 1 ? 'room' : 'rooms' }}
                                                 </span>
                                             @endif
-                                            @if ($laReviewBadge !== '')
-                                                <span class="card-badge card-badge-review">
-                                                    <i class="fa-solid fa-star" aria-hidden="true"></i> {{ $laReviewBadge }}
-                                                </span>
-                                            @endif
+                                            <span class="card-badge card-badge-review">
+                                                <i class="fa-solid fa-star" aria-hidden="true"></i> {{ $laReviewBadge }}
+                                            </span>
                                             <span class="card-badge card-badge-status">
                                                 <i class="fa-solid fa-check-circle" aria-hidden="true"></i> Available
                                             </span>
@@ -4456,6 +4755,23 @@
             syncDatePair(document.getElementById('travel_date'), document.getElementById('return_date'), true);
             syncDatePair(document.getElementById('workspace_start'), document.getElementById('workspace_end'), true);
             syncDatePair(document.getElementById('pickup_date'), document.getElementById('return_date_rental'), true);
+
+            const seaTripType = document.getElementById('st_trip_type');
+            const seaReturnWrap = document.getElementById('st_return_date_wrap');
+            const seaReturnDate = document.getElementById('return_date');
+            if (seaTripType && seaReturnWrap && seaReturnDate) {
+                const syncSeaTripType = function () {
+                    const isRound = String(seaTripType.value || '') === 'round_trip';
+                    seaReturnWrap.style.display = isRound ? '' : 'none';
+                    seaReturnDate.required = isRound;
+                    if (!isRound) {
+                        seaReturnDate.value = '';
+                    }
+                };
+
+                seaTripType.addEventListener('change', syncSeaTripType);
+                syncSeaTripType();
+            }
         })();
     </script>
 

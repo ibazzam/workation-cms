@@ -1986,6 +1986,14 @@ if (!function_exists('vendorMediaStorageUrlFromPath')) {
             return null;
         }
 
+        // Preserve already-resolved app media URLs and storage URLs as-is.
+        if (str_starts_with($normalized, '/media/')) {
+            return $normalized;
+        }
+        if (str_starts_with($normalized, '/storage/')) {
+            return $normalized;
+        }
+
         if (str_starts_with($normalized, 'http://')) {
             return 'https://' . ltrim(substr($normalized, 7), '/');
         }

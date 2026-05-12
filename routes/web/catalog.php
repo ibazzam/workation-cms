@@ -777,19 +777,19 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
             $mediaEntityTypeMap = [
                 'accommodation' => ['property'],
-                'liveaboard' => ['liveaboard'],
-                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
-                'land_transport' => ['land_transport', 'land-transport', 'transport'],
-                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
-                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
-                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
-                'water_sports' => ['water_sports', 'water-sports', 'activity'],
-                'excursion' => ['excursion', 'activity'],
-                'restaurant' => ['restaurant'],
-                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+                'liveaboard' => ['liveaboard', 'property', 'service'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
+                'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
+                'water_sports' => ['water_sports', 'water-sports', 'activity', 'property', 'service'],
+                'excursion' => ['excursion', 'activity', 'property', 'service'],
+                'restaurant' => ['restaurant', 'property', 'service'],
+                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit', 'property', 'service'],
             ];
-            // property/service fallback removed entirely to prevent accommodation media (entity_type='property')
-            // from bleeding into non-accommodation category cards via entity_id collisions.
+            // Keep fallback empty. Non-accommodation categories include property/service in strict types,
+            // and per-card vendor filtering below prevents cross-vendor collisions.
             $mediaFallbackTypeMap = [];
             $strictMediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
             $fallbackMediaEntityTypes = $mediaFallbackTypeMap[$dbCategoryKey] ?? [];
@@ -801,7 +801,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->unique()
                 ->values();
             $mediaRows = collect(Cache::remember(
-                'catalog:property_media:v4:' . md5($dbCategoryKey . ':' . implode('|', $allMediaEntityTypes) . ':' . $propertyLookupIds->implode(',') . ':' . $mediaVendorUserIds->implode(',')),
+                'catalog:property_media:v5:' . md5($dbCategoryKey . ':' . implode('|', $allMediaEntityTypes) . ':' . $propertyLookupIds->implode(',') . ':' . $mediaVendorUserIds->implode(',')),
                 now()->addMinutes(3),
                 static function () use ($propertyLookupIds, $allMediaEntityTypes, $mediaVendorUserIds) {
                     $query = DB::table('vendor_listing_media')
@@ -825,6 +825,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $catalogPropertyMediaByProperty = $catalogProperties
                 ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes) {
                     $canonicalId = (int) ($property->id ?? 0);
+                    $propertyVendorUserId = (int) ($property->vendor_user_id ?? 0);
                     $preferredLookupIds = collect([
                         (int) ($property->vendor_property_id ?? 0),
                         (int) ($property->dedicated_row_id ?? 0),
@@ -850,7 +851,18 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $strictMatches = $strictLookupIds
                         ->flatMap(static fn (int $lookupId) => collect($mediaByEntityId->get($lookupId, collect())))
                         ->unique(static fn ($media) => (int) ($media->id ?? 0))
-                        ->filter(static fn ($media): bool => in_array((string) ($media->entity_type ?? ''), $strictMediaEntityTypes, true))
+                        ->filter(static function ($media) use ($strictMediaEntityTypes, $propertyVendorUserId): bool {
+                            if (!in_array((string) ($media->entity_type ?? ''), $strictMediaEntityTypes, true)) {
+                                return false;
+                            }
+
+                            if ($propertyVendorUserId <= 0) {
+                                return true;
+                            }
+
+                            $mediaVendorUserId = (int) ($media->vendor_user_id ?? 0);
+                            return $mediaVendorUserId <= 0 || $mediaVendorUserId === $propertyVendorUserId;
+                        })
                         ->values();
 
                     $mediaItems = $strictMatches;
@@ -862,7 +874,18 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         $mediaItems = $fallbackLookupIds
                             ->flatMap(static fn (int $lookupId) => collect($mediaByEntityId->get($lookupId, collect())))
                             ->unique(static fn ($media) => (int) ($media->id ?? 0))
-                            ->filter(static fn ($media): bool => in_array((string) ($media->entity_type ?? ''), $fallbackMediaEntityTypes, true))
+                            ->filter(static function ($media) use ($fallbackMediaEntityTypes, $propertyVendorUserId): bool {
+                                if (!in_array((string) ($media->entity_type ?? ''), $fallbackMediaEntityTypes, true)) {
+                                    return false;
+                                }
+
+                                if ($propertyVendorUserId <= 0) {
+                                    return true;
+                                }
+
+                                $mediaVendorUserId = (int) ($media->vendor_user_id ?? 0);
+                                return $mediaVendorUserId <= 0 || $mediaVendorUserId === $propertyVendorUserId;
+                            })
                             ->values();
                     }
 
@@ -1122,7 +1145,9 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
                     } else {
                         $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
                         $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
-                        $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                        $normalizedPath = ltrim((string) $normalizedPath, '/');
+                        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $normalizedPath)));
+                        $resolved = $encodedPath !== '' ? '/media/portal-public/' . $encodedPath : null;
                     }
                 }
 
@@ -1312,7 +1337,9 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
                     } else {
                         $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
                         $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
-                        $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                        $normalizedPath = ltrim((string) $normalizedPath, '/');
+                        $encodedPath = implode('/', array_map('rawurlencode', explode('/', $normalizedPath)));
+                        $resolved = $encodedPath !== '' ? '/media/portal-public/' . $encodedPath : null;
                     }
                 }
 
@@ -1586,7 +1613,9 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                         } else {
                             $normalizedPath = ltrim(str_replace('\\', '/', $rawPath), '/');
                             $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
-                            $resolved = '/storage/' . ltrim((string) $normalizedPath, '/');
+                            $normalizedPath = ltrim((string) $normalizedPath, '/');
+                            $encodedPath = implode('/', array_map('rawurlencode', explode('/', $normalizedPath)));
+                            $resolved = $encodedPath !== '' ? '/media/portal-public/' . $encodedPath : null;
                         }
                     }
 

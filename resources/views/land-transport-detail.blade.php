@@ -58,26 +58,64 @@
             margin-top: 12px;
         }
 
-        .gallery-shell { display: grid; gap: 10px; }
-        .gallery-hero { width: 100%; height: 360px; object-fit: cover; border-radius: 12px; border: 1px solid #d9e7f0; background: #eef6fb; }
-        .gallery-thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
+        .detail-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
+            gap: 12px;
+            align-items: start;
+        }
+
+        .detail-main {
+            min-width: 0;
+        }
+
+        .detail-sidebar {
+            min-width: 0;
+        }
+
+        .gallery-shell {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 260px;
+            gap: 10px;
+            align-items: start;
+        }
+
+        .gallery-hero-wrap {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #d9e7f0;
+            background: #eef6fb;
+        }
+
+        .gallery-hero {
+            width: 100%;
+            height: 360px;
+            object-fit: cover;
+            display: block;
+            background: #eef6fb;
+        }
+
+        .gallery-thumbs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
         .gallery-thumb {
             border: 2px solid #d7e7f1;
             border-radius: 10px;
             overflow: hidden;
-            width: 72px;
-            height: 72px;
+            width: 100%;
+            height: 84px;
             padding: 0;
             background: #fff;
             cursor: pointer;
         }
+
         .gallery-thumb.is-active { border-color: var(--brand); }
         .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
         .property-summary-shell {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 300px;
-            gap: 12px;
             border: 1px solid var(--line);
             border-radius: 16px;
             background: #fff;
@@ -87,6 +125,7 @@
 
         .property-summary-main h1 { margin: 0 0 8px; font-size: clamp(1.45rem, 2.8vw, 2rem); }
         .property-summary-meta { display: flex; gap: 12px; flex-wrap: wrap; color: #44637a; font-size: 0.88rem; }
+
         .summary-chip {
             display: inline-flex;
             align-items: center;
@@ -101,19 +140,20 @@
             margin-top: 8px;
         }
 
-        .property-summary-price {
+        .booking-sidebar-card {
             border: 1px solid #d6e6ef;
-            border-radius: 12px;
-            background: #f7fbff;
-            padding: 12px;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 14px;
             display: grid;
-            gap: 6px;
-            align-content: start;
+            gap: 8px;
+            position: sticky;
+            top: calc(var(--property-header-offset) + 8px);
         }
 
-        .property-summary-price .k { font-size: 0.72rem; text-transform: uppercase; color: #5f7488; letter-spacing: 0.06em; font-weight: 700; }
-        .property-summary-price .v { font-size: 1.45rem; font-weight: 800; color: #163e57; }
-        .property-summary-price .sub { color: #587086; font-size: 0.8rem; }
+        .booking-sidebar-card .k { font-size: 0.72rem; text-transform: uppercase; color: #5f7488; letter-spacing: 0.06em; font-weight: 700; }
+        .booking-sidebar-card .v { font-size: 1.45rem; font-weight: 800; color: #163e57; }
+        .booking-sidebar-card .sub { color: #587086; font-size: 0.8rem; }
 
         .booking-btn {
             border: 1px solid var(--brand);
@@ -208,10 +248,14 @@
         }
 
         @media (max-width: 980px) {
-            .property-summary-shell { grid-template-columns: 1fr; }
+            .detail-layout { grid-template-columns: 1fr; }
+            .booking-sidebar-card { position: relative; top: 0; }
         }
 
         @media (max-width: 760px) {
+            .gallery-shell { grid-template-columns: 1fr; }
+            .gallery-thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .gallery-thumb { height: 72px; }
             .gallery-hero { height: 250px; }
             .amenities-grid,
             .policies-grid { grid-template-columns: 1fr; }
@@ -275,7 +319,9 @@
     <section class="section" aria-label="Gallery">
         <h2>Photo Gallery</h2>
         <div class="gallery-shell" data-gallery>
-            <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
+            <div class="gallery-hero-wrap">
+                <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
+            </div>
             <div class="gallery-thumbs" role="list">
                 @foreach ($gallery as $index => $image)
                     <button type="button" class="gallery-thumb{{ $loop->first ? ' is-active' : '' }}" data-src="{{ $image }}" aria-label="Image {{ $index + 1 }}">
@@ -286,25 +332,29 @@
         </div>
     </section>
 
-    <section class="property-summary-shell" aria-label="Summary">
-        <div class="property-summary-main">
-            <h1>{{ (string) ($property->name ?? 'Land Transport') }}</h1>
-            <div class="property-summary-meta">
-                <span><i class="fa-solid fa-van-shuttle" aria-hidden="true"></i> Ground transfer service</span>
-                <span class="summary-chip"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $heroReviewScore }} · {{ number_format($heroReviewCount) }} {{ $heroReviewLabel }}</span>
-            </div>
-            @if ($description !== '')
-                <p style="margin:10px 0 0; color:#4b6578; line-height:1.5;">{{ \Illuminate\Support\Str::words($description, 70) }}</p>
-            @endif
+    <div class="detail-layout">
+        <div class="detail-main">
+            <section class="property-summary-shell" aria-label="Summary">
+                <div class="property-summary-main">
+                    <h1>{{ (string) ($property->name ?? 'Land Transport') }}</h1>
+                    <div class="property-summary-meta">
+                        <span><i class="fa-solid fa-van-shuttle" aria-hidden="true"></i> Ground transfer service</span>
+                        <span class="summary-chip"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $heroReviewScore }} · {{ number_format($heroReviewCount) }} {{ $heroReviewLabel }}</span>
+                    </div>
+                    @if ($description !== '')
+                        <p style="margin:10px 0 0; color:#4b6578; line-height:1.5;">{{ \Illuminate\Support\Str::words($description, 70) }}</p>
+                    @endif
+                </div>
+            </section>
         </div>
 
-        <aside class="property-summary-price">
+        <aside class="detail-sidebar booking-sidebar-card">
             <span class="k">Starting from</span>
             <span class="v">{{ $displayPrice }}</span>
             <span class="sub">Per transfer booking</span>
             <a class="booking-btn" href="/category-booking/land-transport/{{ $property->vendor_property_id ?? $property->id }}"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Book Transfer</a>
         </aside>
-    </section>
+    </div>
 
     <nav class="section-tabs">
         <a class="section-tab" href="#amenities-section">Amenities</a>

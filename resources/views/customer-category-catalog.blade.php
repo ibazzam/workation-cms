@@ -1404,7 +1404,7 @@
             display: none;
         }
 
-        /* ── Liveaboard: grid cards (similar to accommodation) ── */
+        /* ÔöÇÔöÇ Liveaboard: grid cards (similar to accommodation) ÔöÇÔöÇ */
         .page.category-liveaboard .catalog-results-layout {
             display: block;
             height: auto;
@@ -1771,7 +1771,7 @@
             display: none;
         }
 
-        /* ── Sea Transport: full-width row cards ── */
+        /* ÔöÇÔöÇ Sea Transport: full-width row cards ÔöÇÔöÇ */
         .page.category-sea-transport .catalog-results-layout {
             display: block;
             height: auto;
@@ -1780,14 +1780,13 @@
         .page.category-sea-transport .catalog-results-list {
             display: flex;
             flex-direction: column;
-            gap: 0;
+            gap: 12px;
             height: auto;
             overflow: visible;
             border-right: 0;
-            background: #ffffff;
-            border: 1px solid #d4e5ef;
-            border-radius: 14px;
-            overflow: hidden;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
         }
 
         .page.category-sea-transport .page-body-split {
@@ -1796,10 +1795,16 @@
 
         .page.category-sea-transport .catalog-section-title {
             display: block;
+            margin: 0 0 8px;
+            padding: 0;
         }
 
         .page.category-sea-transport .catalog-grid {
-            display: contents;
+            display: block;
+            background: #ffffff;
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            overflow: hidden;
         }
 
         .page.category-sea-transport .card {
@@ -1823,7 +1828,7 @@
 
         .page.category-sea-transport .st-card-link {
             display: grid !important;
-            grid-template-columns: 184px minmax(0, 1fr);
+            grid-template-columns: 220px minmax(0, 1fr);
             width: 100%;
             color: inherit;
             text-decoration: none;
@@ -1832,9 +1837,9 @@
         }
 
         .page.category-sea-transport .st-card-link > img {
-            width: 184px;
-            min-width: 184px;
-            height: 132px;
+            width: 220px;
+            min-width: 220px;
+            height: 160px;
             object-fit: cover;
             display: block;
             border-radius: 0;
@@ -1861,8 +1866,8 @@
 
         .page.category-sea-transport .st-card-name {
             margin: 0 0 2px;
-            font-size: 0.94rem;
-            font-weight: 700;
+            font-size: 1rem;
+            font-weight: 800;
             color: #1a2f43;
             line-height: 1.2;
             white-space: nowrap;
@@ -1870,47 +1875,53 @@
             text-overflow: ellipsis;
         }
 
-        .page.category-sea-transport .st-card-route {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #0f6179;
-        }
-
-        .page.category-sea-transport .st-card-departs {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.75rem;
-            color: #345469;
-            background: #eef6fb;
-            border-radius: 5px;
-            padding: 3px 8px;
-            width: fit-content;
-        }
-
-        .page.category-sea-transport .st-card-meta {
+        .page.category-sea-transport .st-journey-line {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-top: 1px;
+            justify-content: space-between;
+            gap: 12px;
+            margin-top: 4px;
+            width: 100%;
         }
 
-        .page.category-sea-transport .st-card-chip {
+        .page.category-sea-transport .st-journey-point {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .page.category-sea-transport .st-journey-point.st-to {
+            text-align: right;
+            align-items: flex-end;
+        }
+
+        .page.category-sea-transport .st-journey-port {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1d4b66;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+        }
+
+        .page.category-sea-transport .st-journey-time {
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: #47667b;
+        }
+
+        .page.category-sea-transport .st-journey-mid {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 2px 7px;
+            gap: 6px;
+            padding: 3px 9px;
             border-radius: 999px;
-            background: #e8f2f8;
+            background: #eef6fb;
             color: #1e5672;
-            font-size: 0.66rem;
+            font-size: 0.74rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
             white-space: nowrap;
         }
 
@@ -1927,24 +1938,6 @@
         .page.category-sea-transport .st-card-review {
             margin: 0;
             justify-content: flex-end;
-        }
-
-        .page.category-sea-transport .st-card-seats {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #2a7a60;
-            background: #e6f7f0;
-            border-radius: 5px;
-            padding: 3px 9px;
-            white-space: nowrap;
-        }
-
-        .page.category-sea-transport .st-card-seats.is-limited {
-            color: #8a4a00;
-            background: #fff4e0;
         }
 
         .page.category-sea-transport .st-price-local {
@@ -2138,6 +2131,17 @@
                 flex-wrap: wrap;
                 align-items: center;
                 gap: 8px;
+            }
+
+            .page.category-sea-transport .st-journey-line {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            .page.category-sea-transport .st-journey-point.st-to {
+                text-align: left;
+                align-items: flex-start;
             }
 
             .page .card-link.land-transport-card-link {
@@ -2717,6 +2721,7 @@
         $pageCategoryClass = match ($categoryKey) {
             'accommodation' => 'category-accommodation',
             'sea_transport'  => 'category-sea-transport',
+            'liveaboard' => 'category-liveaboard',
             default          => 'category-default',
         };
     @endphp
@@ -2938,7 +2943,7 @@
             @elseif ($categoryKey === 'restaurant')
                 <div class="island-context-note" style="margin-bottom:8px;">
                     <i class="fa-solid fa-water" aria-hidden="true"></i>
-                    <span>Restaurants in the Maldives are <strong>island-specific</strong>. Select the island where you are currently staying or planning to visit to see what’s available at that location.</span>
+                    <span>Restaurants in the Maldives are <strong>island-specific</strong>. Select the island where you are currently staying or planning to visit to see whatÔÇÖs available at that location.</span>
                 </div>
                 <div class="grid">
                     <div class="field field-medium">
@@ -3654,6 +3659,7 @@
                                 $stDeparture    = trim((string) ($propertyDetails['departure_point'] ?? ''));
                                 $stArrival      = trim((string) ($propertyDetails['arrival_point'] ?? ''));
                                 $stDepTime      = trim((string) ($propertyDetails['departure_time'] ?? ''));
+                                $stArrTime      = trim((string) ($propertyDetails['arrival_time'] ?? ''));
                                 $stTotalSeats   = (int) ($propertyDetails['total_seats'] ?? 0);
                                 $stLocalPrice   = (float) ($propertyDetails['local_price'] ?? 0);
                                 $stForeignPrice = (float) ($propertyDetails['foreign_price'] ?? 0);
@@ -3662,10 +3668,9 @@
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
                                 $stAvailDays    = (array) ($propertyDetails['availability_schedule'] ?? []);
-                                $stAvailText    = count($stAvailDays) > 0 ? implode(', ', $stAvailDays) : '';
-                                $stSeatsLimited = $stTotalSeats > 0 && $stTotalSeats <= 5;
                                 $stRouteSchedules = is_array($propertyDetails['route_schedules'] ?? null) ? $propertyDetails['route_schedules'] : [];
-                                $stStopSequence   = is_array($propertyDetails['stop_sequence'] ?? null) ? $propertyDetails['stop_sequence'] : [];
+                                $stTransportType = strtolower(trim((string) ($propertyDetails['transport_type'] ?? $propertyDetails['vessel_type'] ?? 'ferry')));
+                                $stTransportIcon = str_contains($stTransportType, 'speed') ? 'fa-ship' : 'fa-ferry';
                                 $stFromLocal  = $stLocalPrice;
                                 $stFromForeign = $stForeignPrice;
                                 foreach ($stRouteSchedules as $_leg) {
@@ -3674,11 +3679,48 @@
                                     if ($lp > 0 && ($stFromLocal  <= 0 || $lp < $stFromLocal))  { $stFromLocal  = $lp; }
                                     if ($fp > 0 && ($stFromForeign <= 0 || $fp < $stFromForeign)) { $stFromForeign = $fp; }
                                 }
-                                $stStopChain = '';
-                                if (count($stStopSequence) > 0) {
-                                    $stStopChain = implode(' → ', $stStopSequence);
-                                } elseif ($stDeparture !== '' || $stArrival !== '') {
-                                    $stStopChain = ($stDeparture !== '' ? $stDeparture : '?') . ' → ' . ($stArrival !== '' ? $stArrival : '?');
+                                $stDurationText = trim((string) (
+                                    $propertyDetails['duration']
+                                    ?? $propertyDetails['journey_duration']
+                                    ?? $propertyDetails['estimated_duration']
+                                    ?? $propertyDetails['travel_time']
+                                    ?? ''
+                                ));
+                                if ($stDurationText === '' && $stDepTime !== '' && $stArrTime !== '') {
+                                    $startTs = strtotime($stDepTime);
+                                    $endTs = strtotime($stArrTime);
+                                    if ($startTs !== false && $endTs !== false) {
+                                        $diffMin = (int) round(abs($endTs - $startTs) / 60);
+                                        if ($diffMin > 0) {
+                                            $hours = intdiv($diffMin, 60);
+                                            $mins = $diffMin % 60;
+                                            $stDurationText = $hours > 0
+                                                ? ($hours . 'h' . ($mins > 0 ? ' ' . $mins . 'm' : ''))
+                                                : ($mins . 'm');
+                                        }
+                                    }
+                                }
+                                if ($stDurationText === '') {
+                                    $stDurationText = 'Duration N/A';
+                                }
+                                $stOneWayPrice = 0.0;
+                                $stOneWayCurrency = $visitorIsLocal ? 'MVR' : 'USD';
+                                if ($visitorIsLocal) {
+                                    if ($stFromLocal > 0) {
+                                        $stOneWayPrice = $stFromLocal;
+                                        $stOneWayCurrency = 'MVR';
+                                    } elseif ($stFromForeign > 0) {
+                                        $stOneWayPrice = $stFromForeign;
+                                        $stOneWayCurrency = 'USD';
+                                    }
+                                } else {
+                                    if ($stFromForeign > 0) {
+                                        $stOneWayPrice = $stFromForeign;
+                                        $stOneWayCurrency = 'USD';
+                                    } elseif ($stFromLocal > 0) {
+                                        $stOneWayPrice = $stFromLocal;
+                                        $stOneWayCurrency = 'MVR';
+                                    }
                                 }
                             @endphp
                             <a class="card-link st-card-link" href="/sea-transport/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
@@ -3686,25 +3728,19 @@
                                 <div class="st-card-inner">
                                     <div class="st-card-info">
                                         <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
-                                        @if ($stStopChain !== '')
-                                            <span class="st-card-route" style="font-size:0.9rem; color:#1d4b66; font-weight:700;">
-                                                <i class="fa-solid fa-route" aria-hidden="true"></i>
-                                                {{ $stStopChain }}
+                                        <div class="st-journey-line">
+                                            <span class="st-journey-point st-from">
+                                                <span class="st-journey-port">{{ $stDeparture !== '' ? $stDeparture : 'Departure port' }}</span>
+                                                <span class="st-journey-time">{{ $stDepTime !== '' ? $stDepTime : '--:--' }}</span>
                                             </span>
-                                        @endif
-                                        @if ($stDepTime !== '')
-                                            <span class="st-card-departs">
-                                                <i class="fa-solid fa-clock" aria-hidden="true"></i> Departs {{ $stDepTime }}
+                                            <span class="st-journey-mid">
+                                                <i class="fa-solid {{ $stTransportIcon }}" aria-hidden="true"></i>
+                                                {{ $stDurationText }}
                                             </span>
-                                        @endif
-                                        <div class="st-card-meta">
-                                            <span class="st-card-chip"><i class="fa-solid fa-ferry" aria-hidden="true"></i> Sea Transport</span>
-                                            @if ($stVesselName !== '')
-                                                <span class="st-card-chip"><i class="fa-solid fa-anchor" aria-hidden="true"></i> {{ $stVesselName }}</span>
-                                            @endif
-                                            @if (count($stRouteSchedules) > 0)
-                                                <span class="st-card-chip"><i class="fa-solid fa-map-signs" aria-hidden="true"></i> {{ count($stRouteSchedules) }} leg{{ count($stRouteSchedules) !== 1 ? 's' : '' }}</span>
-                                            @endif
+                                            <span class="st-journey-point st-to">
+                                                <span class="st-journey-port">{{ $stArrival !== '' ? $stArrival : 'Arrival port' }}</span>
+                                                <span class="st-journey-time">{{ $stArrTime !== '' ? $stArrTime : '--:--' }}</span>
+                                            </span>
                                         </div>
                                     </div>
                                     <div class="st-card-right">
@@ -3712,25 +3748,15 @@
                                             <span class="card-rating-badge">{{ $reviewScore }}</span>
                                             <span>{{ number_format($reviewCount) }} reviews</span>
                                         </div>
-                                        @if ($stTotalSeats > 0)
-                                            <span class="st-card-seats {{ $stSeatsLimited ? 'is-limited' : '' }}">
-                                                <i class="fa-solid fa-chair" aria-hidden="true"></i>
-                                                {{ $stSeatsLimited ? $stTotalSeats . ' seats left' : $stTotalSeats . ' seats' }}
-                                            </span>
-                                        @endif
                                         <div>
-                                            @if ($stFromLocal > 0)
-                                                <span class="st-price-local">from MVR {{ number_format($stFromLocal, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
-                                            @endif
-                                            @if ($stFromForeign > 0)
-                                                <span class="st-price-foreign">from USD {{ number_format($stFromForeign, 2) }}</span>
-                                            @endif
-                                            @if ($stFromLocal <= 0 && $stFromForeign <= 0)
-                                                <span class="st-price-local">Price on request</span>
+                                            @if ($stOneWayPrice > 0)
+                                                <span class="st-price-local">One-way from {{ $stOneWayCurrency }} {{ number_format($stOneWayPrice, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
+                                            @else
+                                                <span class="st-price-local">One-way price on request</span>
                                             @endif
                                         </div>
                                         <span class="st-select-btn">
-                                            View Routes <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                            Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                                         </span>
                                     </div>
                                 </div>
@@ -3740,11 +3766,6 @@
                                 $laStart     = trim((string) ($propertyDetails['start_point'] ?? ''));
                                 $laEnd       = trim((string) ($propertyDetails['end_point'] ?? ''));
                                 $laDays      = (int) ($propertyDetails['journey_duration_days'] ?? 0);
-                                $laCabins    = (int) ($propertyDetails['cabin_count'] ?? 0);
-                                $laStopovers = (array) ($propertyDetails['stopovers'] ?? []);
-                                $laPricing   = (array) ($propertyDetails['pricing_matrix'] ?? []);
-                                $laMinPrice  = count($laPricing) > 0 ? min(array_values($laPricing)) : 0;
-                                $laVessel    = trim((string) ($propertyDetails['vessel_name'] ?? ''));
                                 $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
@@ -3752,47 +3773,39 @@
                                 $laReviewScore = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->rating ?? 0))));
                                 $laReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
                                 $laReviewBadge = ($laReviewScore > 0 ? $laReviewScore : 'N/A') . ' (' . $laReviewCount . ')';
+                                $laStatusRaw = strtolower(trim((string) (
+                                    $propertyDetails['availability_status']
+                                    ?? $propertyDetails['booking_status']
+                                    ?? $propertyDetails['status']
+                                    ?? 'available'
+                                )));
+                                $laStatusLabel = match ($laStatusRaw) {
+                                    'closed', 'closed_for_booking' => 'Closed for booking',
+                                    'sold', 'sold_out' => 'Sold',
+                                    default => 'Available',
+                                };
                             @endphp
                             <a class="card-link card-link-liveaboard" href="{{ $laViewUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
                                 <div class="card-body card-body-liveaboard">
                                     <div class="card-main">
-                                        <span class="card-type-chip"><i class="fa-solid fa-ship" aria-hidden="true"></i> Liveaboard / Safari</span>
                                         <h3>{{ (string) ($property->name ?? 'Safari Vessel') }}</h3>
-                                        @if ($laStart !== '' || $laEnd !== '')
-                                            <span class="card-route"><i class="fa-solid fa-route" aria-hidden="true"></i>
-                                                {{ $laStart !== '' ? $laStart : '?' }}
-                                                <i class="fa-solid fa-arrow-right" aria-hidden="true" style="margin:0 4px;"></i>
-                                                {{ $laEnd !== '' ? $laEnd : '?' }}
-                                            </span>
-                                        @endif
+                                        <span class="card-route">Master Route: {{ $laStart !== '' ? $laStart : '?' }} -> {{ $laEnd !== '' ? $laEnd : '?' }}</span>
                                         <div class="card-badges-row">
                                             @if ($laDays > 0)
                                                 <span class="card-badge card-badge-days">
                                                     <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $laDays }}-day
                                                 </span>
                                             @endif
-                                            @if ($laCabins > 0)
-                                                <span class="card-badge card-badge-cabins">
-                                                    <i class="fa-solid fa-bed" aria-hidden="true"></i> {{ $laCabins }} {{ $laCabins === 1 ? 'room' : 'rooms' }}
-                                                </span>
-                                            @endif
                                             <span class="card-badge card-badge-review">
                                                 <i class="fa-solid fa-star" aria-hidden="true"></i> {{ $laReviewBadge }}
                                             </span>
                                             <span class="card-badge card-badge-status">
-                                                <i class="fa-solid fa-check-circle" aria-hidden="true"></i> Available
+                                                <i class="fa-solid fa-circle" aria-hidden="true"></i> {{ $laStatusLabel }}
                                             </span>
                                         </div>
                                     </div>
                                     <div class="card-side">
-                                        <div class="card-price">
-                                            @if ($laMinPrice > 0)
-                                                From {{ $visitorIsLocal ? 'MVR' : 'USD' }} {{ number_format($laMinPrice, 2) }}
-                                            @else
-                                                Price on request
-                                            @endif
-                                        </div>
                                         <span class="card-action-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>
                                 </div>
@@ -3845,7 +3858,7 @@
                                             @if ($primaryDisplayPrice > 0)
                                                 <span class="price-local">From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}</span>
                                                 @if (is_array($secondaryDisplay) && (float) ($secondaryDisplay['amount'] ?? 0) > 0)
-                                                    <span class="price-foreign">≈ {{ (string) ($secondaryDisplay['currency'] ?? 'MVR') }} {{ number_format((float) ($secondaryDisplay['amount'] ?? 0), 2) }}</span>
+                                                    <span class="price-foreign">Ôëê {{ (string) ($secondaryDisplay['currency'] ?? 'MVR') }} {{ number_format((float) ($secondaryDisplay['amount'] ?? 0), 2) }}</span>
                                                 @endif
                                             @else
                                                 Price on request
@@ -4214,8 +4227,8 @@
             function fallbackCoords(item) {
                 const key = String(item.island || item.city || item.atoll || item.name || 'maldives').toLowerCase();
                 const seed = hashText(key);
-                // Maldives center: 4.1755°N, 73.5093°E
-                // Bounds approximately: 3.2°N to 5.0°N latitude, 72.0°E to 75.0°E longitude
+                // Maldives center: 4.1755┬░N, 73.5093┬░E
+                // Bounds approximately: 3.2┬░N to 5.0┬░N latitude, 72.0┬░E to 75.0┬░E longitude
                 const baseLat = 4.1755;
                 const baseLng = 73.5093;
                 const latOffset = ((seed % 900) / 1000) - 0.45;  // Range: -0.45 to +0.45

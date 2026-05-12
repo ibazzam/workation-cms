@@ -3293,7 +3293,6 @@
                             $reviewCount = (int) ($property->reviews_count ?? 0);
                             $detailUrl = match ($categoryKey) {
                                 'accommodation' => '/property/' . $propertyId,
-                                'land-transport' => '/land-transport/' . $propertyId,
                                 default => '/category-booking/' . $categoryKey . '/' . $propertyId,
                             };
                             $includesBreakfast = (bool) (

@@ -775,22 +775,39 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
-            $mediaEntityTypes = in_array($dbCategoryKey, ['accommodation'], true)
-                ? ['property']
-                : ['service', 'property'];
-            if (in_array($dbCategoryKey, ['sea_transport', 'land_transport', 'liveaboard'], true)) {
-                $mediaEntityTypes = array_values(array_unique(array_merge(
-                    $mediaEntityTypes,
-                    ['sea_transport', 'transport', 'marine_transport']
-                )));
-            }
+            $mediaEntityTypeMap = [
+                'accommodation' => ['property'],
+                'liveaboard' => ['liveaboard'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+                'water_sports' => ['water_sports', 'water-sports', 'activity'],
+                'excursion' => ['excursion', 'activity'],
+                'restaurant' => ['restaurant'],
+                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+            ];
+            $mediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
+            $mediaVendorUserIds = $catalogProperties
+                ->pluck('vendor_user_id')
+                ->map(static fn ($id) => (int) $id)
+                ->filter(static fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values();
             $mediaRows = collect(Cache::remember(
-                'catalog:property_media:v2:' . md5($dbCategoryKey . ':' . implode('|', $mediaEntityTypes) . ':' . $propertyLookupIds->implode(',')),
+                'catalog:property_media:v3:' . md5($dbCategoryKey . ':' . implode('|', $mediaEntityTypes) . ':' . $propertyLookupIds->implode(',') . ':' . $mediaVendorUserIds->implode(',')),
                 now()->addMinutes(3),
-                static function () use ($propertyLookupIds, $mediaEntityTypes) {
-                    return DB::table('vendor_listing_media')
+                static function () use ($propertyLookupIds, $mediaEntityTypes, $mediaVendorUserIds) {
+                    $query = DB::table('vendor_listing_media')
                         ->whereIn('entity_type', $mediaEntityTypes)
-                        ->whereIn('entity_id', $propertyLookupIds->all())
+                        ->whereIn('entity_id', $propertyLookupIds->all());
+
+                    if ($mediaVendorUserIds->isNotEmpty()) {
+                        $query->whereIn('vendor_user_id', $mediaVendorUserIds->all());
+                    }
+
+                    return $query
                         ->orderByDesc('is_primary')
                         ->orderByDesc('created_at')
                         ->limit(360)
@@ -1193,9 +1210,14 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
-        $mediaRows = DB::table('vendor_listing_media')
+        $mediaQuery = DB::table('vendor_listing_media')
             ->whereIn('entity_type', $seaMediaTypes)
-            ->whereIn('entity_id', $mediaEntityIds)
+            ->whereIn('entity_id', $mediaEntityIds);
+        $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
+        if ($seaVendorUserId > 0) {
+            $mediaQuery->where('vendor_user_id', $seaVendorUserId);
+        }
+        $mediaRows = $mediaQuery
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get();
@@ -1452,9 +1474,14 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
             ];
             $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey];
-            $mediaRows = DB::table('vendor_listing_media')
+            $mediaQuery = DB::table('vendor_listing_media')
                 ->whereIn('entity_type', $mediaEntityTypes)
-                ->whereIn('entity_id', $mediaEntityIds)
+                ->whereIn('entity_id', $mediaEntityIds);
+            $genericVendorUserId = (int) ($property->vendor_user_id ?? 0);
+            if ($genericVendorUserId > 0) {
+                $mediaQuery->where('vendor_user_id', $genericVendorUserId);
+            }
+            $mediaRows = $mediaQuery
                 ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
                 ->orderBy('id')
                 ->get();

@@ -58,19 +58,23 @@
             margin-top: 12px;
         }
 
-        .detail-layout {
+        .layout {
             display: grid;
             grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
             gap: 12px;
             align-items: start;
+            margin-top: 12px;
         }
 
-        .detail-main {
+        .service-content {
+            grid-column: 1;
+            grid-row: 1;
             min-width: 0;
         }
 
-        .detail-sidebar {
-            min-width: 0;
+        .reservation-form {
+            grid-column: 2;
+            grid-row: 1;
         }
 
         .gallery-shell {
@@ -140,7 +144,7 @@
             margin-top: 8px;
         }
 
-        .booking-sidebar-card {
+        .booking-card {
             border: 1px solid #d6e6ef;
             border-radius: 14px;
             background: #ffffff;
@@ -148,12 +152,12 @@
             display: grid;
             gap: 8px;
             position: sticky;
-            top: calc(var(--property-header-offset) + 8px);
+            top: 12px;
         }
 
-        .booking-sidebar-card .k { font-size: 0.72rem; text-transform: uppercase; color: #5f7488; letter-spacing: 0.06em; font-weight: 700; }
-        .booking-sidebar-card .v { font-size: 1.45rem; font-weight: 800; color: #163e57; }
-        .booking-sidebar-card .sub { color: #587086; font-size: 0.8rem; }
+        .booking-card .k { font-size: 0.72rem; text-transform: uppercase; color: #5f7488; letter-spacing: 0.06em; font-weight: 700; }
+        .booking-card .v { font-size: 1.45rem; font-weight: 800; color: #163e57; }
+        .booking-card .sub { color: #587086; font-size: 0.8rem; }
 
         .booking-btn {
             border: 1px solid var(--brand);
@@ -248,8 +252,13 @@
         }
 
         @media (max-width: 980px) {
-            .detail-layout { grid-template-columns: 1fr; }
-            .booking-sidebar-card { position: relative; top: 0; }
+            .layout { grid-template-columns: 1fr; }
+            .reservation-form,
+            .service-content {
+                grid-column: auto;
+                grid-row: auto;
+            }
+            .booking-card { position: static; }
         }
 
         @media (max-width: 760px) {
@@ -316,24 +325,24 @@
         <span>{{ (string) ($property->name ?? 'Land Transport') }}</span>
     </nav>
 
-    <section class="section" aria-label="Gallery">
-        <h2>Photo Gallery</h2>
-        <div class="gallery-shell" data-gallery>
-            <div class="gallery-hero-wrap">
-                <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
-            </div>
-            <div class="gallery-thumbs" role="list">
-                @foreach ($gallery as $index => $image)
-                    <button type="button" class="gallery-thumb{{ $loop->first ? ' is-active' : '' }}" data-src="{{ $image }}" aria-label="Image {{ $index + 1 }}">
-                        <img src="{{ $image }}" alt="Thumbnail {{ $index + 1 }}" loading="lazy" onerror="if(!this.dataset.fb){this.dataset.fb='1';this.src='{{ $imageUrl }}';}">
-                    </button>
-                @endforeach
-            </div>
-        </div>
-    </section>
+    <div class="layout">
+        <section class="service-content">
+            <section class="section" aria-label="Gallery">
+                <h2>Photo Gallery</h2>
+                <div class="gallery-shell" data-gallery>
+                    <div class="gallery-hero-wrap">
+                        <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
+                    </div>
+                    <div class="gallery-thumbs" role="list">
+                        @foreach ($gallery as $index => $image)
+                            <button type="button" class="gallery-thumb{{ $loop->first ? ' is-active' : '' }}" data-src="{{ $image }}" aria-label="Image {{ $index + 1 }}">
+                                <img src="{{ $image }}" alt="Thumbnail {{ $index + 1 }}" loading="lazy" onerror="if(!this.dataset.fb){this.dataset.fb='1';this.src='{{ $imageUrl }}';}">
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
+            </section>
 
-    <div class="detail-layout">
-        <div class="detail-main">
             <section class="property-summary-shell" aria-label="Summary">
                 <div class="property-summary-main">
                     <h1>{{ (string) ($property->name ?? 'Land Transport') }}</h1>
@@ -386,9 +395,9 @@
                     </article>
                 </div>
             </section>
-        </div>
+        </section>
 
-        <aside class="detail-sidebar booking-sidebar-card">
+        <aside class="booking-card reservation-form">
             <span class="k">Starting from</span>
             <span class="v">{{ $displayPrice }}</span>
             <span class="sub">Per transfer booking</span>

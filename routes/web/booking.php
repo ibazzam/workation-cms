@@ -1182,9 +1182,32 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->unique()
             ->values();
 
-        $propertyMedia = DB::table('vendor_listing_media')
-            ->where('entity_type', 'property')
-            ->whereIn('entity_id', $propertyMediaEntityIds->isNotEmpty() ? $propertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)])
+        $bookingMediaTypeMap = [
+            'accommodation' => ['property'],
+            'liveaboard' => ['liveaboard'],
+            'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+            'marine_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+            'land_transport' => ['land_transport', 'land-transport', 'transport'],
+            'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+            'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+            'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+            'water_sports' => ['water_sports', 'water-sports', 'activity'],
+            'excursion' => ['excursion', 'activity'],
+            'restaurant' => ['restaurant'],
+            'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+        ];
+        $bookingMediaTypes = $bookingMediaTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
+        $bookingVendorUserId = (int) ($propertyRow->vendor_user_id ?? 0);
+
+        $propertyMediaQuery = DB::table('vendor_listing_media')
+            ->whereIn('entity_type', $bookingMediaTypes)
+            ->whereIn('entity_id', $propertyMediaEntityIds->isNotEmpty() ? $propertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)]);
+
+        if ($bookingVendorUserId > 0) {
+            $propertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
+        }
+
+        $propertyMedia = $propertyMediaQuery
             ->orderByDesc('is_primary')
             ->orderByDesc('created_at')
             ->limit(20)

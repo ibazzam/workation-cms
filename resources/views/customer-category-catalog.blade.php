@@ -1412,61 +1412,60 @@
 
         .page.category-liveaboard .catalog-results-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 14px;
             height: auto;
             margin-top: 20px;
         }
 
         .page.category-liveaboard .catalog-grid {
-            display: block;
-            border: none;
-            border-radius: 0;
-            background: transparent;
+            display: contents;
         }
 
         .page.category-liveaboard .catalog-section-title {
             display: block;
             grid-column: 1 / -1;
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            margin-top: 0;
         }
 
         .page.category-liveaboard .card {
-            display: flex;
-            flex-direction: column;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: var(--surface);
+            border: 1px solid #d4e5ef;
+            border-radius: 14px;
+            background: #f8fcff;
             overflow: hidden;
-            transition: box-shadow 0.22s ease, transform 0.22s ease;
-            box-shadow: 0 2px 8px rgba(15, 97, 121, 0.12);
+            display: block;
+            height: 100%;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
         }
 
         .page.category-liveaboard .card:hover {
-            box-shadow: 0 4px 12px rgba(15, 97, 121, 0.28);
+            border-color: #9ecad8;
+            box-shadow: 0 4px 16px rgba(14, 86, 111, 0.12);
         }
 
         .page.category-liveaboard .card-link-liveaboard {
-            display: contents;
+            display: grid;
+            grid-template-rows: 180px auto;
+            height: 100%;
         }
 
         .page.category-liveaboard .card-link-liveaboard img {
             width: 100%;
-            height: 200px;
+            height: 180px;
             object-fit: cover;
             display: block;
-            background: #d6e8f3;
+            transition: transform 0.25s ease;
+        }
+
+        .page.category-liveaboard .card:hover .card-link-liveaboard img {
+            transform: scale(1.03);
         }
 
         .page.category-liveaboard .card-body-liveaboard {
             display: flex;
             flex-direction: column;
-            gap: 0;
-            flex: 1 1 auto;
-            padding: 14px;
+            row-gap: 4px;
+            align-items: stretch;
+            padding: 10px 12px;
         }
 
         .page.category-liveaboard .card-main {
@@ -1504,9 +1503,9 @@
             display: inline-flex;
             align-items: center;
             gap: 4px;
-            font-size: 0.8rem;
+            font-size: 0.72rem;
             font-weight: 600;
-            color: #0f6179;
+            color: #6f879b;
         }
 
         .page.category-liveaboard .card-badges-row {
@@ -1561,19 +1560,10 @@
         }
 
         .page.category-liveaboard .card-action-btn {
+            margin-top: 6px;
+            padding: 8px 14px;
             font-size: 0.78rem;
-            padding: 8px 12px;
             align-self: flex-start;
-            border-radius: 8px;
-            background: #0f6179;
-            color: #ffffff;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.15s ease;
-        }
-
-        .page.category-liveaboard .card-action-btn:hover {
-            background: #0d4d5f;
         }
 
         .page.category-liveaboard .catalog-map-panel {
@@ -2007,167 +1997,6 @@
             display: none;
         }
 
-        /* Land Transport Category Styling */
-        .page.category-land-transport .catalog-results-layout {
-            display: block;
-            height: auto;
-        }
-
-        .page.category-land-transport .catalog-results-list {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-            height: auto;
-            margin-top: 20px;
-        }
-
-        .page.category-land-transport .catalog-grid {
-            display: block;
-            border: none;
-            border-radius: 0;
-            background: transparent;
-        }
-
-        .page.category-land-transport .catalog-section-title {
-            display: block;
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 8px;
-            margin-top: 0;
-        }
-
-        .page.category-land-transport .catalog-map-panel {
-            display: none;
-        }
-
-        .page .card-link.land-transport-card-link {
-            display: grid;
-            grid-template-columns: 220px minmax(0, 1fr);
-            align-items: stretch;
-            gap: 0;
-            border: 1px solid #d7e3ea;
-            border-radius: 14px;
-            overflow: hidden;
-            background: #ffffff;
-        }
-
-        .page .card-link.land-transport-card-link > img {
-            width: 220px;
-            min-width: 220px;
-            height: 100%;
-            min-height: 172px;
-            object-fit: cover;
-            border-radius: 0;
-            background: #dce9f3;
-        }
-
-        .page .land-transport-card-body {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 14px;
-            padding: 16px;
-        }
-
-        .page .land-transport-card-main {
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-            min-width: 0;
-        }
-
-        .page .land-transport-type {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            width: fit-content;
-            padding: 4px 9px;
-            border-radius: 999px;
-            background: #edf4fb;
-            color: #1f5470;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
-            text-transform: uppercase;
-        }
-
-        .page .land-transport-name {
-            margin: 0;
-            font-size: 1.03rem;
-            line-height: 1.25;
-            color: #15293b;
-            font-weight: 800;
-        }
-
-        .page .land-transport-route {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            color: #35586d;
-            font-size: 0.84rem;
-            font-weight: 600;
-        }
-
-        .page .land-transport-specs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 7px;
-        }
-
-        .page .land-transport-spec {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 8px;
-            border-radius: 8px;
-            border: 1px solid #d7e6f1;
-            background: #f8fbfe;
-            color: #20465c;
-            font-size: 0.74rem;
-            font-weight: 600;
-        }
-
-        .page .land-transport-card-side {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 8px;
-            text-align: right;
-            flex: 0 0 auto;
-        }
-
-        .page .land-transport-card-side .card-review {
-            margin: 0;
-            justify-content: flex-end;
-        }
-
-        .page .land-transport-price {
-            font-size: 1rem;
-            font-weight: 800;
-            color: #0f3650;
-            white-space: nowrap;
-        }
-
-        .page .land-transport-price-sub {
-            display: block;
-            font-size: 0.75rem;
-            color: #486277;
-            font-weight: 600;
-            margin-top: 2px;
-        }
-
-        .page .land-transport-cta {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 9px 15px;
-            border-radius: 10px;
-            background: #0f6179;
-            color: #ffffff;
-            font-size: 0.8rem;
-            font-weight: 700;
-        }
-
         @media (max-width: 680px) {
             .page.category-sea-transport .st-card-link {
                 grid-template-columns: 118px minmax(0, 1fr);
@@ -2204,31 +2033,12 @@
                 align-items: flex-start;
             }
 
-            .page .card-link.land-transport-card-link {
-                grid-template-columns: 122px minmax(0, 1fr);
-            }
-
-            .page .card-link.land-transport-card-link > img {
-                width: 122px;
-                min-width: 122px;
-                min-height: 128px;
-            }
-
-            .page .land-transport-card-body {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-                padding: 12px;
-            }
-
-            .page .land-transport-card-side {
-                align-items: flex-start;
-                text-align: left;
-            }
-
-            .page .land-transport-card-side .card-review,
             .page.category-sea-transport .st-card-review {
                 justify-content: flex-start;
+            }
+
+            .page.category-liveaboard .catalog-results-list {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -3675,42 +3485,37 @@
                                 $resolvedImage = ($thumbUrl && trim($thumbUrl) !== '')
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
+                                $ltRoute = trim(($ltPickup !== '' ? $ltPickup : 'Pick-up') . ' to ' . ($ltDropoff !== '' ? $ltDropoff : 'Drop-off'));
+                                $ltMeta = array_values(array_filter([
+                                    $ltVehicleType !== '' ? $ltVehicleType : null,
+                                    $ltTransmission !== '' ? ucfirst($ltTransmission) : null,
+                                    $ltSeats > 0 ? ($ltSeats . ' seats') : null,
+                                    $ltBags > 0 ? ($ltBags . ' bags') : null,
+                                ], static fn ($value): bool => is_string($value) && trim($value) !== ''));
+                                $ltDesc = $ltMeta !== [] ? implode(' • ', $ltMeta) : 'Private and shared transfer options available.';
                             @endphp
-                            <a class="card-link land-transport-card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                            <a class="card-link" href="{{ $detailUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                                <div class="land-transport-card-body">
-                                    <div class="land-transport-card-main">
-                                        <span class="land-transport-type"><i class="fa-solid fa-car-side" aria-hidden="true"></i> {{ $ltVehicleType !== '' ? $ltVehicleType : 'Vehicle' }}</span>
-                                        <h3 class="land-transport-name">{{ (string) ($property->name ?? 'Land Transport') }}</h3>
-                                        @if ($ltPickup !== '' || $ltDropoff !== '')
-                                            <span class="land-transport-route"><i class="fa-solid fa-route" aria-hidden="true"></i> {{ $ltPickup !== '' ? $ltPickup : 'Pick-up' }} to {{ $ltDropoff !== '' ? $ltDropoff : 'Drop-off' }}</span>
-                                        @endif
-                                        <div class="land-transport-specs">
-                                            @if ($ltTransmission !== '')
-                                                <span class="land-transport-spec"><i class="fa-solid fa-gears" aria-hidden="true"></i> {{ ucfirst($ltTransmission) }}</span>
-                                            @endif
-                                            @if ($ltSeats > 0)
-                                                <span class="land-transport-spec"><i class="fa-solid fa-user-group" aria-hidden="true"></i> {{ $ltSeats }} seats</span>
-                                            @endif
-                                            @if ($ltBags > 0)
-                                                <span class="land-transport-spec"><i class="fa-solid fa-suitcase-rolling" aria-hidden="true"></i> {{ $ltBags }} bags</span>
-                                            @endif
-                                        </div>
-                                    </div>
-                                    <div class="land-transport-card-side">
+                                <div class="card-body">
+                                    <div class="card-main-col">
+                                        <span class="card-type-chip">Land Transport</span>
+                                        <h3>{{ (string) ($property->name ?? 'Land Transport') }}</h3>
+                                        <span class="card-city"><i class="fa-solid fa-route" aria-hidden="true"></i> {{ $ltRoute }}</span>
+                                        <p class="card-desc">{{ $ltDesc }}</p>
                                         <div class="card-review">
                                             <span class="card-rating-badge">{{ $reviewScore }}</span>
                                             <span>{{ number_format($reviewCount) }} reviews</span>
                                         </div>
-                                        <div class="land-transport-price">
+                                    </div>
+                                    <div class="card-meta-right">
+                                        <div class="card-price">
                                             @if ($primaryDisplayPrice > 0)
-                                                From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}
-                                                <small class="land-transport-price-sub">Total estimate</small>
+                                                <span class="price-local">From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}</span>
                                             @else
                                                 Price on request
                                             @endif
                                         </div>
-                                        <span class="land-transport-cta">View Preferred Vehicle <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                                        <span class="card-action-btn">View Transfer <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>
                                 </div>
                             </a>

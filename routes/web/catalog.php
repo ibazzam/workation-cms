@@ -1018,7 +1018,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'service', 'property'])
+            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport'])
             ->whereIn('entity_id', $mediaEntityIds);
 
         if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
@@ -1468,10 +1468,10 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 (int) ($property->vendor_property_id ?? 0),
             ], static fn (int $id): bool => $id > 0)));
             $genericMediaTypeMap = [
-                'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
-                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'transport', 'vehicle', 'property', 'service'],
-                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
-                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
+                'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'transport', 'vehicle'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
             ];
             $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey];
             $mediaQuery = DB::table('vendor_listing_media')

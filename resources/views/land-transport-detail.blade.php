@@ -37,6 +37,68 @@
 
         .page { width: min(1180px, calc(100% - 24px)); margin: 14px auto 28px; }
 
+        .top-search-shell {
+            position: sticky;
+            top: var(--property-header-offset);
+            z-index: 60;
+            border: 1px solid #d4e5ef;
+            background: #ffffff;
+            padding: 8px;
+            margin-bottom: 0;
+        }
+
+        .top-search-inner {
+            width: min(1180px, calc(100% - 24px));
+            margin: 0 auto;
+        }
+
+        .top-search-form {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(140px, 1fr)) auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .top-search-field {
+            border: 1px solid #c6d7e4;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #fbfdff;
+            color: #17344a;
+            display: grid;
+            gap: 2px;
+        }
+
+        .top-search-field label {
+            font-size: 0.68rem;
+            color: #5f7488;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .top-search-field input {
+            border: 0;
+            background: transparent;
+            font: inherit;
+            font-size: 0.88rem;
+            color: #17344a;
+            outline: none;
+            padding: 0;
+        }
+
+        .top-search-btn {
+            border: 1px solid var(--brand);
+            background: var(--brand);
+            color: #fff;
+            border-radius: 8px;
+            padding: 11px 16px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
         .breadcrumb {
             display: flex;
             align-items: center;
@@ -252,6 +314,7 @@
         }
 
         @media (max-width: 980px) {
+            .top-search-form { grid-template-columns: 1fr 1fr; }
             .layout { grid-template-columns: 1fr; }
             .reservation-form,
             .service-content {
@@ -262,6 +325,7 @@
         }
 
         @media (max-width: 760px) {
+            .top-search-form { grid-template-columns: 1fr; }
             .gallery-shell { grid-template-columns: 1fr; }
             .gallery-thumbs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             .gallery-thumb { height: 72px; }
@@ -315,6 +379,30 @@
     'headerCategoryLinks' => $headerCategoryLinks,
     'headerActiveCategoryKey' => $headerCategoryKey,
 ])
+
+<section class="top-search-shell" aria-label="Search transfer options">
+    <div class="top-search-inner">
+        <form class="top-search-form" method="GET" action="/catalog/land-transport">
+            <div class="top-search-field">
+                <label for="topLocation">Location</label>
+                <input id="topLocation" type="text" value="{{ (string) ($property->name ?? 'Land Transport') }}" readonly>
+            </div>
+            <div class="top-search-field">
+                <label for="topStart">Start</label>
+                <input id="topStart" type="date" name="travel_date" min="{{ now()->toDateString() }}">
+            </div>
+            <div class="top-search-field">
+                <label for="topEnd">End</label>
+                <input id="topEnd" type="date" name="return_date" min="{{ now()->toDateString() }}">
+            </div>
+            <div class="top-search-field">
+                <label for="topGuests">Guests</label>
+                <input id="topGuests" type="text" value="2 adults, 0 children" readonly>
+            </div>
+            <button type="submit" class="top-search-btn"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+        </form>
+    </div>
+</section>
 
 <main class="page">
     <nav class="breadcrumb">

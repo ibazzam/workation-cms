@@ -788,7 +788,21 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 'restaurant' => ['restaurant'],
                 'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
             ];
-            $mediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
+            $mediaFallbackTypeMap = [
+                'liveaboard' => ['property', 'service'],
+                'sea_transport' => ['property', 'service'],
+                'land_transport' => ['property', 'service'],
+                'vehicle_rental' => ['property', 'service'],
+                'conference_room' => ['property', 'service'],
+                'remote_workspace' => ['property', 'service'],
+                'water_sports' => ['property', 'service'],
+                'excursion' => ['property', 'service'],
+                'restaurant' => ['property', 'service'],
+                'resort_day_visit' => ['property', 'service'],
+            ];
+            $strictMediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
+            $fallbackMediaEntityTypes = $mediaFallbackTypeMap[$dbCategoryKey] ?? [];
+            $allMediaEntityTypes = array_values(array_unique(array_merge($strictMediaEntityTypes, $fallbackMediaEntityTypes)));
             $mediaVendorUserIds = $catalogProperties
                 ->pluck('vendor_user_id')
                 ->map(static fn ($id) => (int) $id)
@@ -796,11 +810,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->unique()
                 ->values();
             $mediaRows = collect(Cache::remember(
-                'catalog:property_media:v4:' . md5($dbCategoryKey . ':' . implode('|', $mediaEntityTypes) . ':' . $propertyLookupIds->implode(',') . ':' . $mediaVendorUserIds->implode(',')),
+                'catalog:property_media:v4:' . md5($dbCategoryKey . ':' . implode('|', $allMediaEntityTypes) . ':' . $propertyLookupIds->implode(',') . ':' . $mediaVendorUserIds->implode(',')),
                 now()->addMinutes(3),
-                static function () use ($propertyLookupIds, $mediaEntityTypes, $mediaVendorUserIds) {
+                static function () use ($propertyLookupIds, $allMediaEntityTypes, $mediaVendorUserIds) {
                     $query = DB::table('vendor_listing_media')
-                        ->whereIn('entity_type', $mediaEntityTypes)
+                        ->whereIn('entity_type', $allMediaEntityTypes)
                         ->whereIn('entity_id', $propertyLookupIds->all());
 
                     if ($mediaVendorUserIds->isNotEmpty()) {
@@ -818,13 +832,47 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
             $catalogPropertyMediaByProperty = $catalogProperties
-                ->mapWithKeys(static function ($property) use ($mediaByEntityId) {
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes) {
                     $canonicalId = (int) ($property->id ?? 0);
-                    $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+                    $preferredLookupIds = collect([
+                        (int) ($property->vendor_property_id ?? 0),
+                        (int) ($property->dedicated_row_id ?? 0),
+                        (int) ($property->property_id ?? 0),
+                        (int) ($property->legacy_property_id ?? 0),
+                        (int) ($property->source_property_id ?? 0),
+                        (int) ($property->parent_property_id ?? 0),
+                    ])
+                        ->filter(static fn (int $id): bool => $id > 0)
+                        ->unique()
+                        ->values();
 
-                    $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
-                    if ($mediaItems->isEmpty() && $dedicatedId > 0) {
-                        $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
+                    $strictLookupIds = $preferredLookupIds;
+                    if ($canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
+                        $strictLookupIds = $strictLookupIds->push($canonicalId);
+                    }
+                    if ($strictLookupIds->isEmpty()) {
+                        $strictLookupIds = collect([$canonicalId])
+                            ->filter(static fn (int $id): bool => $id > 0)
+                            ->values();
+                    }
+
+                    $strictMatches = $strictLookupIds
+                        ->flatMap(static fn (int $lookupId) => collect($mediaByEntityId->get($lookupId, collect())))
+                        ->unique(static fn ($media) => (int) ($media->id ?? 0))
+                        ->filter(static fn ($media): bool => in_array((string) ($media->entity_type ?? ''), $strictMediaEntityTypes, true))
+                        ->values();
+
+                    $mediaItems = $strictMatches;
+                    if ($mediaItems->isEmpty() && !empty($fallbackMediaEntityTypes)) {
+                        $fallbackLookupIds = $preferredLookupIds->isNotEmpty()
+                            ? $preferredLookupIds
+                            : collect([$canonicalId])->filter(static fn (int $id): bool => $id > 0)->values();
+
+                        $mediaItems = $fallbackLookupIds
+                            ->flatMap(static fn (int $lookupId) => collect($mediaByEntityId->get($lookupId, collect())))
+                            ->unique(static fn ($media) => (int) ($media->id ?? 0))
+                            ->filter(static fn ($media): bool => in_array((string) ($media->entity_type ?? ''), $fallbackMediaEntityTypes, true))
+                            ->values();
                     }
 
                     return [$canonicalId => $mediaItems];

@@ -6,6 +6,106 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
+$resolveReviewStats = static function (array $lookupIds, ?string $categoryKey = null, ?int $vendorUserId = null): \Illuminate\Support\Collection {
+    $normalizedIds = collect($lookupIds)
+        ->map(static fn ($id) => (int) $id)
+        ->filter(static fn (int $id): bool => $id > 0)
+        ->unique()
+        ->values();
+
+    if ($normalizedIds->isEmpty()) {
+        return collect();
+    }
+
+    $normalizedCategory = strtolower(trim((string) $categoryKey));
+    $categoryAliases = collect([
+        $normalizedCategory,
+        str_replace('-', '_', $normalizedCategory),
+        str_replace('_', '-', $normalizedCategory),
+    ])
+        ->filter(static fn ($value): bool => $value !== '')
+        ->unique()
+        ->values();
+
+    $aggregatedByProperty = [];
+    $reviewTableCandidates = ['vendor_property_reviews', 'property_reviews', 'customer_reviews', 'vendor_reviews'];
+
+    foreach ($reviewTableCandidates as $reviewTable) {
+        if (!Schema::hasTable($reviewTable)) {
+            continue;
+        }
+
+        $columns = Schema::getColumnListing($reviewTable);
+        $propertyKey = collect(['vendor_property_id', 'property_id', 'listing_id', 'entity_id'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        $ratingKey = collect(['rating', 'rating_value', 'review_score', 'score'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+
+        if ($propertyKey === null || $ratingKey === null) {
+            continue;
+        }
+
+        $reviewQuery = DB::table($reviewTable)
+            ->whereIn($propertyKey, $normalizedIds->all())
+            ->where($ratingKey, '>', 0);
+
+        $statusKey = collect(['status', 'review_status'])
+            ->first(static fn ($column) => in_array($column, $columns, true));
+        if ($statusKey !== null) {
+            $reviewQuery->whereIn(DB::raw('LOWER(' . $statusKey . ')'), ['approved', 'published', 'active']);
+        }
+
+        if ($categoryAliases->isNotEmpty()) {
+            $categoryColumn = collect(['listing_category', 'entity_type', 'category', 'service_type', 'module'])
+                ->first(static fn ($column) => in_array($column, $columns, true));
+
+            if ($categoryColumn !== null) {
+                $reviewQuery->whereIn(DB::raw('LOWER(' . $categoryColumn . ')'), $categoryAliases->all());
+            }
+        }
+
+        if ($vendorUserId !== null && $vendorUserId > 0 && in_array('vendor_user_id', $columns, true)) {
+            $reviewQuery->where('vendor_user_id', $vendorUserId);
+        }
+
+        $rows = $reviewQuery
+            ->select([
+                DB::raw($propertyKey . ' as property_lookup_id'),
+                DB::raw('AVG(' . $ratingKey . ') as avg_rating'),
+                DB::raw('COUNT(*) as review_count'),
+            ])
+            ->groupBy($propertyKey)
+            ->get();
+
+        foreach ($rows as $row) {
+            $propertyId = (int) ($row->property_lookup_id ?? 0);
+            $reviewCount = max(0, (int) ($row->review_count ?? 0));
+            $avgRating = max(0.0, (float) ($row->avg_rating ?? 0));
+
+            if ($propertyId <= 0 || $reviewCount <= 0 || $avgRating <= 0) {
+                continue;
+            }
+
+            if (!array_key_exists($propertyId, $aggregatedByProperty)) {
+                $aggregatedByProperty[$propertyId] = ['weighted_sum' => 0.0, 'count' => 0];
+            }
+
+            $aggregatedByProperty[$propertyId]['weighted_sum'] += ($avgRating * $reviewCount);
+            $aggregatedByProperty[$propertyId]['count'] += $reviewCount;
+        }
+    }
+
+    return collect($aggregatedByProperty)->map(static function (array $stats): array {
+        $count = max(0, (int) ($stats['count'] ?? 0));
+        $weightedSum = max(0.0, (float) ($stats['weighted_sum'] ?? 0));
+
+        return [
+            'rating' => $count > 0 ? round($weightedSum / $count, 2) : 0.0,
+            'reviews_count' => $count,
+        ];
+    });
+};
+
 Route::get('/catalog/{category}', function (Request $request, string $category) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],
@@ -61,6 +161,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $reservationDatetime = trim((string) $request->query('reservation_datetime', ''));
     $partySize = max(1, (int) $request->query('party_size', 2));
     $vehicleKind = trim((string) $request->query('vehicle_kind', ''));
+    $landTransmission = trim((string) $request->query('transmission', ''));
+    $landSupplier = trim((string) $request->query('supplier', ''));
+    $pickupDatetime = trim((string) $request->query('pickup_datetime', ''));
+    $dropoffDatetime = trim((string) $request->query('dropoff_datetime', ''));
     $activityType = trim((string) $request->query('activity_type', ''));
     $difficulty = trim((string) $request->query('difficulty', ''));
     $excursionDate = trim((string) $request->query('excursion_date', ''));
@@ -93,6 +197,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
     $originPointFilter = trim((string) $request->query('origin_point', ''));
     $destinationPointFilter = trim((string) $request->query('destination_point', ''));
     $travelDate = trim((string) $request->query('travel_date', ''));
+    $tripTypeFilter = trim((string) $request->query('trip_type', 'one_way'));
+    $guestTypeFilter = trim((string) $request->query('guest_type', $visitorResidency === 'local_resident' ? 'local_resident' : 'foreign_national'));
     $seatsRequested = max(1, (int) $request->query('seats', 1));
     $liveaboardStartPoint = trim((string) $request->query('start_point', ''));
     $liveaboardEndPoint = trim((string) $request->query('end_point', ''));
@@ -188,6 +294,71 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     }
                 }
             });
+        }
+
+        if ($dbCategoryKey === 'land_transport') {
+            $vehicleTypeFilter = trim((string) $request->query('vehicle_type', ''));
+
+            if ($vehicleTypeFilter !== '') {
+                $vehicleColumns = [];
+                foreach (['vehicle_type', 'transport_type', 'service_type', 'name', 'listing_name', 'listing_details'] as $candidateColumn) {
+                    if (Schema::hasColumn($categoryTable, $candidateColumn)) {
+                        $vehicleColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (!empty($vehicleColumns)) {
+                    $needle = strtolower($vehicleTypeFilter);
+                    $propertiesQuery->where(function ($query) use ($vehicleColumns, $needle) {
+                        foreach ($vehicleColumns as $index => $column) {
+                            $pattern = '%' . $needle . '%';
+                            if ($index === 0) {
+                                $query->whereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                            } else {
+                                $query->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                            }
+                        }
+                    });
+                }
+            }
+
+            if ($landTransmission !== '') {
+                $transmissionColumns = [];
+                foreach (['transmission', 'gearbox_type', 'listing_details', 'description'] as $candidateColumn) {
+                    if (Schema::hasColumn($categoryTable, $candidateColumn)) {
+                        $transmissionColumns[] = $candidateColumn;
+                    }
+                }
+
+                if (!empty($transmissionColumns)) {
+                    $needle = strtolower($landTransmission);
+                    $propertiesQuery->where(function ($query) use ($transmissionColumns, $needle) {
+                        foreach ($transmissionColumns as $index => $column) {
+                            $pattern = '%' . $needle . '%';
+                            if ($index === 0) {
+                                $query->whereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                            } else {
+                                $query->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                            }
+                        }
+                    });
+                }
+            }
+
+            if ($landSupplier !== '' && Schema::hasColumn($categoryTable, 'vendor_user_id') && Schema::hasTable('users')) {
+                $supplierIds = DB::table('users')
+                    ->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($landSupplier) . '%'])
+                    ->pluck('id')
+                    ->map(static fn ($id) => (int) $id)
+                    ->filter(static fn (int $id) => $id > 0)
+                    ->values();
+
+                if ($supplierIds->isNotEmpty()) {
+                    $propertiesQuery->whereIn('vendor_user_id', $supplierIds->all());
+                } else {
+                    $propertiesQuery->whereRaw('1 = 0');
+                }
+            }
         }
 
         // Price filters are applied after derived-price normalization so listings
@@ -558,6 +729,51 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 ->values();
         }
 
+        $reviewStatsByLookupId = $resolveReviewStats($propertyLookupIds->all(), $dbCategoryKey, null);
+        if ($reviewStatsByLookupId->isNotEmpty()) {
+            $catalogProperties = $catalogProperties->map(static function ($property) use ($reviewStatsByLookupId) {
+                $matchedLookupId = collect(workationPropertyLookupIds($property))
+                    ->first(static fn (int $candidateId): bool => $reviewStatsByLookupId->has($candidateId));
+
+                if (!is_int($matchedLookupId) || $matchedLookupId <= 0) {
+                    return $property;
+                }
+
+                $stats = (array) ($reviewStatsByLookupId->get($matchedLookupId) ?? []);
+                $resolvedRating = max(0.0, (float) ($stats['rating'] ?? 0));
+                $resolvedReviewCount = max(0, (int) ($stats['reviews_count'] ?? 0));
+
+                $property->rating = $resolvedRating;
+                $property->average_rating = $resolvedRating;
+                $property->reviews_count = $resolvedReviewCount;
+                $property->rating_count = $resolvedReviewCount;
+
+                return $property;
+            })->values();
+
+            if ($minRating > 0 || $minReviews > 0) {
+                $catalogProperties = $catalogProperties->filter(static function ($property) use ($minRating, $minReviews): bool {
+                    $resolvedRating = max(0.0, (float) ($property->rating ?? $property->average_rating ?? 0));
+                    $resolvedReviewCount = max(0, (int) ($property->reviews_count ?? $property->rating_count ?? 0));
+
+                    if ($minRating > 0 && $resolvedRating < $minRating) {
+                        return false;
+                    }
+                    if ($minReviews > 0 && $resolvedReviewCount < $minReviews) {
+                        return false;
+                    }
+
+                    return true;
+                })->values();
+            }
+
+            if ($sort === 'highest_reviews') {
+                $catalogProperties = $catalogProperties
+                    ->sortByDesc(static fn ($property) => (float) ($property->rating ?? $property->average_rating ?? 0))
+                    ->values();
+            }
+        }
+
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
             $mediaEntityTypes = in_array($dbCategoryKey, ['accommodation'], true)
                 ? ['property']
@@ -707,6 +923,8 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'rooms' => (int) $request->query('rooms', 1),
             'origin_point' => trim((string) $request->query('origin_point', '')),
             'destination_point' => trim((string) $request->query('destination_point', '')),
+            'trip_type' => $tripTypeFilter,
+            'guest_type' => $guestTypeFilter,
             'travel_date' => $travelDate,
             'seats' => $seatsRequested,
             'start_point' => $liveaboardStartPoint,
@@ -716,11 +934,15 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'return_date' => trim((string) $request->query('return_date', '')),
             'pickup_date' => trim((string) $request->query('pickup_date', '')),
             'vehicle_type' => trim((string) $request->query('vehicle_type', '')), 
+            'transmission' => $landTransmission,
+            'supplier' => $landSupplier,
+            'pickup_datetime' => $pickupDatetime,
+            'dropoff_datetime' => $dropoffDatetime,
         ],
     ]);
 });
 
-Route::get('/sea-transport/{id}', function (Request $request, int $id) {
+Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($resolveReviewStats) {
     $stTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor('sea_transport');
     $propertyQuery = DB::table($stTable)
         ->where(function ($query) use ($id) {
@@ -737,6 +959,23 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
 
     if (!$property) {
         abort(404);
+    }
+
+    $seaLookupIds = collect(workationPropertyLookupIds($property))
+        ->map(static fn ($value) => (int) $value)
+        ->filter(static fn (int $value): bool => $value > 0)
+        ->unique()
+        ->values();
+    $seaReviewStats = $resolveReviewStats($seaLookupIds->all(), 'sea_transport', (int) ($property->vendor_user_id ?? 0));
+    $seaMatchedLookupId = $seaLookupIds->first(static fn (int $lookupId): bool => $seaReviewStats->has($lookupId));
+    if (is_int($seaMatchedLookupId) && $seaMatchedLookupId > 0) {
+        $seaResolvedStats = (array) ($seaReviewStats->get($seaMatchedLookupId) ?? []);
+        $seaResolvedRating = max(0.0, (float) ($seaResolvedStats['rating'] ?? 0));
+        $seaResolvedReviewCount = max(0, (int) ($seaResolvedStats['reviews_count'] ?? 0));
+        $property->rating = $seaResolvedRating;
+        $property->average_rating = $seaResolvedRating;
+        $property->reviews_count = $seaResolvedReviewCount;
+        $property->rating_count = $seaResolvedReviewCount;
     }
 
     $rawDetails = $property->listing_details ?? '{}';
@@ -762,16 +1001,14 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport'])
+            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'service', 'property'])
             ->whereIn('entity_id', $mediaEntityIds);
 
         if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
             $mediaQuery->where('vendor_user_id', (int) ($property->vendor_user_id ?? 0));
         }
 
-        if (Schema::hasColumn('vendor_listing_media', 'vendor_property_id')) {
-            $mediaQuery->whereIn('vendor_property_id', $mediaEntityIds);
-        }
+        // Do not hard-filter by vendor_property_id because many rows only set entity_id.
 
         $mediaRows = $mediaQuery
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
@@ -784,6 +1021,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             // Use /media/vendor/{id}/{variant} route format directly
             if ($mediaId > 0) {
                 $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
             }
             $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
 
@@ -903,7 +1141,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
     ]);
 });
 
-Route::get('/liveaboard/{id}', function (Request $request, int $id) {
+Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolveReviewStats) {
     $laTable = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor('liveaboard');
     $propertyQuery = DB::table($laTable)
         ->where(function ($query) use ($id) {
@@ -920,6 +1158,23 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
 
     if (!$property) {
         abort(404);
+    }
+
+    $liveaboardLookupIds = collect(workationPropertyLookupIds($property))
+        ->map(static fn ($value) => (int) $value)
+        ->filter(static fn (int $value): bool => $value > 0)
+        ->unique()
+        ->values();
+    $liveaboardReviewStats = $resolveReviewStats($liveaboardLookupIds->all(), 'liveaboard', (int) ($property->vendor_user_id ?? 0));
+    $liveaboardMatchedLookupId = $liveaboardLookupIds->first(static fn (int $lookupId): bool => $liveaboardReviewStats->has($lookupId));
+    if (is_int($liveaboardMatchedLookupId) && $liveaboardMatchedLookupId > 0) {
+        $liveaboardResolvedStats = (array) ($liveaboardReviewStats->get($liveaboardMatchedLookupId) ?? []);
+        $liveaboardResolvedRating = max(0.0, (float) ($liveaboardResolvedStats['rating'] ?? 0));
+        $liveaboardResolvedReviewCount = max(0, (int) ($liveaboardResolvedStats['reviews_count'] ?? 0));
+        $property->rating = $liveaboardResolvedRating;
+        $property->average_rating = $liveaboardResolvedRating;
+        $property->reviews_count = $liveaboardResolvedReviewCount;
+        $property->rating_count = $liveaboardResolvedReviewCount;
     }
 
     $rawDetails = $property->listing_details ?? '{}';
@@ -1139,7 +1394,7 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) {
 
 // Generic detail page route handler for land-transport, vehicle-rental, conference-room, remote-workspace
 foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_rental', 'conference-room' => 'conference_room', 'remote-workspace' => 'remote_workspace'] as $routePath => $categoryKey) {
-    Route::get('/' . $routePath . '/{id}', function (Request $request, int $id) use ($categoryKey) {
+    Route::get('/' . $routePath . '/{id}', function (Request $request, int $id) use ($categoryKey, $resolveReviewStats) {
         $table = \App\Support\VendorPropertyCompatibilityReader::categoryTableNameFor($categoryKey);
         $propertyQuery = DB::table($table)
             ->where(function ($query) use ($id) {
@@ -1156,6 +1411,23 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
 
         if (!$property) {
             abort(404);
+        }
+
+        $genericLookupIds = collect(workationPropertyLookupIds($property))
+            ->map(static fn ($value) => (int) $value)
+            ->filter(static fn (int $value): bool => $value > 0)
+            ->unique()
+            ->values();
+        $genericReviewStats = $resolveReviewStats($genericLookupIds->all(), $categoryKey, (int) ($property->vendor_user_id ?? 0));
+        $genericMatchedLookupId = $genericLookupIds->first(static fn (int $lookupId): bool => $genericReviewStats->has($lookupId));
+        if (is_int($genericMatchedLookupId) && $genericMatchedLookupId > 0) {
+            $genericResolvedStats = (array) ($genericReviewStats->get($genericMatchedLookupId) ?? []);
+            $genericResolvedRating = max(0.0, (float) ($genericResolvedStats['rating'] ?? 0));
+            $genericResolvedReviewCount = max(0, (int) ($genericResolvedStats['reviews_count'] ?? 0));
+            $property->rating = $genericResolvedRating;
+            $property->average_rating = $genericResolvedRating;
+            $property->reviews_count = $genericResolvedReviewCount;
+            $property->rating_count = $genericResolvedReviewCount;
         }
 
         $rawDetails = $property->listing_details ?? '{}';

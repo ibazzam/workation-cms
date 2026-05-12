@@ -2210,6 +2210,13 @@ SVG;
         return ltrim($normalized, '/');
     };
 
+    // Also try the public storage symlink as an absolute path, so the proxy can serve
+    // files that live at public/storage/... even when nginx blocks direct /storage/ access.
+    $publicStoragePath = static function (string $relPath) use ($normalizeDiskPath): string {
+        $rel = $normalizeDiskPath($relPath);
+        return $rel !== '' ? public_path('storage/' . $rel) : '';
+    };
+
     $candidatePaths = collect([
         $candidatePath,
         $alternateVariantPath,
@@ -2217,6 +2224,9 @@ SVG;
         $normalizeDiskPath($candidatePath),
         $normalizeDiskPath($alternateVariantPath),
         $normalizeDiskPath($originalPath),
+        $publicStoragePath($candidatePath),
+        $publicStoragePath($alternateVariantPath),
+        $publicStoragePath($originalPath),
     ])->map(static fn ($path) => trim((string) $path))
       ->filter(static fn ($path) => $path !== '')
       ->unique()

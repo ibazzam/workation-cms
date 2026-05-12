@@ -761,9 +761,19 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->id ?? 0),
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
-        $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport'])
-            ->whereIn('entity_id', $mediaEntityIds)
+        $mediaQuery = DB::table('vendor_listing_media')
+            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport'])
+            ->whereIn('entity_id', $mediaEntityIds);
+
+        if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
+            $mediaQuery->where('vendor_user_id', (int) ($property->vendor_user_id ?? 0));
+        }
+
+        if (Schema::hasColumn('vendor_listing_media', 'vendor_property_id')) {
+            $mediaQuery->whereIn('vendor_property_id', $mediaEntityIds);
+        }
+
+        $mediaRows = $mediaQuery
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get();

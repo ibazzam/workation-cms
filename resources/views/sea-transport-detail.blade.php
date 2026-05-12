@@ -558,7 +558,7 @@
     $headerCategoryLinks = [
         ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'url' => '/catalog/accommodation'],
         ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'url' => '/catalog/resort_day_visit'],
-        ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Live Aboard', 'url' => '/catalog/liveaboard'],
+        ['key' => 'liveaboard', 'icon' => 'fa-solid fa-ship', 'title' => 'Liveaboard', 'url' => '/catalog/liveaboard'],
         ['key' => 'excursion', 'icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'url' => '/catalog/excursion'],
         ['key' => 'water-sports', 'icon' => 'fa-solid fa-person-swimming', 'title' => 'Water Sports', 'url' => '/catalog/water_sports'],
         ['key' => 'restaurant', 'icon' => 'fa-solid fa-utensils', 'title' => 'Restaurants', 'url' => '/catalog/restaurant'],
@@ -866,7 +866,7 @@
 
                 <div class="booking-total">
                     <span>Order Total</span>
-                    <strong id="bookingOrderTotal">MVR 0.00</strong>
+                    <strong id="bookingOrderTotal">{{ $visitorResidency === 'local_resident' ? 'MVR' : 'USD' }} 0.00</strong>
                 </div>
                 <p class="booking-note"><i class="fa-solid fa-info-circle" aria-hidden="true"></i> Final pricing adjusted for your guest nationality at checkout.</p>
 
@@ -913,6 +913,7 @@
         const bookingAdults = document.getElementById('bookingAdults');
         const bookingResidency = document.getElementById('bookingResidency');
         let selectedRoute = null;
+        const defaultDisplayCurrency = bookingResidency && bookingResidency.value === 'local_resident' ? 'MVR' : 'USD';
 
         const formatMoney = function (amount, currency) {
             return currency + ' ' + (amount || 0).toLocaleString(undefined, {
@@ -946,7 +947,7 @@
             if (!selectedRoute) {
                 bookingOrderBox.classList.add('is-empty');
                 bookingOrderBox.innerHTML = '<div><i class="fa-solid fa-basket-shopping" aria-hidden="true"></i><br>Add route from the list on the left</div>';
-                bookingOrderTotal.textContent = 'MVR 0.00';
+                bookingOrderTotal.textContent = defaultDisplayCurrency + ' 0.00';
                 if (bookingSubmitBtn) bookingSubmitBtn.disabled = true;
                 return;
             }

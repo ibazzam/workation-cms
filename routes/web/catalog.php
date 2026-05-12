@@ -762,7 +762,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             (int) ($property->vendor_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $mediaRows = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport', 'room', 'liveaboard'])
+            ->whereIn('entity_type', ['service', 'property', 'sea_transport', 'transport', 'marine_transport'])
             ->whereIn('entity_id', $mediaEntityIds)
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
@@ -774,7 +774,6 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) {
             // Use /media/vendor/{id}/{variant} route format directly
             if ($mediaId > 0) {
                 $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
-                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
             }
             $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
 

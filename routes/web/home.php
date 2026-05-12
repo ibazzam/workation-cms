@@ -412,7 +412,7 @@ Route::get('/', function (Request $request) {
         ['title' => 'Experiences', 'subtitle' => 'Diving, snorkel, island tours', 'url' => '/catalog/excursion'],
         ['title' => 'Remote Workspace', 'subtitle' => 'Wi-Fi, desks, quiet corners', 'url' => '/catalog/remote_workspace'],
         ['title' => 'Conference Rooms', 'subtitle' => 'Meeting and event-ready spaces', 'url' => '/catalog/conference_room'],
-        ['title' => 'Live Aboard', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
+        ['title' => 'Liveaboard', 'subtitle' => 'Multi-day safari vessel journeys', 'url' => '/catalog/liveaboard'],
     ]);
 
     $homeTrendingCards = collect([
@@ -1030,7 +1030,7 @@ Route::get('/', function (Request $request) {
                     'Experiences', 'Excursion' => 'excursion',
                     'Remote Workspace' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
-                    'Live Aboard' => 'liveaboard',
+                    'Liveaboard' => 'liveaboard',
                     default => null,
                 };
 
@@ -1054,7 +1054,7 @@ Route::get('/', function (Request $request) {
                     'Experiences', 'Excursion' => 'excursion',
                     'Remote Workspace' => 'remote_workspace',
                     'Conference Rooms' => 'conference_room',
-                    'Live Aboard' => 'liveaboard',
+                    'Liveaboard' => 'liveaboard',
                     default => null,
                 };
 

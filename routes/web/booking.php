@@ -3869,4 +3869,3 @@ Route::post('/booking/water-sports-cart', function (Request $request) {
 
     return redirect($checkoutUrl);
 });
-

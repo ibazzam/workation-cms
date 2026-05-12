@@ -788,18 +788,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 'restaurant' => ['restaurant'],
                 'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
             ];
-            $mediaFallbackTypeMap = [
-                'liveaboard' => ['property', 'service'],
-                'sea_transport' => ['property', 'service'],
-                'land_transport' => ['property', 'service'],
-                'vehicle_rental' => ['property', 'service'],
-                'conference_room' => ['property', 'service'],
-                'remote_workspace' => ['property', 'service'],
-                'water_sports' => ['property', 'service'],
-                'excursion' => ['property', 'service'],
-                'restaurant' => ['property', 'service'],
-                'resort_day_visit' => ['property', 'service'],
-            ];
+            // property/service fallback removed entirely to prevent accommodation media (entity_type='property')
+            // from bleeding into non-accommodation category cards via entity_id collisions.
+            $mediaFallbackTypeMap = [];
             $strictMediaEntityTypes = $mediaEntityTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
             $fallbackMediaEntityTypes = $mediaFallbackTypeMap[$dbCategoryKey] ?? [];
             $allMediaEntityTypes = array_values(array_unique(array_merge($strictMediaEntityTypes, $fallbackMediaEntityTypes)));
@@ -1069,13 +1060,19 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->source_property_id ?? 0),
             (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
+        $seaCanonicalId = (int) ($property->id ?? 0);
+        if ($seaCanonicalId > 0 && !in_array($seaCanonicalId, $mediaEntityIds, true)) {
+            $mediaEntityIds[] = $seaCanonicalId;
+        }
         if ($mediaEntityIds === []) {
             $mediaEntityIds = array_values(array_unique(array_filter([
                 (int) ($property->id ?? 0),
             ], static fn (int $id): bool => $id > 0)));
         }
+        // The vendor portal upload form stores all categories as entity_type='property',
+        // so include 'property' and 'service' in the type list. The vendor_user_id scope prevents bleed.
         $mediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport'])
+            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'])
             ->whereIn('entity_id', $mediaEntityIds);
 
         if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
@@ -1533,13 +1530,15 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                     (int) ($property->id ?? 0),
                 ], static fn (int $id): bool => $id > 0)));
             }
+            // The vendor portal upload form stores all categories as entity_type='property',
+            // so include 'property' and 'service'. The vendor_user_id scope prevents bleed.
             $genericMediaTypeMap = [
                 'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
                 'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'transport', 'vehicle', 'property', 'service'],
                 'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
                 'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
             ];
-            $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey];
+            $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey, 'property', 'service'];
             $mediaQuery = DB::table('vendor_listing_media')
                 ->whereIn('entity_type', $mediaEntityTypes)
                 ->whereIn('entity_id', $mediaEntityIds);

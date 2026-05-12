@@ -1206,30 +1206,21 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         $bookingMediaTypeMap = [
             'accommodation' => ['property'],
             'liveaboard' => ['liveaboard', 'property', 'service'],
-            'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
-            'marine_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
-            'land_transport' => ['land_transport', 'land-transport', 'transport'],
-            'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
-            'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
-            'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
-            'water_sports' => ['water_sports', 'water-sports', 'activity'],
-            'excursion' => ['excursion', 'activity'],
-            'restaurant' => ['restaurant'],
-            'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+            // The vendor portal upload form stores all categories as entity_type='property',
+            // so include 'property' and 'service' for all non-accommodation types.
+            // The vendor_user_id scope on the query below prevents accommodation media bleed.
+            'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
+            'marine_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
+            'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
+            'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
+            'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
+            'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
+            'water_sports' => ['water_sports', 'water-sports', 'activity', 'property', 'service'],
+            'excursion' => ['excursion', 'activity', 'property', 'service'],
+            'restaurant' => ['restaurant', 'property', 'service'],
+            'resort_day_visit' => ['resort_day_visit', 'resort-day-visit', 'property', 'service'],
         ];
-        $bookingMediaFallbackTypeMap = [
-            'liveaboard' => ['property', 'service'],
-            'sea_transport' => ['property', 'service'],
-            'marine_transport' => ['property', 'service'],
-            'land_transport' => ['property', 'service'],
-            'vehicle_rental' => ['property', 'service'],
-            'conference_room' => ['property', 'service'],
-            'remote_workspace' => ['property', 'service'],
-            'water_sports' => ['property', 'service'],
-            'excursion' => ['property', 'service'],
-            'restaurant' => ['property', 'service'],
-            'resort_day_visit' => ['property', 'service'],
-        ];
+        $bookingMediaFallbackTypeMap = [];
         $bookingMediaTypes = $bookingMediaTypeMap[$dbCategoryKey] ?? [$dbCategoryKey];
         $bookingFallbackMediaTypes = $bookingMediaFallbackTypeMap[$dbCategoryKey] ?? [];
         $bookingVendorUserId = (int) ($propertyRow->vendor_user_id ?? 0);

@@ -840,7 +840,14 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         ->values();
 
                     $strictLookupIds = $preferredLookupIds;
-                    if ($includeCanonicalLookupId && $canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
+                    if (!$includeCanonicalLookupId && $canonicalId > 0) {
+                        // For non-accommodation categories, uploads are typically keyed by the
+                        // current listing row id. Prioritize canonical id first to avoid
+                        // collisions from shared legacy ids across different listings.
+                        $strictLookupIds = collect([$canonicalId])
+                            ->merge($strictLookupIds->reject(static fn (int $id): bool => $id === $canonicalId))
+                            ->values();
+                    } elseif ($includeCanonicalLookupId && $canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
                         $strictLookupIds = $strictLookupIds->push($canonicalId);
                     }
                     if ($strictLookupIds->isEmpty()) {
@@ -1094,7 +1101,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
     // Vessel gallery (primary + additional photos).
     $galleryMedia = [];
     if (Schema::hasTable('vendor_listing_media')) {
-        $mediaEntityIds = array_values(array_unique(array_filter([
+        $seaLegacyEntityIds = array_values(array_unique(array_filter([
             (int) ($property->vendor_property_id ?? 0),
             (int) ($property->dedicated_row_id ?? 0),
             (int) ($property->property_id ?? 0),
@@ -1102,27 +1109,42 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->source_property_id ?? 0),
             (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
-        if ($mediaEntityIds === []) {
-            $mediaEntityIds = array_values(array_unique(array_filter([
-                (int) ($property->id ?? 0),
-            ], static fn (int $id): bool => $id > 0)));
+        $seaCanonicalId = (int) ($property->id ?? 0);
+        $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'];
+
+        // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
+        // takes priority over shared legacy IDs that may be reused across multiple listings.
+        $mediaRows = collect();
+        if ($seaCanonicalId > 0) {
+            $canonicalSeaQuery = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', $seaMediaTypes)
+                ->where('entity_id', $seaCanonicalId);
+            if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
+                $canonicalSeaQuery->where('vendor_user_id', $seaVendorUserId);
+            }
+            $mediaRows = $canonicalSeaQuery
+                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->get();
         }
-        // The vendor portal upload form stores all categories as entity_type='property',
-        // so include 'property' and 'service' in the type list. The vendor_user_id scope prevents bleed.
-        $mediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'])
-            ->whereIn('entity_id', $mediaEntityIds);
 
-        if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
-            $mediaQuery->where('vendor_user_id', (int) ($property->vendor_user_id ?? 0));
+        // Fall back to legacy IDs only if canonical returned nothing.
+        if ($mediaRows->isEmpty() && !empty($seaLegacyEntityIds)) {
+            $legacySeaIds = array_values(array_diff($seaLegacyEntityIds, [$seaCanonicalId]));
+            if (!empty($legacySeaIds)) {
+                $legacySeaQuery = DB::table('vendor_listing_media')
+                    ->whereIn('entity_type', $seaMediaTypes)
+                    ->whereIn('entity_id', $legacySeaIds);
+                if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
+                    $legacySeaQuery->where('vendor_user_id', $seaVendorUserId);
+                }
+                $mediaRows = $legacySeaQuery
+                    ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                    ->orderBy('id')
+                    ->get();
+            }
         }
-
-        // Do not hard-filter by vendor_property_id because many rows only set entity_id.
-
-        $mediaRows = $mediaQuery
-            ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
-            ->orderBy('id')
-            ->get();
 
         $seaCanonicalId = (int) ($property->id ?? 0);
         if ($mediaRows->isEmpty() && $seaCanonicalId > 0 && !in_array($seaCanonicalId, $mediaEntityIds, true)) {
@@ -1585,7 +1607,7 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
         // Gallery media
         $galleryMedia = [];
         if (Schema::hasTable('vendor_listing_media')) {
-            $mediaEntityIds = array_values(array_unique(array_filter([
+            $genericLegacyEntityIds = array_values(array_unique(array_filter([
                 (int) ($property->vendor_property_id ?? 0),
                 (int) ($property->dedicated_row_id ?? 0),
                 (int) ($property->property_id ?? 0),
@@ -1593,11 +1615,6 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 (int) ($property->source_property_id ?? 0),
                 (int) ($property->parent_property_id ?? 0),
             ], static fn (int $id): bool => $id > 0)));
-            if ($mediaEntityIds === []) {
-                $mediaEntityIds = array_values(array_unique(array_filter([
-                    (int) ($property->id ?? 0),
-                ], static fn (int $id): bool => $id > 0)));
-            }
             // The vendor portal upload form stores all categories as entity_type='property',
             // so include 'property' and 'service'. The vendor_user_id scope prevents bleed.
             $genericMediaTypeMap = [
@@ -1607,17 +1624,41 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
             ];
             $mediaEntityTypes = $genericMediaTypeMap[$categoryKey] ?? [$categoryKey, 'property', 'service'];
-            $mediaQuery = DB::table('vendor_listing_media')
-                ->whereIn('entity_type', $mediaEntityTypes)
-                ->whereIn('entity_id', $mediaEntityIds);
+            $genericCanonicalId = (int) ($property->id ?? 0);
             $genericVendorUserId = (int) ($property->vendor_user_id ?? 0);
-            if ($genericVendorUserId > 0) {
-                $mediaQuery->where('vendor_user_id', $genericVendorUserId);
+
+            // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
+            // takes priority over shared legacy IDs that may be reused across multiple listings.
+            $mediaRows = collect();
+            if ($genericCanonicalId > 0) {
+                $canonicalGenericQuery = DB::table('vendor_listing_media')
+                    ->whereIn('entity_type', $mediaEntityTypes)
+                    ->where('entity_id', $genericCanonicalId);
+                if ($genericVendorUserId > 0) {
+                    $canonicalGenericQuery->where('vendor_user_id', $genericVendorUserId);
+                }
+                $mediaRows = $canonicalGenericQuery
+                    ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                    ->orderBy('id')
+                    ->get();
             }
-            $mediaRows = $mediaQuery
-                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
-                ->orderBy('id')
-                ->get();
+
+            // Fall back to legacy IDs only if canonical returned nothing.
+            if ($mediaRows->isEmpty() && !empty($genericLegacyEntityIds)) {
+                $legacyGenericIds = array_values(array_diff($genericLegacyEntityIds, [$genericCanonicalId]));
+                if (!empty($legacyGenericIds)) {
+                    $legacyGenericQuery = DB::table('vendor_listing_media')
+                        ->whereIn('entity_type', $mediaEntityTypes)
+                        ->whereIn('entity_id', $legacyGenericIds);
+                    if ($genericVendorUserId > 0) {
+                        $legacyGenericQuery->where('vendor_user_id', $genericVendorUserId);
+                    }
+                    $mediaRows = $legacyGenericQuery
+                        ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                        ->orderBy('id')
+                        ->get();
+                }
+            }
 
             $genericCanonicalId = (int) ($property->id ?? 0);
             if ($mediaRows->isEmpty() && $genericCanonicalId > 0 && !in_array($genericCanonicalId, $mediaEntityIds, true)) {

@@ -813,6 +813,7 @@ Route::get('/', function (Request $request) {
                     'conference_rooms' => 'conference_room',
                     'excursions', 'experience', 'experiences', 'watersports', 'water_sports' => 'excursion',
                     'workspace', 'work_friendly', 'workfriendly' => 'remote_workspace',
+                    'live_aboard', 'safari_liveaboard', 'safari_live_aboard' => 'liveaboard',
                     'marine', 'marine_transfer', 'marine_transfers', 'marine_transport' => 'sea_transport',
                     'land', 'land_transfer', 'land_transfers' => 'land_transport',
                     default => $normalized,

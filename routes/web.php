@@ -563,6 +563,33 @@ if (!function_exists('workationDerivedListingBasePrice')) {
                 $value = (array) $value;
             }
 
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    return;
+                }
+
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    $collectStructuredPriceCandidates($decoded, $depth + 1);
+                    return;
+                }
+
+                if (preg_match_all('/(?:^|\R)\s*[^:=\R]+[:=]\s*([0-9]+(?:[.,][0-9]+)?)/u', $trimmed, $matches) === 1) {
+                    foreach (($matches[1] ?? []) as $matchedAmount) {
+                        $normalized = $normalizePrice($matchedAmount);
+                        if ($normalized > 0) {
+                            $candidates[] = $normalized;
+                        }
+                    }
+                    return;
+                }
+
+                if (str_contains($trimmed, '{') || str_contains($trimmed, '[') || str_contains($trimmed, ':') || str_contains($trimmed, '=')) {
+                    return;
+                }
+            }
+
             if (!is_array($value)) {
                 $normalized = $normalizePrice($value);
                 if ($normalized > 0) {

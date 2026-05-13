@@ -101,4 +101,44 @@ class CatalogCategoryPricingTest extends TestCase
             ->assertOk()
             ->assertSeeText('From MVR 780.00');
     }
+
+    public function test_liveaboard_catalog_card_uses_lowest_price_from_string_encoded_pricing_matrix(): void
+    {
+        $table = 'vendor_liveaboard_listings';
+        $columns = Schema::getColumnListing($table);
+        $payload = [
+            'vendor_property_id' => 7101,
+            'vendor_user_id' => 91,
+            'name' => 'Atoll Explorer Liveaboard',
+            'status' => 'active',
+            'location' => 'Male',
+            'description' => 'Multi-day safari journey.',
+            'base_price' => 0,
+            'currency' => 'MVR',
+            'listing_moderation_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $detailsPayload = json_encode([
+            'pricing_matrix' => '{"Male→Ari":4200,"Male→Baa":5000}',
+        ], JSON_THROW_ON_ERROR);
+
+        if (in_array('listing_details', $columns, true)) {
+            $payload['listing_details'] = $detailsPayload;
+        }
+        if (in_array('details', $columns, true)) {
+            $payload['details'] = $detailsPayload;
+        }
+
+        $payload = array_intersect_key($payload, array_flip($columns));
+
+        DB::table($table)->insert($payload);
+
+        $response = $this->get('/catalog/liveaboard', ['CF-IPCountry' => 'MV']);
+
+        $response
+            ->assertOk()
+            ->assertSeeText('From MVR 4,200.00');
+    }
 }

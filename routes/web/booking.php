@@ -1240,6 +1240,22 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->limit(20)
             ->get();
 
+        if ($propertyMedia->isEmpty() && $canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
+            $canonicalPropertyMediaQuery = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', $bookingMediaTypes)
+                ->where('entity_id', $canonicalPropertyRowId);
+
+            if ($bookingVendorUserId > 0) {
+                $canonicalPropertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
+            }
+
+            $propertyMedia = $canonicalPropertyMediaQuery
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(20)
+                ->get();
+        }
+
         if ($propertyMedia->isEmpty() && !empty($bookingFallbackMediaTypes)) {
             $fallbackPropertyMediaQuery = DB::table('vendor_listing_media')
                 ->whereIn('entity_type', $bookingFallbackMediaTypes)

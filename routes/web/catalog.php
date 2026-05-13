@@ -867,6 +867,24 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         ->values();
 
                     $mediaItems = $strictMatches;
+                    if ($mediaItems->isEmpty() && $canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
+                        $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()))
+                            ->unique(static fn ($media) => (int) ($media->id ?? 0))
+                            ->filter(static function ($media) use ($strictMediaEntityTypes, $propertyVendorUserId): bool {
+                                if (!in_array((string) ($media->entity_type ?? ''), $strictMediaEntityTypes, true)) {
+                                    return false;
+                                }
+
+                                if ($propertyVendorUserId <= 0) {
+                                    return true;
+                                }
+
+                                $mediaVendorUserId = (int) ($media->vendor_user_id ?? 0);
+                                return $mediaVendorUserId <= 0 || $mediaVendorUserId === $propertyVendorUserId;
+                            })
+                            ->values();
+                    }
+
                     if ($mediaItems->isEmpty() && !empty($fallbackMediaEntityTypes)) {
                         $fallbackLookupIds = $preferredLookupIds->isNotEmpty()
                             ? $preferredLookupIds
@@ -1105,6 +1123,22 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->get();
+
+        $seaCanonicalId = (int) ($property->id ?? 0);
+        if ($mediaRows->isEmpty() && $seaCanonicalId > 0 && !in_array($seaCanonicalId, $mediaEntityIds, true)) {
+            $canonicalMediaQuery = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'])
+                ->where('entity_id', $seaCanonicalId);
+
+            if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
+                $canonicalMediaQuery->where('vendor_user_id', (int) ($property->vendor_user_id ?? 0));
+            }
+
+            $mediaRows = $canonicalMediaQuery
+                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->get();
+        }
 
         foreach ($mediaRows as $mediaRow) {
             $mediaId = (int) ($mediaRow->id ?? 0);
@@ -1584,6 +1618,20 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                 ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
                 ->orderBy('id')
                 ->get();
+
+            $genericCanonicalId = (int) ($property->id ?? 0);
+            if ($mediaRows->isEmpty() && $genericCanonicalId > 0 && !in_array($genericCanonicalId, $mediaEntityIds, true)) {
+                $canonicalMediaQuery = DB::table('vendor_listing_media')
+                    ->whereIn('entity_type', $mediaEntityTypes)
+                    ->where('entity_id', $genericCanonicalId);
+                if ($genericVendorUserId > 0) {
+                    $canonicalMediaQuery->where('vendor_user_id', $genericVendorUserId);
+                }
+                $mediaRows = $canonicalMediaQuery
+                    ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                    ->orderBy('id')
+                    ->get();
+            }
 
             foreach ($mediaRows as $mediaRow) {
                 $mediaId = (int) ($mediaRow->id ?? 0);

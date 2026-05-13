@@ -822,8 +822,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             ));
 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+            $includeCanonicalLookupId = in_array($dbCategoryKey, ['accommodation', 'liveaboard'], true);
             $catalogPropertyMediaByProperty = $catalogProperties
-                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes) {
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes, $includeCanonicalLookupId) {
                     $canonicalId = (int) ($property->id ?? 0);
                     $propertyVendorUserId = (int) ($property->vendor_user_id ?? 0);
                     $preferredLookupIds = collect([
@@ -839,7 +840,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         ->values();
 
                     $strictLookupIds = $preferredLookupIds;
-                    if ($canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
+                    if ($includeCanonicalLookupId && $canonicalId > 0 && !$strictLookupIds->contains($canonicalId)) {
                         $strictLookupIds = $strictLookupIds->push($canonicalId);
                     }
                     if ($strictLookupIds->isEmpty()) {
@@ -1083,10 +1084,6 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->source_property_id ?? 0),
             (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
-        $seaCanonicalId = (int) ($property->id ?? 0);
-        if ($seaCanonicalId > 0 && !in_array($seaCanonicalId, $mediaEntityIds, true)) {
-            $mediaEntityIds[] = $seaCanonicalId;
-        }
         if ($mediaEntityIds === []) {
             $mediaEntityIds = array_values(array_unique(array_filter([
                 (int) ($property->id ?? 0),

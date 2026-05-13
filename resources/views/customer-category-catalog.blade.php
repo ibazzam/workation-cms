@@ -3197,7 +3197,12 @@
                                     }
                                 } else {
                                     if ($fallbackImage === '') {
-                                        $fallbackImage = '/storage/' . ltrim(str_replace('public/', '', str_replace('storage/', '', str_replace('\\', '/', $fallbackPath))), '/');
+                                        $normalizedFallbackPath = ltrim(str_replace('\\', '/', $fallbackPath), '/');
+                                        $normalizedFallbackPath = preg_replace('#^(public/|storage/)#', '', $normalizedFallbackPath);
+                                        $normalizedFallbackPath = ltrim((string) $normalizedFallbackPath, '/');
+                                        $fallbackImage = $normalizedFallbackPath !== ''
+                                            ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $normalizedFallbackPath)))
+                                            : '';
                                     }
                                 }
                             }

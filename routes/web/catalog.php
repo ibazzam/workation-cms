@@ -1321,7 +1321,8 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
     $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
 
     // Resolve minimum price from pricing matrix
-    $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+    $pricingMatrixPrices = array_values(array_filter(array_map(static fn ($value) => is_numeric($value) ? (float) $value : 0.0, $pricingMatrix), static fn ($value) => $value > 0));
+    $minPrice = $pricingMatrixPrices !== [] ? min($pricingMatrixPrices) : workationDerivedListingBasePrice($property);
 
     // Gallery media
     $galleryMedia = [];
@@ -1586,7 +1587,8 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
         $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
 
         // Resolve minimum price from pricing matrix
-        $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+        $pricingMatrixPrices = array_values(array_filter(array_map(static fn ($value) => is_numeric($value) ? (float) $value : 0.0, $pricingMatrix), static fn ($value) => $value > 0));
+        $minPrice = $pricingMatrixPrices !== [] ? min($pricingMatrixPrices) : workationDerivedListingBasePrice($property);
 
         // Gallery media
         $galleryMedia = [];

@@ -366,6 +366,89 @@
             box-shadow: 0 0 0 2px rgba(29, 132, 140, 0.25);
         }
 
+        .nearby-grid {
+            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 320px));
+            justify-content: start;
+            gap: 10px;
+        }
+
+        .nearby-card {
+            border: 1px solid #d4e5ef;
+            border-radius: 12px;
+            background: #ffffff;
+            overflow: hidden;
+            text-decoration: none;
+            color: inherit;
+            display: grid;
+            grid-template-rows: 156px auto;
+            min-width: 0;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .nearby-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(16, 52, 75, 0.12);
+        }
+
+        .nearby-card-media {
+            width: 100%;
+            height: 156px;
+            object-fit: cover;
+            background: #eaf2f8;
+            display: block;
+        }
+
+        .nearby-card-body {
+            padding: 10px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .nearby-location {
+            font-size: 0.72rem;
+            color: #4a90a4;
+            font-weight: 600;
+        }
+
+        .nearby-name {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #18384e;
+            line-height: 1.2;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .nearby-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.74rem;
+            color: #5b7287;
+        }
+
+        .nearby-price {
+            color: #17344a;
+            font-weight: 700;
+        }
+
+        .nearby-empty {
+            color: #5f7488;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 767px) {
+            .nearby-grid { grid-template-columns: 1fr; }
+            .nearby-card { grid-template-rows: 176px auto; }
+            .nearby-card-media { height: 176px; }
+            .nearby-card-body { padding: 12px; }
+        }
+
         .amenities-board {
             margin-top: 10px;
             border: 1px solid #d7e6f0;
@@ -1499,15 +1582,26 @@
         @if ($similarProperties->isNotEmpty())
             <div class="nearby-grid">
                 @foreach ($similarProperties as $nearby)
-                    <a href="{{ $nearby['url'] ?? '#' }}" class="nearby-card" title="{{ $nearby['name'] ?? '' }}">
-                        <img src="{{ $nearby['thumbnail_url'] ?? '' }}" alt="{{ $nearby['name'] ?? 'Property' }}" class="nearby-card-media" loading="lazy">
+                    @php
+                        $nearbyCurrency = strtoupper(trim((string) ($nearby['currency'] ?? 'MVR')));
+                        $nearbyBasePrice = (float) ($nearby['base_price'] ?? 0);
+                        $nearbyPrice = number_format($nearbyBasePrice, 2);
+                        $nearbyPriceLabel = $nearbyBasePrice > 0
+                            ? ('From ' . $nearbyCurrency . ' ' . $nearbyPrice)
+                            : 'Price on request';
+                        $nearbyDistance = isset($nearby['distance_km']) ? (float) $nearby['distance_km'] : null;
+                        $nearbyThumb = trim((string) ($nearby['thumbnail_url'] ?? ''));
+                        $nearbyThumbFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22600%22 height=%22300%22 viewBox=%220 0 600 300%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d9e9f4%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c6ddec%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22600%22 height=%22300%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%233e6078%22 font-family=%22Arial%22 font-size=%2224%22%3ENearby%20Property%3C/text%3E%3C/svg%3E";
+                    @endphp
+                    <a href="{{ $nearby['url'] ?? '#' }}" class="nearby-card" title="{{ $nearby['name'] ?? '' }}" aria-label="Open {{ $nearby['name'] ?? 'Property' }}">
+                        <img src="{{ $nearbyThumb !== '' ? $nearbyThumb : $nearbyThumbFallback }}" alt="{{ $nearby['name'] ?? 'Property' }}" class="nearby-card-media" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $nearbyThumbFallback }}';}">
                         <div class="nearby-card-body">
-                            <div class="nearby-location">{{ $nearby['location_line'] ?? 'Maldives' }}</div>
+                            <span class="nearby-location">{{ $nearby['location_line'] ?? 'Maldives' }}</span>
                             <h3 class="nearby-name">{{ $nearby['name'] ?? 'Journey' }}</h3>
                             <div class="nearby-meta">
-                                <span class="nearby-price">{{ $nearby['currency'] ?? 'MVR' }} {{ number_format((float) ($nearby['base_price'] ?? 0), 0) }}</span>
-                                @if ($nearby['distance_km'] !== null)
-                                    <span>{{ round($nearby['distance_km'], 1) }} km away</span>
+                                <span class="nearby-price">{{ $nearbyPriceLabel }}</span>
+                                @if ($nearbyDistance !== null)
+                                    <span>{{ number_format($nearbyDistance, 1) }} km away</span>
                                 @endif
                             </div>
                         </div>

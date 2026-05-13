@@ -2316,21 +2316,6 @@ SVG;
     }
 
     if ($resolvedBinary === null) {
-        $directUrl = vendorMediaStorageUrlFromPath($originalPath);
-        if (is_string($directUrl) && trim($directUrl) !== '') {
-            $directUrl = trim($directUrl);
-
-            // Keep legacy absolute URLs working.
-            if (!str_starts_with($directUrl, '/media/')) {
-                return redirect()->away($directUrl, 302);
-            }
-
-            // Route local/public storage through the app proxy instead of returning 404.
-            if (!str_starts_with($directUrl, '/media/vendor/')) {
-                return redirect($directUrl, 302);
-            }
-        }
-
         return $placeholderResponse();
     }
 

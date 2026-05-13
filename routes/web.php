@@ -549,6 +549,48 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             return 0.0;
         };
 
+        $candidates = [];
+        if ($existingBasePrice > 0) {
+            $candidates[] = $existingBasePrice;
+        }
+
+        $collectStructuredPriceCandidates = static function ($value, int $depth = 0) use (&$collectStructuredPriceCandidates, &$candidates, $normalizePrice): void {
+            if ($depth > 5) {
+                return;
+            }
+
+            if (is_object($value)) {
+                $value = (array) $value;
+            }
+
+            if (!is_array($value)) {
+                $normalized = $normalizePrice($value);
+                if ($normalized > 0) {
+                    $candidates[] = $normalized;
+                }
+
+                return;
+            }
+
+            foreach ($value as $nestedValue) {
+                if (is_array($nestedValue) || is_object($nestedValue)) {
+                    $collectStructuredPriceCandidates($nestedValue, $depth + 1);
+                    continue;
+                }
+
+                $normalized = $normalizePrice($nestedValue);
+                if ($normalized > 0) {
+                    $candidates[] = $normalized;
+                }
+            }
+        };
+
+        foreach (['pricing_matrix', 'pricing_by_segment'] as $pricingKey) {
+            if (isset($details[$pricingKey])) {
+                $collectStructuredPriceCandidates($details[$pricingKey]);
+            }
+        }
+
         $candidateKeys = [
             'base_price',
             'starting_price',
@@ -591,11 +633,6 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             'meal_plan_full_board_price',
             'meal_plan_all_inclusive_price',
         ];
-
-        $candidates = [];
-        if ($existingBasePrice > 0) {
-            $candidates[] = $existingBasePrice;
-        }
 
         if (!is_array($details) || $details === []) {
             return $candidates === [] ? 0.0 : (float) min($candidates);

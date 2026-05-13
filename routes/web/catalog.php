@@ -1146,22 +1146,6 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             }
         }
 
-        $seaCanonicalId = (int) ($property->id ?? 0);
-        if ($mediaRows->isEmpty() && $seaCanonicalId > 0 && !in_array($seaCanonicalId, $mediaEntityIds, true)) {
-            $canonicalMediaQuery = DB::table('vendor_listing_media')
-                ->whereIn('entity_type', ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'])
-                ->where('entity_id', $seaCanonicalId);
-
-            if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id')) {
-                $canonicalMediaQuery->where('vendor_user_id', (int) ($property->vendor_user_id ?? 0));
-            }
-
-            $mediaRows = $canonicalMediaQuery
-                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
-                ->orderBy('id')
-                ->get();
-        }
-
         foreach ($mediaRows as $mediaRow) {
             $mediaId = (int) ($mediaRow->id ?? 0);
             $candidateStoredValues = [];
@@ -1337,7 +1321,8 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
     $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
 
     // Resolve minimum price from pricing matrix
-    $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+    $pricingMatrixPrices = array_values(array_filter(array_map(static fn ($value) => is_numeric($value) ? (float) $value : 0.0, $pricingMatrix), static fn ($value) => $value > 0));
+    $minPrice = $pricingMatrixPrices !== [] ? min($pricingMatrixPrices) : workationDerivedListingBasePrice($property);
 
     // Gallery media
     $galleryMedia = [];
@@ -1602,7 +1587,8 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
         $pricingMatrix = is_array($listingDetails['pricing_matrix'] ?? null) ? $listingDetails['pricing_matrix'] : [];
 
         // Resolve minimum price from pricing matrix
-        $minPrice = count($pricingMatrix) > 0 ? min(array_values($pricingMatrix)) : 0;
+        $pricingMatrixPrices = array_values(array_filter(array_map(static fn ($value) => is_numeric($value) ? (float) $value : 0.0, $pricingMatrix), static fn ($value) => $value > 0));
+        $minPrice = $pricingMatrixPrices !== [] ? min($pricingMatrixPrices) : workationDerivedListingBasePrice($property);
 
         // Gallery media
         $galleryMedia = [];
@@ -1658,20 +1644,6 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                         ->orderBy('id')
                         ->get();
                 }
-            }
-
-            $genericCanonicalId = (int) ($property->id ?? 0);
-            if ($mediaRows->isEmpty() && $genericCanonicalId > 0 && !in_array($genericCanonicalId, $mediaEntityIds, true)) {
-                $canonicalMediaQuery = DB::table('vendor_listing_media')
-                    ->whereIn('entity_type', $mediaEntityTypes)
-                    ->where('entity_id', $genericCanonicalId);
-                if ($genericVendorUserId > 0) {
-                    $canonicalMediaQuery->where('vendor_user_id', $genericVendorUserId);
-                }
-                $mediaRows = $canonicalMediaQuery
-                    ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
-                    ->orderBy('id')
-                    ->get();
             }
 
             foreach ($mediaRows as $mediaRow) {

@@ -1136,8 +1136,13 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
                 if ($resolved === null || trim((string) $resolved) === '') {
                     if (str_starts_with($rawPath, 'http://')) {
                         $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
-                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/')) {
                         $resolved = $rawPath;
+                    } elseif (str_starts_with($rawPath, '/storage/')) {
+                        $storagePath = ltrim(substr($rawPath, strlen('/storage/')), '/');
+                        $resolved = $storagePath !== ''
+                            ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $storagePath)))
+                            : null;
                     } elseif (str_starts_with($rawPath, '__public__/')) {
                         $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
                         $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
@@ -1328,8 +1333,13 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
                 if ($resolved === null || trim((string) $resolved) === '') {
                     if (str_starts_with($rawPath, 'http://')) {
                         $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
-                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                    } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/')) {
                         $resolved = $rawPath;
+                    } elseif (str_starts_with($rawPath, '/storage/')) {
+                        $storagePath = ltrim(substr($rawPath, strlen('/storage/')), '/');
+                        $resolved = $storagePath !== ''
+                            ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $storagePath)))
+                            : null;
                     } elseif (str_starts_with($rawPath, '__public__/')) {
                         $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
                         $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));
@@ -1604,8 +1614,13 @@ foreach (['land-transport' => 'land_transport', 'vehicle-rental' => 'vehicle_ren
                     if ($resolved === null || trim((string) $resolved) === '') {
                         if (str_starts_with($rawPath, 'http://')) {
                             $resolved = 'https://' . ltrim(substr($rawPath, 7), '/');
-                        } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/') || str_starts_with($rawPath, '/storage/')) {
+                        } elseif (str_starts_with($rawPath, 'https://') || str_starts_with($rawPath, '/media/')) {
                             $resolved = $rawPath;
+                        } elseif (str_starts_with($rawPath, '/storage/')) {
+                            $storagePath = ltrim(substr($rawPath, strlen('/storage/')), '/');
+                            $resolved = $storagePath !== ''
+                                ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $storagePath)))
+                                : null;
                         } elseif (str_starts_with($rawPath, '__public__/')) {
                             $localPath = ltrim(substr($rawPath, strlen('__public__/')), '/');
                             $encodedPath = implode('/', array_map('rawurlencode', explode('/', $localPath)));

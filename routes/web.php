@@ -1986,12 +1986,17 @@ if (!function_exists('vendorMediaStorageUrlFromPath')) {
             return null;
         }
 
-        // Preserve already-resolved app media URLs and storage URLs as-is.
+        // Preserve already-resolved app media URLs as-is.
         if (str_starts_with($normalized, '/media/')) {
             return $normalized;
         }
         if (str_starts_with($normalized, '/storage/')) {
-            return $normalized;
+            $storagePath = ltrim(substr($normalized, strlen('/storage/')), '/');
+            if ($storagePath === '') {
+                return null;
+            }
+
+            return '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $storagePath)));
         }
 
         if (str_starts_with($normalized, 'http://')) {
@@ -2018,7 +2023,11 @@ if (!function_exists('vendorMediaStorageUrlFromPath')) {
 
         $normalized = ltrim($normalized, '/');
 
-        return $normalized !== '' ? ('/storage/' . $normalized) : null;
+        if ($normalized === '') {
+            return null;
+        }
+
+        return '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $normalized)));
     }
 }
 

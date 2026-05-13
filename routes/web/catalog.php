@@ -824,7 +824,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
             $includeCanonicalLookupId = in_array($dbCategoryKey, ['accommodation', 'liveaboard'], true);
             $catalogPropertyMediaByProperty = $catalogProperties
-                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes, $includeCanonicalLookupId, $dbCategoryKey) {
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes, $includeCanonicalLookupId) {
                     $canonicalId = (int) ($property->id ?? 0);
                     $propertyVendorUserId = (int) ($property->vendor_user_id ?? 0);
                     $preferredLookupIds = collect([
@@ -852,40 +852,9 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     $strictMatches = $strictLookupIds
                         ->flatMap(static fn (int $lookupId) => collect($mediaByEntityId->get($lookupId, collect())))
                         ->unique(static fn ($media) => (int) ($media->id ?? 0))
-                        ->filter(static function ($media) use ($strictMediaEntityTypes, $propertyVendorUserId, $dbCategoryKey): bool {
+                        ->filter(static function ($media) use ($strictMediaEntityTypes, $propertyVendorUserId): bool {
                             if (!in_array((string) ($media->entity_type ?? ''), $strictMediaEntityTypes, true)) {
                                 return false;
-                            }
-
-                            // Prevent non-accommodation media from showing accommodation entity_type='property'
-                            // when the property came from an accommodation import ID. Only allow 'property'
-                            // type for non-accommodation if it's explicitly tagged (not just a fallback).
-                            if ($dbCategoryKey !== 'accommodation' && (string) ($media->entity_type ?? '') === 'property') {
-                                // For non-accommodation categories, only accept 'property' entity_type
-                                // if the media is explicitly for this category (not a generic fallback).
-                                // This prevents accommodation media (which also uses entity_type='property')
-                                // from bleeding into other galleries.
-                                $categorySpecificTypes = [
-                                    'liveaboard' => ['liveaboard'],
-                                    'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
-                                    'land_transport' => ['land_transport', 'land-transport', 'transport'],
-                                    'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
-                                    'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
-                                    'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
-                                    'water_sports' => ['water_sports', 'water-sports', 'activity'],
-                                    'excursion' => ['excursion', 'activity'],
-                                    'restaurant' => ['restaurant'],
-                                    'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
-                                ];
-                                $categoryTypes = $categorySpecificTypes[$dbCategoryKey] ?? [];
-                                // Only allow 'property' if the media has a category-specific type OR if it matches vendor/entity_id exactly
-                                $hasCategorySpecificType = !empty(array_intersect(
-                                    [$media->entity_type ?? ''],
-                                    $categoryTypes
-                                ));
-                                if (!$hasCategorySpecificType) {
-                                    return false;
-                                }
                             }
 
                             if ($propertyVendorUserId <= 0) {

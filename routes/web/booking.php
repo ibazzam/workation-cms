@@ -1188,21 +1188,11 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->unique()
             ->values();
 
-        $strictPropertyMediaEntityIds = $preferredPropertyMediaEntityIds;
         $canonicalPropertyRowId = (int) ($propertyRow->id ?? 0);
-        $includeCanonicalPropertyMediaId = in_array($dbCategoryKey, ['accommodation', 'liveaboard'], true);
-        if ($includeCanonicalPropertyMediaId && $canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
-            $strictPropertyMediaEntityIds = $strictPropertyMediaEntityIds->push($canonicalPropertyRowId);
-        }
-        if ($strictPropertyMediaEntityIds->isEmpty()) {
-            $strictPropertyMediaEntityIds = collect([$canonicalPropertyRowId])
-                ->filter(static fn (int $id): bool => $id > 0)
-                ->values();
-        }
 
         $fallbackPropertyMediaEntityIds = $preferredPropertyMediaEntityIds->isNotEmpty()
             ? $preferredPropertyMediaEntityIds
-            : $strictPropertyMediaEntityIds;
+            : collect([$canonicalPropertyRowId])->filter(static fn (int $id): bool => $id > 0)->values();
 
         $bookingMediaTypeMap = [
             'accommodation' => ['property'],
@@ -1226,21 +1216,9 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         $bookingFallbackMediaTypes = $bookingMediaFallbackTypeMap[$dbCategoryKey] ?? [];
         $bookingVendorUserId = (int) ($propertyRow->vendor_user_id ?? 0);
 
-        $propertyMediaQuery = DB::table('vendor_listing_media')
-            ->whereIn('entity_type', $bookingMediaTypes)
-            ->whereIn('entity_id', $strictPropertyMediaEntityIds->isNotEmpty() ? $strictPropertyMediaEntityIds->all() : [(int) ($propertyRow->id ?? 0)]);
-
-        if ($bookingVendorUserId > 0) {
-            $propertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
-        }
-
-        $propertyMedia = $propertyMediaQuery
-            ->orderByDesc('is_primary')
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
-
-        if ($propertyMedia->isEmpty() && $canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
+        // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
+        // takes priority over shared legacy IDs that may be reused across multiple listings.
+        if ($canonicalPropertyRowId > 0) {
             $canonicalPropertyMediaQuery = DB::table('vendor_listing_media')
                 ->whereIn('entity_type', $bookingMediaTypes)
                 ->where('entity_id', $canonicalPropertyRowId);
@@ -1254,6 +1232,29 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
                 ->orderByDesc('created_at')
                 ->limit(20)
                 ->get();
+        }
+
+        // Fall back to legacy IDs only if canonical returned nothing.
+        if ($propertyMedia->isEmpty() && $preferredPropertyMediaEntityIds->isNotEmpty()) {
+            $legacyOnlyPropertyIds = $preferredPropertyMediaEntityIds
+                ->reject(static fn (int $id): bool => $id === $canonicalPropertyRowId)
+                ->values();
+
+            if ($legacyOnlyPropertyIds->isNotEmpty()) {
+                $legacyPropertyMediaQuery = DB::table('vendor_listing_media')
+                    ->whereIn('entity_type', $bookingMediaTypes)
+                    ->whereIn('entity_id', $legacyOnlyPropertyIds->all());
+
+                if ($bookingVendorUserId > 0) {
+                    $legacyPropertyMediaQuery->where('vendor_user_id', $bookingVendorUserId);
+                }
+
+                $propertyMedia = $legacyPropertyMediaQuery
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('created_at')
+                    ->limit(20)
+                    ->get();
+            }
         }
 
         if ($propertyMedia->isEmpty() && !empty($bookingFallbackMediaTypes)) {

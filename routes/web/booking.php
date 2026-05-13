@@ -1240,6 +1240,30 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
             ->limit(20)
             ->get();
 
+        // Filter out accommodation media for non-accommodation categories to prevent bleed
+        if ($dbCategoryKey !== 'accommodation') {
+            $categorySpecificTypes = [
+                'liveaboard' => ['liveaboard'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+                'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+                'water_sports' => ['water_sports', 'water-sports', 'activity'],
+                'excursion' => ['excursion', 'activity'],
+                'restaurant' => ['restaurant'],
+                'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+            ];
+            $categoryTypes = $categorySpecificTypes[$dbCategoryKey] ?? [];
+            $propertyMedia = $propertyMedia->filter(static function ($media) use ($categoryTypes) {
+                // Only exclude 'property' entity_type if it doesn't have a category-specific type
+                if ((string) ($media->entity_type ?? '') === 'property') {
+                    return false;  // Exclude generic 'property' type for non-accommodation
+                }
+                return true;
+            });
+        }
+
         if ($propertyMedia->isEmpty() && !empty($bookingFallbackMediaTypes)) {
             $fallbackPropertyMediaQuery = DB::table('vendor_listing_media')
                 ->whereIn('entity_type', $bookingFallbackMediaTypes)
@@ -1254,6 +1278,30 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
                 ->orderByDesc('created_at')
                 ->limit(20)
                 ->get();
+
+            // Filter out accommodation media for non-accommodation categories to prevent bleed
+            if ($dbCategoryKey !== 'accommodation') {
+                $categorySpecificTypes = [
+                    'liveaboard' => ['liveaboard'],
+                    'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                    'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                    'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+                    'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                    'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+                    'water_sports' => ['water_sports', 'water-sports', 'activity'],
+                    'excursion' => ['excursion', 'activity'],
+                    'restaurant' => ['restaurant'],
+                    'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+                ];
+                $categoryTypes = $categorySpecificTypes[$dbCategoryKey] ?? [];
+                $propertyMedia = $propertyMedia->filter(static function ($media) use ($categoryTypes) {
+                    // Only exclude 'property' entity_type if it doesn't have a category-specific type
+                    if ((string) ($media->entity_type ?? '') === 'property') {
+                        return false;  // Exclude generic 'property' type for non-accommodation
+                    }
+                    return true;
+                });
+            }
         }
     }
 

@@ -1190,7 +1190,8 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
         $strictPropertyMediaEntityIds = $preferredPropertyMediaEntityIds;
         $canonicalPropertyRowId = (int) ($propertyRow->id ?? 0);
-        if ($canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
+        $includeCanonicalPropertyMediaId = in_array($dbCategoryKey, ['accommodation', 'liveaboard'], true);
+        if ($includeCanonicalPropertyMediaId && $canonicalPropertyRowId > 0 && !$strictPropertyMediaEntityIds->contains($canonicalPropertyRowId)) {
             $strictPropertyMediaEntityIds = $strictPropertyMediaEntityIds->push($canonicalPropertyRowId);
         }
         if ($strictPropertyMediaEntityIds->isEmpty()) {

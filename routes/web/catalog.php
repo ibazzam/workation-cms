@@ -1284,10 +1284,10 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
         foreach ($mediaRows as $mediaRow) {
             $mediaId = (int) ($mediaRow->id ?? 0);
             $candidateStoredValues = [];
-            // Use /media/vendor/{id}/{variant} route format directly
+            // Prefer thumb first because some listings only have thumb generated.
             if ($mediaId > 0) {
-                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
                 $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
+                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
             }
             $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
 

@@ -2093,7 +2093,7 @@
         $homeTrendingCards = $homeTrendingCards ?? collect();
         $homeWeekendDealCards = $homeWeekendDealCards ?? collect();
         $homeLovedCards = $homeLovedCards ?? collect();
-        $cardSvgFallback = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
+        $cardSvgFallback = '/images/placeholders/listing-fallback.svg';
         $homeBranding = function_exists('workationLogoAndTaglineProfile') ? workationLogoAndTaglineProfile() : [];
         $homeBrandLogo = trim((string) ($homeBranding['logo_url'] ?? ''));
         $homeBrandName = trim((string) ($homeBranding['brand_name'] ?? 'Workation'));

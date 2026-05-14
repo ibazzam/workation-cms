@@ -642,6 +642,9 @@
         $gallery = collect([$imageUrl]);
     }
 
+    $heroPrimaryImage = (string) ($gallery->first() ?: $imageUrl);
+    $heroFallbackImage = (string) ($gallery->first(static fn ($img) => (string) $img !== $heroPrimaryImage) ?: $imageUrl);
+
     $amenitiesRaw = [];
     foreach (['amenities', 'features', 'services', 'highlights', 'safety_equipment'] as $key) {
         $val = $listingDetails[$key] ?? null;
@@ -731,7 +734,7 @@
                 <h2 class="block-title">Service Gallery</h2>
                 <div class="gallery-shell" data-gallery>
                     <div class="gallery-banner-wrap">
-                        <img id="galleryHero" class="gallery-hero" src="{{ $gallery->first() ?: $imageUrl }}" alt="Sea transport image" loading="lazy" onerror="if(!this.src.startsWith('data:')){this.onerror=null;this.src='{{ $imageUrl }}';}">
+                        <img id="galleryHero" class="gallery-hero" src="{{ $heroPrimaryImage }}" alt="Sea transport image" loading="lazy" onerror="if(!this.dataset.fb && '{{ $heroFallbackImage }}' !== '' && this.src !== '{{ $heroFallbackImage }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $heroFallbackImage }}';}else{this.onerror=null;this.src='{{ $imageUrl }}';}">
                     </div>
                     <div class="gallery-thumbs" role="list">
                         @foreach ($gallery->take(8) as $index => $image)

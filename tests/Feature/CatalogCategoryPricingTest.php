@@ -121,6 +121,8 @@ class CatalogCategoryPricingTest extends TestCase
         ];
 
         $detailsPayload = json_encode([
+            'journey_duration_days' => 20,
+            'cabin_count' => 12,
             'pricing_matrix' => '{"Male→Ari":4200,"Male→Baa":5000}',
         ], JSON_THROW_ON_ERROR);
 

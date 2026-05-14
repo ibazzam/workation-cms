@@ -1109,9 +1109,37 @@
     }
     $amenities = collect($amenitiesRaw)->map(static fn ($item) => trim((string) $item))->filter()->unique()->values();
 
-    // Pricing
-    $minPrice = (float) ($minPrice ?? 0);
-    $displayPrice = $minPrice > 0 ? number_format($minPrice, 0) : 'POA';
+    // Pricing: prefer lowest cabin rate (same source used by cabin table), then fallback to route-level minPrice.
+    $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
+    $heroCurrency = $visitorIsLocal ? 'MVR' : 'USD';
+
+    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
+        if ($visitorIsLocal) {
+            return $localMvr > 0 ? $localMvr : $fallback;
+        }
+
+        return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
+    };
+
+    $minRoomRate = collect($rooms ?? [])->flatMap(static function ($room) use ($resolveVisitorRate) {
+        $fallback = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
+
+        $rates = [
+            $resolveVisitorRate((float) ($room->meal_plan_room_only_price_usd ?? 0), (float) ($room->meal_plan_room_only_price_local ?? 0), $fallback),
+            $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0),
+            $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0),
+            $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0),
+            $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0),
+        ];
+
+        return collect($rates)->filter(static fn (float $value): bool => $value > 0);
+    })->min();
+
+    $resolvedHeroMinPrice = (is_numeric($minRoomRate) && (float) $minRoomRate > 0)
+        ? (float) $minRoomRate
+        : (float) ($minPrice ?? 0);
+
+    $displayPrice = $resolvedHeroMinPrice > 0 ? number_format($resolvedHeroMinPrice, 2) : 'POA';
 
     // Gallery
     $galleryFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22420%22 viewBox=%220 0 900 420%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22420%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2228%22%3ELiveaboard%20Image%3C%2Ftext%3E%3C%2Fsvg%3E";
@@ -1210,7 +1238,7 @@
 
         <aside class="property-summary-price" aria-label="Journey pricing">
             <span class="k">Starting from</span>
-            <span class="v">MVR {{ $displayPrice }}</span>
+            <span class="v">{{ $heroCurrency }} {{ $displayPrice }}</span>
             <span class="sub">per person</span>
             <a class="cta" href="#cabins-section"><i class="fa-solid fa-calendar-check"></i> Book Journey</a>
         </aside>

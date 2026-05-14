@@ -659,8 +659,8 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             }
         }
 
-        // Fallback: recursively scan all nested numeric fields that look like price
-        $collectLowestPrice($details, $vendorId, $propertyId, $roomId);
+        // Do not scan the full payload blindly; that can pick non-price fields like
+        // journey_duration_days, counts, or coordinates and create incorrect low prices.
 
         if ($candidates === []) {
             return 0.0;

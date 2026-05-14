@@ -3209,7 +3209,7 @@
                             if (str_starts_with($fallbackImage, 'http://')) {
                                 $fallbackImage = 'https://' . ltrim(substr($fallbackImage, 7), '/');
                             }
-                            $svgFallback = "data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22900%22 height=%22520%22 viewBox=%220 0 900 520%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%221%22 y2=%221%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23d7ebf8%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7deef%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22900%22 height=%22520%22 fill=%22url(%23g)%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 fill=%22%23406582%22 font-family=%22Arial%22 font-size=%2234%22%3ENo%20image%3C%2Ftext%3E%3C%2Fsvg%3E";
+                            $svgFallback = '/images/placeholders/listing-fallback.svg';
                             $price = (float) ($property->base_price ?? 0);
                             $cityName = trim((string) ($property->city ?? $property->island ?? $property->atoll ?? ''));
                             $isExcursionCard = $categoryKey === 'excursion';

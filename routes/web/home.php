@@ -788,10 +788,21 @@ Route::get('/', function (Request $request) {
         }
 
         if (Schema::hasTable('vendor_listing_media') && $propertyLookupIds->isNotEmpty()) {
-            $homeMediaCacheKey = 'home:property-media:v1:' . sha1(implode(',', $propertyLookupIds->all()));
-            $mediaRows = Cache::remember($homeMediaCacheKey, now()->addMinutes(10), static function () use ($propertyLookupIds) {
+            $homeMediaEntityTypes = [
+                'property', 'service',
+                'liveaboard',
+                'sea_transport', 'sea-transport', 'marine_transport', 'transport',
+                'land_transport', 'land-transport',
+                'vehicle_rental', 'vehicle-rental', 'vehicle',
+                'conference_room', 'conference-room', 'meeting_room', 'meeting-room',
+                'remote_workspace', 'remote-workspace', 'workspace',
+                'excursion', 'activity', 'water_sports', 'water-sports',
+                'restaurant', 'resort_day_visit', 'resort-day-visit',
+            ];
+            $homeMediaCacheKey = 'home:property-media:v2:' . sha1(implode(',', $homeMediaEntityTypes) . '|' . implode(',', $propertyLookupIds->all()));
+            $mediaRows = Cache::remember($homeMediaCacheKey, now()->addMinutes(10), static function () use ($propertyLookupIds, $homeMediaEntityTypes) {
                 return DB::table('vendor_listing_media')
-                    ->where('entity_type', 'property')
+                    ->whereIn('entity_type', $homeMediaEntityTypes)
                     ->whereIn('entity_id', $propertyLookupIds->all())
                     ->orderByDesc('is_primary')
                     ->orderByDesc('created_at')
@@ -804,11 +815,43 @@ Route::get('/', function (Request $request) {
                 ->mapWithKeys(static function ($property) use ($mediaByEntityId) {
                     $canonicalId = (int) ($property->id ?? 0);
                     $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
+                    $vendorUserId = (int) ($property->vendor_user_id ?? 0);
+                    $category = strtolower(trim(str_replace('-', '_', (string) ($property->listing_category ?? ''))));
+
+                    $allowedTypes = match ($category) {
+                        'accommodation' => ['property'],
+                        'liveaboard' => ['liveaboard'],
+                        'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                        'land_transport' => ['land_transport', 'land-transport', 'transport'],
+                        'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
+                        'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
+                        'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
+                        'excursion' => ['excursion', 'activity'],
+                        'water_sports' => ['water_sports', 'water-sports', 'activity'],
+                        'restaurant' => ['restaurant'],
+                        'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+                        default => ['property', 'service'],
+                    };
 
                     $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
                     if ($mediaItems->isEmpty() && $dedicatedId > 0) {
                         $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
                     }
+
+                    $mediaItems = $mediaItems
+                        ->filter(static function ($media) use ($allowedTypes, $vendorUserId): bool {
+                            if (!in_array((string) ($media->entity_type ?? ''), $allowedTypes, true)) {
+                                return false;
+                            }
+
+                            if ($vendorUserId <= 0) {
+                                return true;
+                            }
+
+                            $mediaVendorUserId = (int) ($media->vendor_user_id ?? 0);
+                            return $mediaVendorUserId <= 0 || $mediaVendorUserId === $vendorUserId;
+                        })
+                        ->values();
 
                     return [$canonicalId => $mediaItems];
                 })

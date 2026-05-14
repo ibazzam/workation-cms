@@ -906,7 +906,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $mediaEntityTypeMap = [
                 'accommodation' => ['property'],
                 'liveaboard' => ['liveaboard', 'property', 'service'],
-                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
                 'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
                 'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
                 'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
@@ -1239,7 +1239,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
         ], static fn (int $id): bool => $id > 0)));
         $seaCanonicalId = (int) ($property->id ?? 0);
         $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
-        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'];
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
 
         // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
         // takes priority over shared legacy IDs that may be reused across multiple listings.

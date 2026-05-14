@@ -530,22 +530,18 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             if (is_numeric($value)) {
                 return (float) $value;
             }
-
             if (is_string($value)) {
                 $normalized = trim($value);
                 if ($normalized === '') {
                     return 0.0;
                 }
-
                 $normalized = str_replace(',', '', $normalized);
                 $normalized = preg_replace('/[^0-9.\-]+/', '', $normalized) ?? '';
                 if ($normalized === '' || !is_numeric($normalized)) {
                     return 0.0;
                 }
-
                 return (float) $normalized;
             }
-
             return 0.0;
         };
 
@@ -554,249 +550,80 @@ if (!function_exists('workationDerivedListingBasePrice')) {
             $candidates[] = $existingBasePrice;
         }
 
-        $collectStructuredPriceCandidates = static function ($value, int $depth = 0) use (&$collectStructuredPriceCandidates, &$candidates, $normalizePrice): void {
-            if ($depth > 5) {
-                return;
-            }
-
-            if (is_object($value)) {
-                $value = (array) $value;
-            }
-
-            if (is_string($value)) {
-                $trimmed = trim($value);
-                if ($trimmed === '') {
-                    return;
-                }
-
-                $decoded = json_decode($trimmed, true);
-                if (is_array($decoded)) {
-                    $collectStructuredPriceCandidates($decoded, $depth + 1);
-                    return;
-                }
-
-                if (preg_match_all('/(?:^|\R)\s*[^:=\R]+[:=]\s*([0-9]+(?:[.,][0-9]+)?)/u', $trimmed, $matches) === 1) {
-                    foreach (($matches[1] ?? []) as $matchedAmount) {
-                        $normalized = $normalizePrice($matchedAmount);
-                        if ($normalized > 0) {
-                            $candidates[] = $normalized;
-                        }
+        // Helper to recursively scan for lowest price by vendor/room/property ID
+        $collectLowestPrice = static function ($value, $vendorId = null, $propertyId = null, $roomId = null, $depth = 0) use (&$collectLowestPrice, &$candidates, $normalizePrice) {
+            if ($depth > 6) return;
+            if (is_object($value)) $value = (array)$value;
+            if (is_array($value)) {
+                foreach ($value as $k => $v) {
+                    // If key matches vendor/property/room ID, scan inside
+                    if ($vendorId !== null && (string)$k === (string)$vendorId) {
+                        $collectLowestPrice($v, $vendorId, $propertyId, $roomId, $depth + 1);
+                        continue;
                     }
-                    return;
+                    if ($propertyId !== null && (string)$k === (string)$propertyId) {
+                        $collectLowestPrice($v, $vendorId, $propertyId, $roomId, $depth + 1);
+                        continue;
+                    }
+                    if ($roomId !== null && (string)$k === (string)$roomId) {
+                        $collectLowestPrice($v, $vendorId, $propertyId, $roomId, $depth + 1);
+                        continue;
+                    }
+                    // Otherwise, scan recursively
+                    $collectLowestPrice($v, $vendorId, $propertyId, $roomId, $depth + 1);
                 }
-
-                if (str_contains($trimmed, '{') || str_contains($trimmed, '[') || str_contains($trimmed, ':') || str_contains($trimmed, '=')) {
-                    return;
-                }
-            }
-
-            if (!is_array($value)) {
+            } else {
                 $normalized = $normalizePrice($value);
                 if ($normalized > 0) {
                     $candidates[] = $normalized;
                 }
-
-                return;
-            }
-
-            foreach ($value as $nestedValue) {
-                if (is_array($nestedValue) || is_object($nestedValue)) {
-                    $collectStructuredPriceCandidates($nestedValue, $depth + 1);
-                    continue;
-                }
-
-                $normalized = $normalizePrice($nestedValue);
-                if ($normalized > 0) {
-                    $candidates[] = $normalized;
-                }
             }
         };
 
+        $vendorId = isset($property->vendor_user_id) ? $property->vendor_user_id : null;
+        $propertyId = isset($property->vendor_property_id) ? $property->vendor_property_id : null;
+        $roomId = isset($property->room_id) ? $property->room_id : null;
+
         foreach (['pricing_matrix', 'pricing_by_segment'] as $pricingKey) {
             if (isset($details[$pricingKey])) {
-                $collectStructuredPriceCandidates($details[$pricingKey]);
+                $collectLowestPrice($details[$pricingKey], $vendorId, $propertyId, $roomId);
             }
         }
 
         $candidateKeys = [
-            'base_price',
-            'starting_price',
-            'from_price',
-            'starting_from_price',
-            'price_per_night',
-            'base_price_per_night',
-            'price_per_day',
-            'daily_rate',
-            'hourly_rate',
-            'adult_price',
-            'price_per_adult',
-            'child_price',
-            'price_per_child',
-            'infant_price',
-            'price_per_infant',
-            'per_person_rate',
-            'per_pax_rate',
-            'per_trip_rate',
-            'starting_hourly_rate',
-            'starting_daily_rate',
-            'adult_rate',
-            'child_rate',
-            'adult_charge',
-            'child_charge',
-            'trip_rate',
-            'trip_price',
-            'hourly_price',
-            'daily_price',
-            'base_charge',
-            'booking_fee',
-            'service_fee',
-            'platform_fee',
-            'price',
-            'rate',
-            'cost',
-            'meal_plan_room_only_price',
-            'meal_plan_breakfast_price',
-            'meal_plan_half_board_price',
-            'meal_plan_full_board_price',
+            'base_price', 'starting_price', 'from_price', 'starting_from_price', 'price_per_night', 'base_price_per_night',
+            'price_per_day', 'daily_rate', 'hourly_rate', 'adult_price', 'price_per_adult', 'child_price', 'price_per_child',
+            'infant_price', 'price_per_infant', 'per_person_rate', 'per_pax_rate', 'per_trip_rate', 'starting_hourly_rate',
+            'starting_daily_rate', 'adult_rate', 'child_rate', 'adult_charge', 'child_charge', 'trip_rate', 'trip_price',
+            'hourly_price', 'daily_price', 'base_charge', 'booking_fee', 'service_fee', 'platform_fee', 'price', 'rate', 'cost',
+            'meal_plan_room_only_price', 'meal_plan_breakfast_price', 'meal_plan_half_board_price', 'meal_plan_full_board_price',
             'meal_plan_all_inclusive_price',
         ];
 
-        if (!is_array($details) || $details === []) {
-            return $candidates === [] ? 0.0 : (float) min($candidates);
-        }
-
-        foreach ($candidateKeys as $key) {
-            $normalized = $normalizePrice($details[$key] ?? null);
-            if ($normalized > 0) {
-                $candidates[] = $normalized;
-            }
-        }
-
-        foreach (['pricing', 'pricing_config', 'price_config'] as $nestedKey) {
-            if (!is_array($details[$nestedKey] ?? null)) {
-                continue;
-            }
-
+        if (is_array($details)) {
             foreach ($candidateKeys as $key) {
-                $normalized = $normalizePrice($details[$nestedKey][$key] ?? null);
+                $normalized = $normalizePrice($details[$key] ?? null);
                 if ($normalized > 0) {
                     $candidates[] = $normalized;
                 }
             }
-        }
-
-        // Fallback: recursively scan nested payloads for numeric fields that are likely pricing.
-        // Guard against common non-price numeric keys like total_beds, max_guests, ratings, counts, etc.
-        $collectNestedPriceCandidates = static function ($value, int $depth = 0) use (&$collectNestedPriceCandidates, &$candidates, $normalizePrice): void {
-            if ($depth > 5) {
-                return;
-            }
-
-            if (is_array($value)) {
-                foreach ($value as $nestedKey => $nestedValue) {
-                    if (is_array($nestedValue) || is_object($nestedValue)) {
-                        $collectNestedPriceCandidates($nestedValue, $depth + 1);
-                        continue;
-                    }
-
-                    $keyText = strtolower(trim((string) $nestedKey));
-                    if ($keyText === '') {
-                        continue;
-                    }
-
-                    $keyTokens = array_values(array_filter(explode('_', (string) (preg_replace('/[^a-z0-9]+/', '_', $keyText) ?? ''))));
-                    if ($keyTokens === []) {
-                        continue;
-                    }
-
-                    $priceTokens = [
-                        'price',
-                        'fare',
-                        'charge',
-                        'cost',
-                        'fee',
-                        'rate',
-                        'amount',
-                        'subtotal',
-                        'total',
-                        'nightly',
-                        'daily',
-                        'hourly',
-                    ];
-                    $excludeTokens = [
-                        'rating',
-                        'review',
-                        'reviews',
-                        'star',
-                        'stars',
-                        'bed',
-                        'beds',
-                        'guest',
-                        'guests',
-                        'room',
-                        'rooms',
-                        'count',
-                        'qty',
-                        'quantity',
-                        'capacity',
-                        'occupancy',
-                        'distance',
-                        'latitude',
-                        'longitude',
-                        'lat',
-                        'lng',
-                        'adults',
-                        'children',
-                        'infants',
-                        'nights',
-                        'days',
-                        'hours',
-                        'minutes',
-                        'duration',
-                    ];
-
-                    $hasPriceToken = false;
-                    foreach ($keyTokens as $token) {
-                        if (in_array($token, $priceTokens, true)) {
-                            $hasPriceToken = true;
-                            break;
-                        }
-                    }
-
-                    $hasExcludedToken = false;
-                    foreach ($keyTokens as $token) {
-                        if (in_array($token, $excludeTokens, true)) {
-                            $hasExcludedToken = true;
-                            break;
-                        }
-                    }
-
-                    $looksLikePriceField = $hasPriceToken && !$hasExcludedToken;
-
-                    if (!$looksLikePriceField) {
-                        continue;
-                    }
-
-                    $normalized = $normalizePrice($nestedValue);
+            foreach (['pricing', 'pricing_config', 'price_config'] as $nestedKey) {
+                if (!is_array($details[$nestedKey] ?? null)) continue;
+                foreach ($candidateKeys as $key) {
+                    $normalized = $normalizePrice($details[$nestedKey][$key] ?? null);
                     if ($normalized > 0) {
                         $candidates[] = $normalized;
                     }
                 }
-
-                return;
             }
+        }
 
-            if (is_object($value)) {
-                $collectNestedPriceCandidates((array) $value, $depth + 1);
-            }
-        };
-
-        $collectNestedPriceCandidates($details);
+        // Fallback: recursively scan all nested numeric fields that look like price
+        $collectLowestPrice($details, $vendorId, $propertyId, $roomId);
 
         if ($candidates === []) {
             return 0.0;
         }
-
         return (float) min($candidates);
     }
 }

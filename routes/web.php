@@ -535,6 +535,15 @@ if (!function_exists('workationDerivedListingBasePrice')) {
                 if ($normalized === '') {
                     return 0.0;
                 }
+
+                // Accept only plain numeric/currency-like strings; reject structured payload fragments.
+                if (
+                    !preg_match('/^\s*[A-Za-z]{0,3}\s*[-+]?\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*$/', $normalized)
+                    && !preg_match('/^\s*[-+]?\d+(?:\.\d+)?\s*$/', $normalized)
+                ) {
+                    return 0.0;
+                }
+
                 $normalized = str_replace(',', '', $normalized);
                 $normalized = preg_replace('/[^0-9.\-]+/', '', $normalized) ?? '';
                 if ($normalized === '' || !is_numeric($normalized)) {
@@ -554,6 +563,38 @@ if (!function_exists('workationDerivedListingBasePrice')) {
         $collectLowestPrice = static function ($value, $vendorId = null, $propertyId = null, $roomId = null, $depth = 0) use (&$collectLowestPrice, &$candidates, $normalizePrice) {
             if ($depth > 6) return;
             if (is_object($value)) $value = (array)$value;
+
+            if (is_string($value)) {
+                $trimmed = trim($value);
+                if ($trimmed === '') {
+                    return;
+                }
+
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    $collectLowestPrice($decoded, $vendorId, $propertyId, $roomId, $depth + 1);
+                    return;
+                }
+
+                // Handle line/map formats like "key:4200" or "key=4200" and extract only numeric values.
+                if (preg_match_all('/(?:^|\R|,)\s*[^:=\R,]+[:=]\s*([-+]?\d+(?:\.\d+)?)/u', $trimmed, $matches) >= 1) {
+                    foreach (($matches[1] ?? []) as $matchedAmount) {
+                        $normalized = $normalizePrice($matchedAmount);
+                        if ($normalized > 0) {
+                            $candidates[] = $normalized;
+                        }
+                    }
+                    return;
+                }
+
+                $normalized = $normalizePrice($trimmed);
+                if ($normalized > 0) {
+                    $candidates[] = $normalized;
+                }
+
+                return;
+            }
+
             if (is_array($value)) {
                 foreach ($value as $k => $v) {
                     // If key matches vendor/property/room ID, scan inside

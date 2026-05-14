@@ -799,7 +799,7 @@ Route::get('/', function (Request $request) {
                 'excursion', 'activity', 'water_sports', 'water-sports',
                 'restaurant', 'resort_day_visit', 'resort-day-visit',
             ];
-            $homeMediaCacheKey = 'home:property-media:v2:' . sha1(implode(',', $homeMediaEntityTypes) . '|' . implode(',', $propertyLookupIds->all()));
+            $homeMediaCacheKey = 'home:property-media:v3:' . sha1(implode(',', $homeMediaEntityTypes) . '|' . implode(',', $propertyLookupIds->all()));
             $mediaRows = Cache::remember($homeMediaCacheKey, now()->addMinutes(10), static function () use ($propertyLookupIds, $homeMediaEntityTypes) {
                 return DB::table('vendor_listing_media')
                     ->whereIn('entity_type', $homeMediaEntityTypes)
@@ -817,24 +817,26 @@ Route::get('/', function (Request $request) {
                     $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
                     $vendorUserId = (int) ($property->vendor_user_id ?? 0);
                     $category = strtolower(trim(str_replace('-', '_', (string) ($property->listing_category ?? ''))));
+                    $canonicalOnlyCategories = ['sea_transport', 'resort_day_visit', 'liveaboard', 'excursion', 'restaurant', 'vehicle_rental', 'remote_workspace'];
+                    $useCanonicalOnlyLookup = in_array($category, $canonicalOnlyCategories, true);
 
                     $allowedTypes = match ($category) {
                         'accommodation' => ['property'],
-                        'liveaboard' => ['liveaboard'],
-                        'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
-                        'land_transport' => ['land_transport', 'land-transport', 'transport'],
-                        'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport'],
-                        'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room'],
-                        'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace'],
-                        'excursion' => ['excursion', 'activity'],
-                        'water_sports' => ['water_sports', 'water-sports', 'activity'],
-                        'restaurant' => ['restaurant'],
-                        'resort_day_visit' => ['resort_day_visit', 'resort-day-visit'],
+                        'liveaboard' => ['liveaboard', 'property', 'service'],
+                        'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
+                        'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
+                        'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
+                        'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
+                        'remote_workspace' => ['remote_workspace', 'remote-workspace', 'workspace', 'property', 'service'],
+                        'excursion' => ['excursion', 'activity', 'property', 'service'],
+                        'water_sports' => ['water_sports', 'water-sports', 'activity', 'property', 'service'],
+                        'restaurant' => ['restaurant', 'property', 'service'],
+                        'resort_day_visit' => ['resort_day_visit', 'resort-day-visit', 'property', 'service'],
                         default => ['property', 'service'],
                     };
 
                     $mediaItems = collect($mediaByEntityId->get($canonicalId, collect()));
-                    if ($mediaItems->isEmpty() && $dedicatedId > 0) {
+                    if (!$useCanonicalOnlyLookup && $mediaItems->isEmpty() && $dedicatedId > 0) {
                         $mediaItems = collect($mediaByEntityId->get($dedicatedId, collect()));
                     }
 

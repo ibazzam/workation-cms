@@ -906,7 +906,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             $mediaEntityTypeMap = [
                 'accommodation' => ['property'],
                 'liveaboard' => ['liveaboard', 'property', 'service'],
-                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport'],
+                'sea_transport' => ['sea_transport', 'sea-transport', 'marine_transport', 'transport', 'property', 'service'],
                 'land_transport' => ['land_transport', 'land-transport', 'transport', 'property', 'service'],
                 'vehicle_rental' => ['vehicle_rental', 'vehicle-rental', 'vehicle', 'transport', 'property', 'service'],
                 'conference_room' => ['conference_room', 'conference-room', 'meeting_room', 'meeting-room', 'property', 'service'],
@@ -951,8 +951,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
             $mediaByEntityId = $mediaRows->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
             $includeCanonicalLookupId = in_array($dbCategoryKey, ['accommodation', 'liveaboard'], true);
+            $canonicalOnlyMediaLookupCategories = ['sea_transport', 'resort_day_visit', 'liveaboard', 'excursion', 'restaurant', 'vehicle_rental', 'remote_workspace'];
+            $useCanonicalOnlyMediaLookup = in_array($dbCategoryKey, $canonicalOnlyMediaLookupCategories, true);
             $catalogPropertyMediaByProperty = $catalogProperties
-                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes, $includeCanonicalLookupId, $dbCategoryKey) {
+                ->mapWithKeys(static function ($property) use ($mediaByEntityId, $strictMediaEntityTypes, $fallbackMediaEntityTypes, $includeCanonicalLookupId, $dbCategoryKey, $useCanonicalOnlyMediaLookup) {
                     $canonicalId = (int) ($property->id ?? 0);
                     $propertyVendorUserId = (int) ($property->vendor_user_id ?? 0);
                     $preferredLookupIds = collect([
@@ -982,6 +984,10 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                         $strictLookupIds = collect([$canonicalId])
                             ->filter(static fn (int $id): bool => $id > 0)
                             ->values();
+                    }
+
+                    if ($useCanonicalOnlyMediaLookup && $canonicalId > 0) {
+                        $strictLookupIds = collect([$canonicalId]);
                     }
 
                     $strictMatches = $strictLookupIds
@@ -1239,7 +1245,8 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
         ], static fn (int $id): bool => $id > 0)));
         $seaCanonicalId = (int) ($property->id ?? 0);
         $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
-        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'];
+        $seaLegacyMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
 
         // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
         // takes priority over shared legacy IDs that may be reused across multiple listings.
@@ -1262,7 +1269,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             $legacySeaIds = array_values(array_diff($seaLegacyEntityIds, [$seaCanonicalId]));
             if (!empty($legacySeaIds)) {
                 $legacySeaQuery = DB::table('vendor_listing_media')
-                    ->whereIn('entity_type', $seaMediaTypes)
+                    ->whereIn('entity_type', $seaLegacyMediaTypes)
                     ->whereIn('entity_id', $legacySeaIds);
                 if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
                     $legacySeaQuery->where('vendor_user_id', $seaVendorUserId);

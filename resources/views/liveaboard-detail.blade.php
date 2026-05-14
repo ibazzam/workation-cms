@@ -1113,31 +1113,53 @@
     $visitorIsLocal = ($visitorResidency ?? 'foreign_national') === 'local_resident';
     $heroCurrency = $visitorIsLocal ? 'MVR' : 'USD';
 
-    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
+    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback, string $fallbackCurrency = 'USD') use ($visitorIsLocal, $mvrUsdRate): float {
         if ($visitorIsLocal) {
-            return $localMvr > 0 ? $localMvr : $fallback;
+            if ($localMvr > 0) {
+                return $localMvr;
+            }
+            if ($fallback <= 0) {
+                return 0.0;
+            }
+            if (strtoupper(trim($fallbackCurrency)) === 'USD' && $mvrUsdRate > 0) {
+                return round($fallback * $mvrUsdRate, 2);
+            }
+
+            return $fallback;
         }
 
-        return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
+        if ($foreignUsd > 0) {
+            return $foreignUsd;
+        }
+        if ($fallback <= 0) {
+            return 0.0;
+        }
+        if (strtoupper(trim($fallbackCurrency)) === 'MVR' && $mvrUsdRate > 0) {
+            return round($fallback / $mvrUsdRate, 2);
+        }
+
+        return $fallback;
     };
 
     $minRoomRate = collect($rooms ?? [])->flatMap(static function ($room) use ($resolveVisitorRate) {
         $fallback = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
+        $fallbackCurrency = strtoupper(trim((string) ($room->currency ?? 'USD')));
 
         $rates = [
-            $resolveVisitorRate((float) ($room->meal_plan_room_only_price_usd ?? 0), (float) ($room->meal_plan_room_only_price_local ?? 0), $fallback),
-            $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0),
-            $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0),
-            $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0),
-            $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0),
+            $resolveVisitorRate((float) ($room->meal_plan_room_only_price_usd ?? 0), (float) ($room->meal_plan_room_only_price_local ?? 0), $fallback, $fallbackCurrency),
+            $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0, $fallbackCurrency),
+            $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0, $fallbackCurrency),
+            $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0, $fallbackCurrency),
+            $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0, $fallbackCurrency),
         ];
 
         return collect($rates)->filter(static fn (float $value): bool => $value > 0);
     })->min();
 
+    $hasRooms = collect($rooms ?? [])->isNotEmpty();
     $resolvedHeroMinPrice = (is_numeric($minRoomRate) && (float) $minRoomRate > 0)
         ? (float) $minRoomRate
-        : (float) ($minPrice ?? 0);
+        : ($hasRooms ? 0.0 : (float) ($minPrice ?? 0));
 
     $displayPrice = $resolvedHeroMinPrice > 0 ? number_format($resolvedHeroMinPrice, 2) : 'POA';
 
@@ -1347,17 +1369,40 @@
                     $roomCurrency = $visitorIsLocal ? 'MVR' : 'USD';
 
                     $defaultNightlyRate = (float) ($room->base_price_per_night ?? ($room->base_price ?? 0));
-                    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback) use ($visitorIsLocal, $mvrUsdRate): float {
+                    $resolveVisitorRate = static function (float $foreignUsd, float $localMvr, float $fallback, string $fallbackCurrency = 'USD') use ($visitorIsLocal, $mvrUsdRate): float {
                         if ($visitorIsLocal) {
-                            return $localMvr > 0 ? $localMvr : $fallback;
+                            if ($localMvr > 0) {
+                                return $localMvr;
+                            }
+                            if ($fallback <= 0) {
+                                return 0.0;
+                            }
+                            if (strtoupper(trim($fallbackCurrency)) === 'USD' && $mvrUsdRate > 0) {
+                                return round($fallback * $mvrUsdRate, 2);
+                            }
+
+                            return $fallback;
                         }
-                        return $foreignUsd > 0 ? $foreignUsd : ($mvrUsdRate > 0 ? round($fallback / $mvrUsdRate, 2) : 0.0);
+
+                        if ($foreignUsd > 0) {
+                            return $foreignUsd;
+                        }
+                        if ($fallback <= 0) {
+                            return 0.0;
+                        }
+                        if (strtoupper(trim($fallbackCurrency)) === 'MVR' && $mvrUsdRate > 0) {
+                            return round($fallback / $mvrUsdRate, 2);
+                        }
+
+                        return $fallback;
                     };
+                    $fallbackCurrency = strtoupper(trim((string) ($room->currency ?? 'USD')));
 
                     $roomOnlyNightlyRate = $resolveVisitorRate(
                         (float) ($room->meal_plan_room_only_price_usd ?? 0),
                         (float) ($room->meal_plan_room_only_price_local ?? 0),
-                        $defaultNightlyRate
+                        $defaultNightlyRate,
+                        $fallbackCurrency
                     );
 
                     $rateOptions = collect([
@@ -1372,28 +1417,28 @@
                             'meal_plan' => 'BB',
                             'title' => 'Bed & Breakfast',
                             'subtitle' => 'Breakfast included',
-                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0),
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_bb_price_usd ?? 0), (float) ($room->meal_plan_bb_price_local ?? 0), 0.0, $fallbackCurrency),
                             'icon' => 'fa-solid fa-mug-hot',
                         ],
                         [
                             'meal_plan' => 'HB',
                             'title' => 'Half Board',
                             'subtitle' => 'Half board included',
-                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0),
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_hb_price_usd ?? 0), (float) ($room->meal_plan_hb_price_local ?? 0), 0.0, $fallbackCurrency),
                             'icon' => 'fa-solid fa-utensils',
                         ],
                         [
                             'meal_plan' => 'FB',
                             'title' => 'Full Board',
                             'subtitle' => 'Full board included',
-                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0),
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_fb_price_usd ?? 0), (float) ($room->meal_plan_fb_price_local ?? 0), 0.0, $fallbackCurrency),
                             'icon' => 'fa-solid fa-bowl-food',
                         ],
                         [
                             'meal_plan' => 'All Inclusive',
                             'title' => 'All Inclusive',
                             'subtitle' => 'Journey package with meals & services',
-                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0),
+                            'nightly' => $resolveVisitorRate((float) ($room->meal_plan_ai_price_usd ?? 0), (float) ($room->meal_plan_ai_price_local ?? 0), 0.0, $fallbackCurrency),
                             'icon' => 'fa-solid fa-champagne-glasses',
                         ],
                     ])->filter(static fn ($item) => (float) ($item['nightly'] ?? 0) > 0)->values();

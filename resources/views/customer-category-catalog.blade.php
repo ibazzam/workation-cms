@@ -3324,15 +3324,34 @@
                                     : ($includesBreakfast ? 'Breakfast included' : 'Without breakfast'));
                             $actionLabel = $categoryKey === 'accommodation' ? 'View Deal' : 'Book Now';
                             // Dual-currency pricing for non-accommodation service cards
-                            $priceLocal = $categoryKey !== 'accommodation'
-                                ? max(0.0, (float) ($cardDetails['price_local'] ?? $price))
-                                : $price;
-                            $priceUsdRaw = $categoryKey !== 'accommodation'
-                                ? ($cardDetails['price_usd'] ?? $cardDetails['price_foreign'] ?? null)
-                                : null;
-                            $priceUsd = ($priceUsdRaw !== null && is_numeric($priceUsdRaw) && (float) $priceUsdRaw > 0)
-                                ? (float) $priceUsdRaw
-                                : null;
+                            $priceLocal = $categoryKey !== 'accommodation' ? 0.0 : $price;
+                            $priceUsd = null;
+                            $propertyCurrency = strtoupper(trim((string) ($property->currency ?? 'MVR')));
+                            if ($categoryKey !== 'accommodation') {
+                                $priceUsdRaw = $cardDetails['price_usd'] ?? $cardDetails['price_foreign'] ?? null;
+                                $priceLocalRaw = $cardDetails['price_local'] ?? null;
+
+                                if ($priceUsdRaw !== null && is_numeric($priceUsdRaw) && (float) $priceUsdRaw > 0) {
+                                    $priceUsd = (float) $priceUsdRaw;
+                                }
+
+                                if ($priceLocalRaw !== null && is_numeric($priceLocalRaw) && (float) $priceLocalRaw > 0) {
+                                    $priceLocal = (float) $priceLocalRaw;
+                                }
+
+                                if ($propertyCurrency === 'USD') {
+                                    if ($priceUsd === null && $price > 0) {
+                                        $priceUsd = $price;
+                                    }
+                                    if ($priceLocal <= 0 && $priceUsd !== null && $mvrUsdRate > 0) {
+                                        $priceLocal = round($priceUsd * $mvrUsdRate, 2);
+                                    }
+                                } else {
+                                    if ($priceLocal <= 0 && $price > 0) {
+                                        $priceLocal = $price;
+                                    }
+                                }
+                            }
                             if ($categoryKey === 'excursion' || $categoryKey === 'water_sports') {
                                 $excLocalAdult = (float) ($cardDetails['adult_price_local'] ?? 0);
                                 $excForeignAdult = (float) ($cardDetails['adult_price_foreign'] ?? 0);

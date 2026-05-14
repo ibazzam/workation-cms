@@ -1245,7 +1245,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
         ], static fn (int $id): bool => $id > 0)));
         $seaCanonicalId = (int) ($property->id ?? 0);
         $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
-        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'];
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
         $seaLegacyMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
 
         // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)

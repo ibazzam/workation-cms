@@ -242,7 +242,7 @@ class VendorPropertyCompatibilityReader
         }
 
         $cachedRows = Cache::remember(
-            'vendor_property_compatibility_reader:all_active_listings:v3:' . $normalizedLimit,
+            'vendor_property_compatibility_reader:all_active_listings:v4:' . $normalizedLimit,
             now()->addMinutes(5),
             static function () use ($normalizedLimit) {
         $categoryTableMap = self::categoryTableMap();

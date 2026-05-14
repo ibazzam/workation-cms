@@ -577,7 +577,7 @@ if (!function_exists('workationDerivedListingBasePrice')) {
                 }
 
                 // Handle line/map formats like "key:4200" or "key=4200" and extract only numeric values.
-                if (preg_match_all('/(?:^|\R|,)\s*[^:=\R,]+[:=]\s*([-+]?\d+(?:\.\d+)?)/u', $trimmed, $matches) >= 1) {
+                if (preg_match_all('/(?:^|\r\n|\r|\n|,)\s*[^:=,\r\n]+[:=]\s*([-+]?\d+(?:\.\d+)?)/u', $trimmed, $matches) >= 1) {
                     foreach (($matches[1] ?? []) as $matchedAmount) {
                         $normalized = $normalizePrice($matchedAmount);
                         if ($normalized > 0) {

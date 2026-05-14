@@ -121,6 +121,8 @@ class CatalogCategoryPricingTest extends TestCase
         ];
 
         $detailsPayload = json_encode([
+            'journey_duration_days' => 20,
+            'cabin_count' => 12,
             'pricing_matrix' => '{"Male→Ari":4200,"Male→Baa":5000}',
         ], JSON_THROW_ON_ERROR);
 
@@ -140,5 +142,91 @@ class CatalogCategoryPricingTest extends TestCase
         $response
             ->assertOk()
             ->assertSeeText('From MVR 4,200.00');
+    }
+
+    public function test_liveaboard_catalog_card_prefers_room_level_price_over_property_level_base_price(): void
+    {
+        $listingTable = 'vendor_liveaboard_listings';
+        $listingColumns = Schema::getColumnListing($listingTable);
+
+        $listingPayload = [
+            'vendor_property_id' => 7201,
+            'vendor_user_id' => 91,
+            'name' => 'Dolphin Cruise',
+            'status' => 'active',
+            'location' => 'Male',
+            'description' => 'Multi-day safari journey.',
+            'base_price' => 20, // must be ignored for catalog card when room rate exists
+            'currency' => 'MVR',
+            'listing_moderation_status' => 'approved',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $listingPayload = array_intersect_key($listingPayload, array_flip($listingColumns));
+        DB::table($listingTable)->insert($listingPayload);
+
+        if (Schema::hasTable('users')) {
+            $userColumns = Schema::getColumnListing('users');
+            $userPayload = [
+                'id' => 91,
+                'name' => 'Liveaboard Vendor',
+                'username' => 'liveaboard_vendor_91',
+                'email' => 'vendor91@example.test',
+                'password' => bcrypt('password'),
+                'portal_role' => 'VENDOR',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $userPayload = array_intersect_key($userPayload, array_flip($userColumns));
+            DB::table('users')->insert($userPayload);
+        }
+
+        if (Schema::hasTable('vendor_properties')) {
+            $parentColumns = Schema::getColumnListing('vendor_properties');
+            $parentPayload = [
+                'id' => 7201,
+                'vendor_user_id' => 91,
+                'name' => 'Dolphin Cruise',
+                'category' => 'liveaboard',
+                'status' => 'active',
+                'base_price' => 20,
+                'currency' => 'MVR',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $parentPayload = array_intersect_key($parentPayload, array_flip($parentColumns));
+            DB::table('vendor_properties')->insert($parentPayload);
+        }
+
+        if (Schema::hasTable('vendor_property_room_categories')) {
+            $roomTable = 'vendor_property_room_categories';
+            $roomColumns = Schema::getColumnListing($roomTable);
+
+            $roomPayload = [
+                'vendor_property_id' => 7201,
+                'property_id' => 7201,
+                'vendor_user_id' => 91,
+                'name' => 'Ocean Cabin',
+                'currency' => 'USD',
+                'base_price' => 250,
+                'meal_plan_room_only_price_usd' => 250,
+                'status' => 'active',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $roomPayload = array_intersect_key($roomPayload, array_flip($roomColumns));
+            DB::table($roomTable)->insert($roomPayload);
+        }
+
+        $response = $this->get('/catalog/liveaboard', ['CF-IPCountry' => 'US']);
+
+        $response
+            ->assertOk()
+            ->assertSeeText('From USD 250.00')
+            ->assertDontSeeText('From USD 1.30');
     }
 }

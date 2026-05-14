@@ -694,6 +694,134 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                 return $property;
             })->values();
 
+            if ($dbCategoryKey === 'liveaboard' && $propertyLookupIds->isNotEmpty() && Schema::hasTable('vendor_property_room_categories')) {
+                $roomTable = 'vendor_property_room_categories';
+                $roomPropertyColumns = [];
+                if (Schema::hasColumn($roomTable, 'vendor_property_id')) {
+                    $roomPropertyColumns[] = 'vendor_property_id';
+                }
+                if (Schema::hasColumn($roomTable, 'property_id')) {
+                    $roomPropertyColumns[] = 'property_id';
+                }
+
+                if ($roomPropertyColumns !== []) {
+                    $usdPriceColumns = [];
+                    foreach (['meal_plan_room_only_price_usd', 'meal_plan_bb_price_usd', 'meal_plan_hb_price_usd', 'meal_plan_fb_price_usd', 'meal_plan_ai_price_usd', 'price_usd', 'base_price_usd'] as $column) {
+                        if (Schema::hasColumn($roomTable, $column)) {
+                            $usdPriceColumns[] = $column;
+                        }
+                    }
+
+                    $localPriceColumns = [];
+                    foreach (['meal_plan_room_only_price_local', 'meal_plan_bb_price_local', 'meal_plan_hb_price_local', 'meal_plan_fb_price_local', 'meal_plan_ai_price_local', 'price_local'] as $column) {
+                        if (Schema::hasColumn($roomTable, $column)) {
+                            $localPriceColumns[] = $column;
+                        }
+                    }
+
+                    $fallbackPriceColumns = [];
+                    foreach (['base_price_per_night', 'price_per_night', 'room_only_price', 'base_price'] as $column) {
+                        if (Schema::hasColumn($roomTable, $column)) {
+                            $fallbackPriceColumns[] = $column;
+                        }
+                    }
+
+                    $hasRoomCurrencyColumn = Schema::hasColumn($roomTable, 'currency');
+
+                    $roomRows = DB::table($roomTable)
+                        ->where(static function ($query) use ($roomPropertyColumns, $propertyLookupIds) {
+                            foreach ($roomPropertyColumns as $index => $propertyColumn) {
+                                if ($index === 0) {
+                                    $query->whereIn($propertyColumn, $propertyLookupIds->all());
+                                } else {
+                                    $query->orWhereIn($propertyColumn, $propertyLookupIds->all());
+                                }
+                            }
+                        })
+                        ->get(array_values(array_unique(array_merge(
+                            $roomPropertyColumns,
+                            $usdPriceColumns,
+                            $localPriceColumns,
+                            $fallbackPriceColumns,
+                            $hasRoomCurrencyColumn ? ['currency'] : []
+                        ))));
+
+                    $roomPriceByProperty = collect();
+                    foreach ($roomRows as $row) {
+                        $roomPropertyIds = collect($roomPropertyColumns)
+                            ->map(static fn ($column) => (int) ($row->{$column} ?? 0))
+                            ->filter(static fn (int $id): bool => $id > 0)
+                            ->values();
+
+                        if ($roomPropertyIds->isEmpty()) {
+                            continue;
+                        }
+
+                        $usdPrices = collect($usdPriceColumns)
+                            ->map(static fn ($column) => (float) ($row->{$column} ?? 0))
+                            ->filter(static fn (float $value): bool => $value > 0)
+                            ->values();
+                        $localPrices = collect($localPriceColumns)
+                            ->map(static fn ($column) => (float) ($row->{$column} ?? 0))
+                            ->filter(static fn (float $value): bool => $value > 0)
+                            ->values();
+                        $fallbackPrices = collect($fallbackPriceColumns)
+                            ->map(static fn ($column) => (float) ($row->{$column} ?? 0))
+                            ->filter(static fn (float $value): bool => $value > 0)
+                            ->values();
+                        $rowCurrency = strtoupper(trim((string) ($row->currency ?? '')));
+
+                        $rowBestCurrency = '';
+                        $rowBestPrice = 0.0;
+                        if ($usdPrices->isNotEmpty()) {
+                            $rowBestCurrency = 'USD';
+                            $rowBestPrice = (float) $usdPrices->min();
+                        } elseif ($localPrices->isNotEmpty()) {
+                            $rowBestCurrency = 'MVR';
+                            $rowBestPrice = (float) $localPrices->min();
+                        } elseif ($fallbackPrices->isNotEmpty()) {
+                            $rowBestCurrency = in_array($rowCurrency, ['USD', 'MVR'], true) ? $rowCurrency : 'USD';
+                            $rowBestPrice = (float) $fallbackPrices->min();
+                        }
+
+                        if ($rowBestPrice <= 0 || $rowBestCurrency === '') {
+                            continue;
+                        }
+
+                        foreach ($roomPropertyIds as $roomPropertyId) {
+                            $existing = $roomPriceByProperty->get($roomPropertyId);
+                            if (!is_array($existing) || (float) ($existing['price'] ?? 0) <= 0 || (float) ($existing['price'] ?? INF) > $rowBestPrice) {
+                                $roomPriceByProperty->put($roomPropertyId, [
+                                    'currency' => $rowBestCurrency,
+                                    'price' => $rowBestPrice,
+                                ]);
+                            }
+                        }
+                    }
+
+                    $catalogProperties = $catalogProperties->map(static function ($property) use ($roomPriceByProperty) {
+                        $lookupId = collect(workationPropertyLookupIds($property))
+                            ->first(static fn (int $candidateId): bool => $roomPriceByProperty->has($candidateId));
+
+                        if (!is_int($lookupId) || $lookupId <= 0) {
+                            return $property;
+                        }
+
+                        $resolved = (array) ($roomPriceByProperty->get($lookupId) ?? []);
+                        $resolvedPrice = (float) ($resolved['price'] ?? 0);
+                        $resolvedCurrency = strtoupper(trim((string) ($resolved['currency'] ?? '')));
+                        if ($resolvedPrice <= 0 || $resolvedCurrency === '') {
+                            return $property;
+                        }
+
+                        $property->base_price = $resolvedPrice;
+                        $property->currency = $resolvedCurrency;
+
+                        return $property;
+                    })->values();
+                }
+            }
+
             if ($minPrice > 0 || $maxPrice > 0) {
                 $catalogProperties = $catalogProperties->filter(static function ($property) use ($minPrice, $maxPrice) {
                     $price = (float) ($property->base_price ?? 0);
@@ -1461,26 +1589,34 @@ Route::get('/liveaboard/{id}', function (Request $request, int $id) use ($resolv
 
     $mvrUsdRate = max(0.0, (float) env('MVR_USD_RATE', 15.42));
 
-    // Query rooms for this liveaboard property
+    // Query rooms for this liveaboard property (support both canonical and legacy property IDs)
     $propertyId = (int) ($property->id ?? 0);
+    $liveaboardPropertyLookupIds = collect(workationPropertyLookupIds($property))
+        ->map(static fn ($value) => (int) $value)
+        ->filter(static fn (int $value): bool => $value > 0)
+        ->unique()
+        ->values();
     $vendorUserId = (int) ($property->vendor_user_id ?? 0);
     
     $rooms = collect();
     $roomMediaByRoom = collect();
     
-    if ($propertyId > 0 && Schema::hasTable('vendor_property_room_categories')) {
+    if (($propertyId > 0 || $liveaboardPropertyLookupIds->isNotEmpty()) && Schema::hasTable('vendor_property_room_categories')) {
         $hasLegacyPropertyId = Schema::hasColumn('vendor_property_room_categories', 'property_id');
+        $lookupIds = $liveaboardPropertyLookupIds->isNotEmpty()
+            ? $liveaboardPropertyLookupIds->all()
+            : [$propertyId];
 
         $roomsQuery = DB::table('vendor_property_room_categories')
-            ->where(function ($query) use ($propertyId, $vendorUserId, $hasLegacyPropertyId) {
-                $query->where(function ($inner) use ($propertyId, $vendorUserId) {
-                    $inner->where('vendor_property_id', $propertyId)
+            ->where(function ($query) use ($lookupIds, $vendorUserId, $hasLegacyPropertyId) {
+                $query->where(function ($inner) use ($lookupIds, $vendorUserId) {
+                    $inner->whereIn('vendor_property_id', $lookupIds)
                         ->where('vendor_user_id', $vendorUserId);
                 });
 
                 if ($hasLegacyPropertyId) {
-                    $query->orWhere(function ($inner) use ($propertyId, $vendorUserId) {
-                        $inner->where('property_id', $propertyId)
+                    $query->orWhere(function ($inner) use ($lookupIds, $vendorUserId) {
+                        $inner->whereIn('property_id', $lookupIds)
                             ->where('vendor_user_id', $vendorUserId)
                             ->where('vendor_property_id', 0);
                     });

@@ -1839,8 +1839,8 @@
         }
 
         .page.category-sea-transport .card:hover {
-            background: #f5fbff;
-            box-shadow: inset 0 0 0 1px rgba(15, 97, 121, 0.08);
+            background: #f8fcff;
+            box-shadow: inset 0 0 0 1px rgba(47, 165, 138, 0.08);
         }
 
         .page.category-sea-transport .st-card-link {
@@ -1870,7 +1870,7 @@
             flex-direction: row;
             align-items: center;
             gap: 0;
-            padding: 14px 16px;
+            padding: 16px 18px;
         }
 
         .page.category-sea-transport .st-card-info {
@@ -1878,15 +1878,15 @@
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
         }
 
         .page.category-sea-transport .st-card-name {
             margin: 0 0 2px;
-            font-size: 1rem;
-            font-weight: 800;
+            font-size: 0.96rem;
+            font-weight: 700;
             color: #1a2f43;
-            line-height: 1.2;
+            line-height: 1.28;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -1896,7 +1896,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 16px;
             margin-top: 4px;
             width: 100%;
         }
@@ -1914,7 +1914,7 @@
         }
 
         .page.category-sea-transport .st-journey-port {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #1d4b66;
             white-space: nowrap;
@@ -1924,9 +1924,9 @@
         }
 
         .page.category-sea-transport .st-journey-time {
-            font-size: 0.76rem;
+            font-size: 0.74rem;
             font-weight: 600;
-            color: #47667b;
+            color: #6f879b;
         }
 
         .page.category-sea-transport .st-journey-mid {
@@ -1947,30 +1947,46 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 6px;
+            gap: 8px;
             text-align: right;
-            padding-left: 16px;
+            padding-left: 18px;
+            min-width: 210px;
         }
 
         .page.category-sea-transport .st-card-review {
             margin: 0;
             justify-content: flex-end;
+            align-items: center;
+            gap: 6px;
         }
 
-        .page.category-sea-transport .st-price-local {
+        .page.category-sea-transport .st-price-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .page.category-sea-transport .st-price-label {
             display: block;
-            font-size: 0.9rem;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #6f879b;
+            white-space: nowrap;
+        }
+
+        .page.category-sea-transport .st-price-amount {
+            display: block;
+            font-size: 0.96rem;
             font-weight: 800;
             color: #1a2f43;
             white-space: nowrap;
         }
 
-        .page.category-sea-transport .st-price-foreign {
-            display: block;
-            font-size: 0.74rem;
+        .page.category-sea-transport .st-price-amount small {
+            font-size: 0.68rem;
             font-weight: 600;
-            color: #0f6179;
-            white-space: nowrap;
+            color: #6f879b;
         }
 
         .page.category-sea-transport .st-select-btn {
@@ -1979,8 +1995,8 @@
             gap: 5px;
             padding: 8px 14px;
             border: none;
-            border-radius: 8px;
-            background: #0f6179;
+            border-radius: 5px;
+            background: #2fa58a;
             color: #ffffff;
             font-size: 0.78rem;
             font-weight: 700;
@@ -1990,7 +2006,7 @@
         }
 
         .page.category-sea-transport .st-select-btn:hover {
-            background: #0b4f66;
+            background: #27917a;
         }
 
         .page.category-sea-transport .catalog-map-panel {
@@ -2020,6 +2036,11 @@
                 flex-wrap: wrap;
                 align-items: center;
                 gap: 8px;
+                min-width: 0;
+            }
+
+            .page.category-sea-transport .st-price-wrap {
+                align-items: flex-start;
             }
 
             .page.category-sea-transport .st-journey-line {
@@ -2590,7 +2611,7 @@
     @php
         $pageCategoryClass = match ($categoryKey) {
             'accommodation' => 'category-accommodation',
-            'sea_transport'  => 'category-sea-transport',
+            'sea_transport'  => 'category-default',
             'liveaboard' => 'category-default',
             default          => 'category-default',
         };
@@ -3558,7 +3579,6 @@
                                 $stAvailDays    = (array) ($propertyDetails['availability_schedule'] ?? []);
                                 $stRouteSchedules = is_array($propertyDetails['route_schedules'] ?? null) ? $propertyDetails['route_schedules'] : [];
                                 $stTransportType = strtolower(trim((string) ($propertyDetails['transport_type'] ?? $propertyDetails['vessel_type'] ?? 'ferry')));
-                                $stTransportIcon = str_contains($stTransportType, 'speed') ? 'fa-ship' : 'fa-ferry';
                                 $stFromLocal  = $stLocalPrice;
                                 $stFromForeign = $stForeignPrice;
                                 foreach ($stRouteSchedules as $_leg) {
@@ -3591,6 +3611,13 @@
                                 if ($stDurationText === '') {
                                     $stDurationText = 'Duration N/A';
                                 }
+                                $stTripTypeRaw = strtolower(trim((string) (
+                                    $propertyDetails['trip_type']
+                                    ?? $propertyDetails['fare_type']
+                                    ?? 'one_way'
+                                )));
+                                $stIsRoundTrip = in_array($stTripTypeRaw, ['round_trip', 'round-trip', 'round trip'], true);
+                                $stFareLabel = $stIsRoundTrip ? 'Round-trip fare' : 'One-way fare';
                                 $stOneWayPrice = 0.0;
                                 $stOneWayCurrency = $visitorIsLocal ? 'MVR' : 'USD';
                                 if ($visitorIsLocal) {
@@ -3610,40 +3637,47 @@
                                         $stOneWayCurrency = 'MVR';
                                     }
                                 }
+                                $stRouteText = sprintf(
+                                    '%s - %s -> %s - %s',
+                                    $stDeparture !== '' ? $stDeparture : 'Departure port',
+                                    $stDepTime !== '' ? $stDepTime : '--:--',
+                                    $stArrival !== '' ? $stArrival : 'Arrival port',
+                                    $stArrTime !== '' ? $stArrTime : '--:--'
+                                );
+                                $stMetaBits = array_values(array_filter([
+                                    $stTransportType !== '' ? ucfirst(str_replace(['_', '-'], ' ', $stTransportType)) : null,
+                                    $stVesselName !== '' ? $stVesselName : null,
+                                    $stTotalSeats > 0 ? ($stTotalSeats . ' seats') : null,
+                                ], static fn ($value): bool => is_string($value) && trim($value) !== ''));
+                                $stDescription = $stMetaBits !== []
+                                    ? implode(' • ', $stMetaBits)
+                                    : 'Scheduled sea transfer service.';
                             @endphp
-                            <a class="card-link st-card-link" href="/sea-transport/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                            <a class="card-link" href="/sea-transport/{{ $propertyId }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                                <div class="st-card-inner">
-                                    <div class="st-card-info">
-                                        <h3 class="st-card-name">{{ (string) ($property->name ?? 'Ferry Service') }}</h3>
-                                        <div class="st-journey-line">
-                                            <span class="st-journey-point st-from">
-                                                <span class="st-journey-port">{{ $stDeparture !== '' ? $stDeparture : 'Departure port' }}</span>
-                                                <span class="st-journey-time">{{ $stDepTime !== '' ? $stDepTime : '--:--' }}</span>
-                                            </span>
-                                            <span class="st-journey-mid">
-                                                <i class="fa-solid {{ $stTransportIcon }}" aria-hidden="true"></i>
-                                                {{ $stDurationText }}
-                                            </span>
-                                            <span class="st-journey-point st-to">
-                                                <span class="st-journey-port">{{ $stArrival !== '' ? $stArrival : 'Arrival port' }}</span>
-                                                <span class="st-journey-time">{{ $stArrTime !== '' ? $stArrTime : '--:--' }}</span>
-                                            </span>
-                                        </div>
+                                <div class="card-body">
+                                    <div class="card-main-col">
+                                        <span class="card-type-chip">{{ (string) ($categoryMeta['label'] ?? 'Sea Transport') }}</span>
+                                        <h3>{{ (string) ($property->name ?? 'Sea Transport') }}</h3>
+                                        <span class="card-city"><i class="fa-solid fa-route" aria-hidden="true"></i> {{ $stRouteText }}</span>
+                                        <span class="card-time"><i class="fa-regular fa-clock" aria-hidden="true"></i> {{ $stDurationText }}</span>
+                                        <p class="card-desc">{{ $stDescription }}</p>
                                     </div>
-                                    <div class="st-card-right">
-                                        <div class="card-review st-card-review">
+                                    <div class="card-meta-right">
+                                        <div class="card-review">
                                             <span class="card-rating-badge">{{ $reviewScore }}</span>
                                             <span>{{ number_format($reviewCount) }} reviews</span>
                                         </div>
-                                        <div>
+                                        <div class="card-price">
                                             @if ($stOneWayPrice > 0)
-                                                <span class="st-price-local">One-way from {{ $stOneWayCurrency }} {{ number_format($stOneWayPrice, 2) }}<small style="font-weight:500;font-size:0.65rem;"> / seat</small></span>
+                                                <span class="price-local">From {{ $stOneWayCurrency }} {{ number_format($stOneWayPrice, 2) }}</span>
+                                                <span class="price-foreign">{{ $stFareLabel }} • Minimum price / seat</span>
                                             @else
-                                                <span class="st-price-local">One-way price on request</span>
+                                                <span class="price-local">Price on request</span>
+                                                <span class="price-foreign">{{ $stFareLabel }}</span>
                                             @endif
                                         </div>
-                                        <span class="st-select-btn">
+                                        <span class="card-action-btn">
                                             Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
                                         </span>
                                     </div>

@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [ main ]
   push:
-    branches: [ main, feat/sprint-1-holds ]
+    branches-ignore:
+      - coverage-reports
 
 jobs:
   smoke:

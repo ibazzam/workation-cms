@@ -5,7 +5,8 @@ permissions:
 
 on:
   push:
-    branches: [ main ]
+    branches-ignore:
+      - coverage-reports
   pull_request:
     branches: [ main ]
   workflow_dispatch:

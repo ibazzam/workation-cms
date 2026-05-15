@@ -1307,13 +1307,10 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
 
         foreach ($mediaRows as $mediaRow) {
             $mediaId = (int) ($mediaRow->id ?? 0);
-            $candidateStoredValues = [];
-            // Prefer thumb first because some listings only have thumb generated.
-            if ($mediaId > 0) {
-                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/thumb';
-                $candidateStoredValues[] = '/media/vendor/' . $mediaId . '/banner';
-            }
-            $candidateStoredValues[] = trim((string) ($mediaRow->file_path ?? ''));
+            // Resolve a single canonical URL per media row to prevent duplicated thumbnails.
+            $candidateStoredValues = $mediaId > 0
+                ? ['/media/vendor/' . $mediaId . '/banner']
+                : [trim((string) ($mediaRow->file_path ?? ''))];
 
             foreach ($candidateStoredValues as $rawPathCandidate) {
                 $rawPath = trim((string) $rawPathCandidate);

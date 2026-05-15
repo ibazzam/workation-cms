@@ -1235,7 +1235,14 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
     // Vessel gallery (primary + additional photos).
     $galleryMedia = [];
     if (Schema::hasTable('vendor_listing_media')) {
+        $seaCanonicalId = collect([
+            (int) ($property->vendor_property_id ?? 0),
+            (int) ($property->property_id ?? 0),
+            (int) ($property->id ?? 0),
+        ])->first(static fn (int $id): bool => $id > 0) ?? 0;
         $seaLegacyEntityIds = array_values(array_unique(array_filter([
+            $seaCanonicalId,
+            (int) ($property->id ?? 0),
             (int) ($property->vendor_property_id ?? 0),
             (int) ($property->dedicated_row_id ?? 0),
             (int) ($property->property_id ?? 0),
@@ -1243,7 +1250,6 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->source_property_id ?? 0),
             (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
-        $seaCanonicalId = (int) ($property->id ?? 0);
         $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
         $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
         $seaLegacyMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
@@ -1386,6 +1392,25 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             $heroUrl = function_exists('portalManagedMediaUrlFromPath')
                 ? (portalManagedMediaUrlFromPath($fallbackHero) ?? $fallbackHero)
                 : $fallbackHero;
+
+            if ($heroUrl !== '' && !str_starts_with($heroUrl, 'https://') && !str_starts_with($heroUrl, '/')) {
+                if (str_starts_with($heroUrl, 'http://')) {
+                    $heroUrl = 'https://' . ltrim(substr($heroUrl, 7), '/');
+                } elseif (str_starts_with($heroUrl, 'storage/')) {
+                    $storagePath = ltrim(substr($heroUrl, strlen('storage/')), '/');
+                    $heroUrl = $storagePath !== ''
+                        ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $storagePath)))
+                        : '';
+                } else {
+                    $normalizedPath = ltrim(str_replace('\\', '/', $heroUrl), '/');
+                    $normalizedPath = preg_replace('#^(public/|storage/)#', '', $normalizedPath);
+                    $normalizedPath = ltrim((string) $normalizedPath, '/');
+                    $heroUrl = $normalizedPath !== ''
+                        ? '/media/portal-public/' . implode('/', array_map('rawurlencode', explode('/', $normalizedPath)))
+                        : '';
+                }
+            }
+
             $galleryMedia = [$heroUrl];
         }
     }

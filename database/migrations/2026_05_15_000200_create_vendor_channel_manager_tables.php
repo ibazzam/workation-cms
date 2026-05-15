@@ -12,7 +12,7 @@ return new class extends Migration
             Schema::create('vendor_channel_accounts', function (Blueprint $table): void {
                 $table->id();
                 $table->foreignId('vendor_user_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('vendor_property_id')->nullable()->constrained('vendor_properties')->nullOnDelete();
+                $table->unsignedBigInteger('vendor_property_id')->nullable();
                 $table->string('channel_code', 40);
                 $table->string('account_reference', 160)->nullable();
                 $table->string('status', 24)->default('disconnected');
@@ -56,7 +56,7 @@ return new class extends Migration
             Schema::create('vendor_room_inventory_daily', function (Blueprint $table): void {
                 $table->id();
                 $table->foreignId('vendor_user_id')->constrained('users')->cascadeOnDelete();
-                $table->foreignId('vendor_property_id')->nullable()->constrained('vendor_properties')->nullOnDelete();
+                $table->unsignedBigInteger('vendor_property_id')->nullable();
                 $table->string('room_key', 120);
                 $table->unsignedBigInteger('internal_room_category_id')->nullable();
                 $table->unsignedBigInteger('internal_accommodation_room_id')->nullable();

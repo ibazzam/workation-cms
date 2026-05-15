@@ -140,6 +140,33 @@
             color: #dff4fb;
         }
 
+        .hero-status-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            border: 1px solid rgba(214, 236, 243, 0.32);
+            background: rgba(9, 44, 64, 0.3);
+            color: #eefbff;
+        }
+
+        .hero-status-pill.is-ok {
+            border-color: rgba(147, 214, 173, 0.5);
+            background: rgba(17, 99, 62, 0.26);
+        }
+
+        .hero-status-pill.is-warn {
+            border-color: rgba(240, 208, 128, 0.5);
+            background: rgba(125, 82, 9, 0.24);
+        }
+
+        .hero-status-pill.is-err {
+            border-color: rgba(240, 183, 179, 0.5);
+            background: rgba(109, 17, 17, 0.22);
+        }
+
         .logout {
             border: 1px solid #b8dfe4;
             border-radius: 9px;
@@ -641,6 +668,111 @@
             font-size: 0.86rem;
             font-weight: 600;
             padding: 10px 12px;
+        }
+
+        .workspace-command-bar {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.85fr);
+            gap: 12px;
+            align-items: start;
+            margin-bottom: 12px;
+            padding: 14px;
+            border: 1px solid #d8e2eb;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbfd 100%);
+            box-shadow: 0 10px 28px rgba(18, 42, 63, 0.06);
+        }
+
+        .workspace-command-eyebrow {
+            margin: 0 0 6px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #547389;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .workspace-command-title {
+            margin: 0;
+            font-size: clamp(1.1rem, 2vw, 1.5rem);
+            line-height: 1.15;
+            color: #173550;
+        }
+
+        .workspace-command-copy {
+            margin: 8px 0 0;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: #5f7181;
+            max-width: 760px;
+        }
+
+        .workspace-command-meta {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .workspace-command-meta-item {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 6px 10px;
+            background: #eef5f9;
+            color: #35556d;
+            font-size: 0.76rem;
+            font-weight: 700;
+            border: 1px solid #d3e2eb;
+        }
+
+        .workspace-command-chips {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .workspace-command-chip {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid #cfe0ea;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            color: #31566d;
+            background: #fafdff;
+        }
+
+        .workspace-command-actions {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .workspace-command-action {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 52px;
+            padding: 10px 12px;
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #ffffff;
+            color: #17344d;
+            font-size: 0.83rem;
+            font-weight: 800;
+            text-decoration: none;
+            text-align: center;
+            transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .workspace-command-action:hover {
+            transform: translateY(-1px);
+            border-color: #b5c7d8;
+            box-shadow: 0 8px 20px rgba(18, 42, 63, 0.08);
         }
 
         .vendor-workspace-nav {
@@ -2847,6 +2979,10 @@
                 align-items: flex-start;
             }
 
+            .auth-bar {
+                align-items: flex-start;
+            }
+
             .summary-grid {
                 grid-template-columns: 1fr 1fr;
             }
@@ -2881,6 +3017,14 @@
             .overview-actions-head {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            .workspace-command-bar {
+                grid-template-columns: 1fr;
+            }
+
+            .workspace-command-actions {
+                grid-template-columns: 1fr 1fr;
             }
 
             .listing-transfer-head {
@@ -3069,6 +3213,14 @@
 
             .guided-steps {
                 grid-template-columns: 1fr;
+            }
+
+            .workspace-command-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .workspace-command-meta {
+                flex-direction: column;
             }
 
             .listing-category-shortcuts .btn {

@@ -2039,6 +2039,7 @@ require __DIR__ . '/web/blog.php';
 
 require __DIR__ . '/web/media.php';
 require __DIR__ . '/web/customer.php';
+require __DIR__ . '/web/channel.php';
 Route::get('/media/vendor/{media}/{variant?}', function (int $media, ?string $variant = 'banner') {
         $placeholderResponse = static function () {
                 $svg = <<<'SVG'

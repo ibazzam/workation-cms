@@ -40,6 +40,11 @@
             ->unique()
             ->values();
         $vendorTaxComponents = $vendorTaxComponents ?? collect();
+        $vendorDistribution = is_array($vendorDistribution ?? null) ? $vendorDistribution : [];
+        $distributionAccounts = collect($vendorDistribution['accounts'] ?? []);
+        $distributionRoomMappings = collect($vendorDistribution['room_mappings'] ?? []);
+        $distributionEvents = collect($vendorDistribution['recent_events'] ?? []);
+        $distributionSummary = is_array($vendorDistribution['summary'] ?? null) ? $vendorDistribution['summary'] : [];
         $vendorEngagement = is_array($vendorEngagement ?? null) ? $vendorEngagement : [];
         $vendorDashboardSnapshot = is_array($vendorDashboardSnapshot ?? null) ? $vendorDashboardSnapshot : [];
         $engagementInquiriesTable = (string) ($vendorEngagement['inquiries_table'] ?? '');
@@ -82,7 +87,7 @@
         $listingWizardStep = (int) session('listing_wizard_step', 1);
         $listingWizardStep = max(1, min(4, $listingWizardStep));
         $portalPageQuery = strtolower(trim((string) request()->query('page', '')));
-        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions'], true)
+        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions', 'distribution', 'compliance'], true)
             ? $portalPageQuery
             : 'overview';
         $panelFromPageQuery = match ($activePortalPage) {
@@ -90,6 +95,8 @@
             'listings' => 'listings',
             'reservations', 'operations', 'availability' => 'reservations',
             'billing' => 'billing',
+            'distribution' => 'distribution',
+            'compliance' => 'compliance',
             'engagement', 'promotions' => 'engagement',
             'reports', 'overview' => 'overview',
             default => '',
@@ -99,9 +106,33 @@
         $showReservationsPage = in_array($activePortalPage, ['reservations', 'operations'], true);
         $showAvailabilityPage = $activePortalPage === 'availability';
         $showBillingPage = $activePortalPage === 'billing';
+        $showDistributionPage = $activePortalPage === 'distribution';
+        $showCompliancePage = $activePortalPage === 'compliance';
         $showMessagesPage = $activePortalPage === 'messages';
         $showEngagementPage = in_array($activePortalPage, ['engagement', 'promotions'], true);
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
+        $portalPageMeta = [
+            'overview' => ['title' => 'Executive Dashboard', 'description' => 'Business performance, operational signals, and direct actions for daily vendor management.'],
+            'reports' => ['title' => 'Performance Reports', 'description' => 'Commercial, operational, and partner-readiness reporting for accountable decisions.'],
+            'profile' => ['title' => 'Partner Profile', 'description' => 'Business identity, compliance records, and account settings for partner trust.'],
+            'listings' => ['title' => 'Listings Console', 'description' => 'Manage inventory presentation, content quality, and category-specific listing readiness.'],
+            'reservations' => ['title' => 'Reservations Operations', 'description' => 'Track bookings, service recovery, and booking pipeline execution in one queue.'],
+            'operations' => ['title' => 'Reservations Operations', 'description' => 'Track bookings, service recovery, and booking pipeline execution in one queue.'],
+            'availability' => ['title' => 'Availability & Allotment', 'description' => 'Control sellable inventory, date-level availability, and operational capacity.'],
+            'billing' => ['title' => 'Finance & Reconciliation', 'description' => 'Review collections, commissions, gateway fees, and payout visibility.'],
+            'distribution' => ['title' => 'Distribution & Connectivity', 'description' => 'Manage channels, room mappings, sync health, and OTA connectivity standards.'],
+            'messages' => ['title' => 'Guest Messaging', 'description' => 'Handle pre-arrival, in-stay, and after-stay communication with operational discipline.'],
+            'engagement' => ['title' => 'Guest Experience & Growth', 'description' => 'Reviews, loyalty, promotions, and guest retention workflows.'],
+            'promotions' => ['title' => 'Guest Experience & Growth', 'description' => 'Reviews, loyalty, promotions, and guest retention workflows.'],
+            'compliance' => ['title' => 'Compliance & Operations', 'description' => 'Enterprise command-center view for control status, channel risk, and go-live readiness.'],
+        ];
+        $currentPageMeta = $portalPageMeta[$activePortalPage] ?? $portalPageMeta['overview'];
+        $workspaceShortcutActions = [
+            ['label' => 'Open Listings', 'href' => '/vendor/listings'],
+            ['label' => 'Reservations Queue', 'href' => '/vendor/reservations'],
+            ['label' => 'Channel Manager', 'href' => '/vendor/distribution'],
+            ['label' => 'Compliance Center', 'href' => '/vendor/compliance'],
+        ];
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '';
@@ -355,6 +386,21 @@
         });
         $vendorRefundCaseCount = (int) $vendorRefundCases->count();
         $vendorRefundExposureTotal = (float) $vendorRefundCases->sum(fn ($reservation) => (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0));
+        $vendorOperationalHealth = is_array($vendorOperationalHealth ?? null) ? $vendorOperationalHealth : [];
+        $heroOperationalSummary = is_array($vendorOperationalHealth['summary'] ?? null) ? $vendorOperationalHealth['summary'] : [];
+        $heroOperationalStatus = strtolower(trim((string) ($vendorOperationalHealth['status'] ?? 'unavailable')));
+        $heroOperationalStatusLabel = match ($heroOperationalStatus) {
+            'healthy' => 'Healthy',
+            'degraded' => 'Degraded',
+            'action_required' => 'Action Required',
+            default => 'Unavailable',
+        };
+        $heroOperationalStatusClass = match ($heroOperationalStatus) {
+            'healthy' => 'is-ok',
+            'degraded' => 'is-warn',
+            'action_required' => 'is-err',
+            default => 'is-neutral',
+        };
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -362,11 +408,12 @@
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
                     <h1>Partner Operations Center</h1>
-                    <p>Workspace overview and direct actions.</p>
+                    <p>Enterprise-grade vendor console for inventory, reservations, finance, connectivity, and operational control.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
                         <span class="auth-user">Signed in as {{ $portalUser }}</span>
+                        <span class="hero-status-pill {{ $heroOperationalStatusClass }}">Platform status: {{ $heroOperationalStatusLabel }}</span>
                         <form method="POST" action="/portal/vendor/logout">
                             @csrf
                             <button class="logout" type="submit">Log Out</button>
@@ -374,12 +421,60 @@
                     </div>
                 </div>
             </div>
+
+            <div class="hero-links" aria-label="Primary workspace shortcuts">
+                <a class="hero-link" href="/vendor/listings">Listings Console</a>
+                <a class="hero-link" href="/vendor/reservations">Reservations Queue</a>
+                <a class="hero-link" href="/vendor/distribution">Channel Manager</a>
+                <a class="hero-link" href="/vendor/compliance">Compliance &amp; Operations</a>
+            </div>
+
+            <div class="hero-highlights" aria-label="Executive platform highlights">
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Operational posture</p>
+                    <p class="hero-highlight-value">{{ $heroOperationalStatusLabel }}</p>
+                    <p class="hero-highlight-meta">Action-required accounts: {{ (int) ($heroOperationalSummary['action_required_accounts'] ?? 0) }} | Dead-letter: {{ (int) ($heroOperationalSummary['dead_letter_events'] ?? 0) }}</p>
+                </article>
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Commercial snapshot</p>
+                    <p class="hero-highlight-value">MVR {{ number_format($grossCollectionsTotal, 2) }}</p>
+                    <p class="hero-highlight-meta">{{ $vendorReservationsCount }} reservations | Avg booking MVR {{ number_format($vendorAverageBookingValue, 2) }}</p>
+                </article>
+                <article class="hero-highlight">
+                    <p class="hero-highlight-label">Inventory readiness</p>
+                    <p class="hero-highlight-value">{{ $vendorActiveListingCount }}</p>
+                    <p class="hero-highlight-meta">Active listings | Pending reservations {{ $vendorPendingReservationsCount }} | Refund cases {{ $vendorRefundCaseCount }}</p>
+                </article>
+            </div>
         </section>
 
         <div class="portal-shell">
         @include('vendor-portal.partials.sidebar')
 
         <div class="portal-content">
+
+        <section class="workspace-command-bar" aria-label="Workspace command bar">
+            <div class="workspace-command-main">
+                <p class="workspace-command-eyebrow">Enterprise vendor operations</p>
+                <h2 class="workspace-command-title">{{ $currentPageMeta['title'] }}</h2>
+                <p class="workspace-command-copy">{{ $currentPageMeta['description'] }}</p>
+                <div class="workspace-command-meta">
+                    <span class="workspace-command-meta-item">Partner: {{ (string) ($vendorProfile['name'] ?? $portalUser ?? 'Vendor') }}</span>
+                    <span class="workspace-command-meta-item">Active listings: {{ $vendorActiveListingCount }}</span>
+                    <span class="workspace-command-meta-item">Reservations: {{ $vendorReservationsCount }}</span>
+                </div>
+                <div class="workspace-command-chips">
+                    <span class="workspace-command-chip">Responsive vendor portal</span>
+                    <span class="workspace-command-chip">Operational control surface</span>
+                    <span class="workspace-command-chip">International OTA workflow</span>
+                </div>
+            </div>
+            <div class="workspace-command-actions">
+                @foreach ($workspaceShortcutActions as $workspaceShortcutAction)
+                    <a class="workspace-command-action" href="{{ $workspaceShortcutAction['href'] }}">{{ $workspaceShortcutAction['label'] }}</a>
+                @endforeach
+            </div>
+        </section>
 
         @if ($showOverviewPage)
             @include('vendor-portal.partials.overview')
@@ -481,6 +576,14 @@
             @include('vendor-portal.partials.payout-status')
         @endif
 
+        @if ($showDistributionPage)
+            @include('vendor-portal.partials.distribution')
+        @endif
+
+        @if ($showCompliancePage)
+            @include('vendor-portal.partials.compliance-operations')
+        @endif
+
         @if ($showMessagesPage)
             @include('vendor-portal.partials.messages-center')
         @endif
@@ -580,7 +683,7 @@
             const guidedWizardPrev = document.getElementById("guidedWizardPrev");
             const guidedWizardResume = document.getElementById("guidedWizardResume");
             const guidedWizardNext = document.getElementById("guidedWizardNext");
-            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'engagement', 'api'], true) ? $forcedPanelKey : '' }}";
+            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'engagement', 'distribution', 'compliance', 'api'], true) ? $forcedPanelKey : '' }}";
             const forcedMediaPanelType = "{{ in_array($forcedMediaPanelType, ['property', 'room'], true) ? $forcedMediaPanelType : '' }}";
             const forcedMediaPanelId = Number("{{ $forcedMediaPanelId }}") || 0;
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;

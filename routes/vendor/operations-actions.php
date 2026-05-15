@@ -3,6 +3,7 @@
 use App\Models\User;
 use App\Support\ReservationPricingPolicy;
 use App\Support\ReservationSettlementCalculator;
+use App\Support\VendorPortalAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -213,6 +214,14 @@ Route::post('/portal/vendor/availability/save', function (Request $request) {
         ? 'Availability updated for 1 day.'
         : ('Availability updated for ' . $appliedCount . ' days.');
 
+    VendorPortalAuditLogger::log('vendor_availability.updated', [
+        'severity' => 'info',
+        'target_identifier' => 'availability:' . ($vendorPropertyId ?? 'shared'),
+        'days_updated' => $appliedCount,
+        'listing_category' => $normalizedListingCategory,
+        'schedule_profile' => $scheduleProfile,
+    ]);
+
     return back()->with('portal_notice', $message);
 });
 
@@ -293,6 +302,13 @@ Route::post('/portal/vendor/transport/tariff/save', function (Request $request) 
             ->where('vendor_user_id', $vendorUserId)
             ->update($colUpdate);
     }
+
+    VendorPortalAuditLogger::log('vendor_transport_tariff.updated', [
+        'severity' => 'info',
+        'target_identifier' => 'listing:' . (int) $validated['vendor_property_id'],
+        'tariff_mode' => $tariffMode,
+        'selected_rate' => $selectedRate,
+    ]);
 
     return back()->with('portal_notice', 'Transport tariff updated.');
 });
@@ -409,6 +425,13 @@ Route::post('/portal/vendor/transfer/rates/save', function (Request $request) {
         vendorPortalSyncAccommodationStructuredData((int) $validated['vendor_property_id'], $vendorUserId, $details);
     }
 
+    VendorPortalAuditLogger::log('vendor_transfer_rates.updated', [
+        'severity' => 'info',
+        'target_identifier' => 'listing:' . (int) $validated['vendor_property_id'],
+        'listing_category' => $listingCategory,
+        'transfer_option_count' => count($submittedTransferOptions),
+    ]);
+
     return back()->with('portal_notice', 'Transfer rates updated for availability and bookings.');
 });
 
@@ -520,6 +543,15 @@ Route::post('/portal/vendor/reservations/{reservation}/status', function (Reques
             'updated_at' => now(),
         ], static fn ($value) => $value !== null));
 
+    VendorPortalAuditLogger::log('vendor_reservation.status_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'reservation:' . $reservation,
+        'from_status' => $priorStatus,
+        'to_status' => $requestedStatus,
+        'payment_status' => $priorPaymentStatus,
+        'cancellation_request' => $isPaidCancellationIntent,
+    ]);
+
     $updatedRow = DB::table('vendor_reservations')->where('id', $reservation)->first();
     if ($updatedRow) {
         $bookingRef = '#' . (int) ($updatedRow->id ?? $reservation);
@@ -618,6 +650,13 @@ Route::post('/portal/vendor/reservations/{reservation}/delete', function (int $r
             'updated_at' => now(),
         ]);
 
+    VendorPortalAuditLogger::log('vendor_reservation.deleted_from_portal', [
+        'severity' => 'warn',
+        'target_identifier' => 'reservation:' . $reservation,
+        'status' => $status,
+        'payment_status' => $paymentStatus,
+    ]);
+
     return back()->with('portal_notice', 'Booking removed from your vendor portal list.');
 });
 
@@ -697,6 +736,14 @@ Route::post('/portal/vendor/inquiries/{inquiry}/status', function (Request $requ
         return back()->withErrors(['profile' => 'Inquiry update did not apply. Verify access and try again.']);
     }
 
+    VendorPortalAuditLogger::log('vendor_inquiry.updated', [
+        'severity' => 'info',
+        'target_identifier' => 'inquiry:' . $inquiry,
+        'source_table' => $table,
+        'status_updated' => filled($validated['status'] ?? null),
+        'response_updated' => filled($validated['response'] ?? null),
+    ]);
+
     return back()->with('portal_notice', 'Inquiry updated successfully.');
 });
 
@@ -775,6 +822,14 @@ Route::post('/portal/vendor/reviews/{review}/respond', function (Request $reques
     if ($updated < 1) {
         return back()->withErrors(['profile' => 'Review update did not apply. Verify access and try again.']);
     }
+
+    VendorPortalAuditLogger::log('vendor_review.responded', [
+        'severity' => 'info',
+        'target_identifier' => 'review:' . $review,
+        'source_table' => $table,
+        'status_updated' => filled($validated['status'] ?? null),
+        'response_updated' => filled($validated['response'] ?? null),
+    ]);
 
     return back()->with('portal_notice', 'Review response saved.');
 });
@@ -857,6 +912,15 @@ Route::post('/portal/vendor/pricing/create', function (Request $request) {
     }
 
     DB::table('vendor_pricing_rules')->insert($payload);
+
+    VendorPortalAuditLogger::log('vendor_pricing_rule.created', [
+        'severity' => 'info',
+        'target_identifier' => 'pricing-rule:' . strtolower(trim((string) $validated['name'])),
+        'rule_type' => (string) $validated['rule_type'],
+        'vendor_property_id' => $vendorPropertyId,
+        'vendor_service_id' => $vendorServiceId,
+        'vendor_room_category_id' => $vendorRoomCategoryId,
+    ]);
 
     return back()->with('portal_notice', 'Pricing rule saved.');
 });
@@ -1115,6 +1179,14 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     Cache::forget('vendor:portal:billing:v2:' . $vendorUserId);
     Cache::forget('vendor:portal:payout-accounts:v1:' . $vendorUserId);
 
+    VendorPortalAuditLogger::log('vendor_billing.updated', [
+        'severity' => 'info',
+        'target_identifier' => 'billing:' . $vendorUserId,
+        'billing_email_count' => (int) $billingEmails->count(),
+        'payout_account_count' => (int) $normalizedAccounts->count(),
+        'primary_currency' => strtoupper(trim((string) ($primaryAccount['currency'] ?? 'MVR'))),
+    ]);
+
     return back()->with('portal_notice', 'Billing details updated.');
 });
 
@@ -1158,6 +1230,13 @@ Route::post('/portal/vendor/address/update', function (Request $request) {
         $payload
     );
 
+    VendorPortalAuditLogger::log('vendor_billing.address_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'billing:' . $vendorUserId,
+        'country' => $billingCountry,
+        'city' => $billingCity,
+    ]);
+
     return back()->with('portal_notice', 'Address details updated.');
 });
 
@@ -1187,6 +1266,11 @@ Route::post('/portal/vendor/password/update', function (Request $request) {
 
     $vendorUser->password = (string) $validated['password'];
     $vendorUser->save();
+
+    VendorPortalAuditLogger::log('vendor_profile.password_updated', [
+        'severity' => 'warn',
+        'target_identifier' => 'vendor:' . (int) $vendorUser->id,
+    ]);
 
     return back()->with('portal_notice', 'Password updated successfully.');
 });
@@ -1260,6 +1344,13 @@ Route::post('/portal/vendor/reservations/{reservation}/messages', function (Requ
             }
         }
 
+        VendorPortalAuditLogger::log('vendor_reservation_message.blocked', [
+            'severity' => 'warn',
+            'target_identifier' => 'reservation:' . $reservation,
+            'block_reason' => (string) ($filterResult['reason'] ?? 'blocked'),
+            'block_pattern' => (string) ($filterResult['pattern'] ?? ''),
+        ]);
+
         return back()->withErrors(['vendor' => $filterResult['reason']]);
     }
 
@@ -1276,6 +1367,12 @@ Route::post('/portal/vendor/reservations/{reservation}/messages', function (Requ
         'customer_read'       => false,
         'created_at'          => now(),
         'updated_at'          => now(),
+    ]);
+
+    VendorPortalAuditLogger::log('vendor_reservation_message.sent', [
+        'severity' => 'info',
+        'target_identifier' => 'reservation:' . $reservation,
+        'message_length' => mb_strlen($messageText),
     ]);
 
     // Notify the customer

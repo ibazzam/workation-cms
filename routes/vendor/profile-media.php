@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Support\ReservationPricingPolicy;
+use App\Support\VendorPortalAuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -101,6 +102,14 @@ Route::post('/portal/vendor/categories/update', function (Request $request) {
         );
     }
 
+    VendorPortalAuditLogger::log('vendor_profile.categories_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'vendor:' . (int) $vendorUser->id,
+        'category_count' => count($normalizedCategories),
+        'request_action' => $requestAction,
+        'documents_uploaded' => count($uploadedDocuments),
+    ]);
+
     return back()->with('portal_notice', 'Category request saved and sent for admin validation review.');
 });
 
@@ -164,6 +173,11 @@ Route::post('/portal/vendor/profile/update', function (Request $request) {
         }
     }
     $vendorUser->save();
+
+    VendorPortalAuditLogger::log('vendor_profile.compliance_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'vendor:' . (int) $vendorUser->id,
+    ]);
 
     session([
         'portal_vendor_user' => $vendorUser->name,
@@ -341,6 +355,14 @@ Route::post('/portal/vendor/media/upload', function (Request $request) {
         DB::table('vendor_listing_media')->insert($mediaPayload);
     }
 
+    VendorPortalAuditLogger::log('vendor_media.uploaded', [
+        'severity' => 'info',
+        'target_identifier' => 'media:' . $entityType . ':' . ($entityId ?? 'shared'),
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
+        'files_uploaded' => count($uploadedFiles),
+    ]);
+
     return vendorPortalListingsBackResponse(
         'Photos uploaded successfully.',
         4,
@@ -380,6 +402,12 @@ Route::post('/portal/vendor/media/bulk-delete', function (Request $request) {
     foreach ($mediaRecords as $mediaRecord) {
         vendorPortalDeleteMediaRecord($mediaRecord, $vendorUserId);
     }
+
+    VendorPortalAuditLogger::log('vendor_media.bulk_deleted', [
+        'severity' => 'warn',
+        'target_identifier' => 'media:bulk-delete',
+        'deleted_count' => (int) $mediaRecords->count(),
+    ]);
 
     return vendorPortalListingsBackResponse(
         count($mediaRecords) . ' photo(s) removed.',
@@ -427,6 +455,13 @@ Route::post('/portal/vendor/media/{media}/primary', function (Request $request, 
             'updated_at' => now(),
         ]);
 
+    VendorPortalAuditLogger::log('vendor_media.primary_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'media:' . $media,
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
+    ]);
+
     return vendorPortalListingsBackResponse(
         'Primary photo updated.',
         4,
@@ -468,6 +503,13 @@ Route::post('/portal/vendor/media/{media}/update', function (Request $request, i
     $entityType = $mediaRecord ? (string) ($mediaRecord->entity_type ?? '') : null;
     $entityId = $mediaRecord && isset($mediaRecord->entity_id) ? (int) $mediaRecord->entity_id : null;
 
+    VendorPortalAuditLogger::log('vendor_media.metadata_updated', [
+        'severity' => 'info',
+        'target_identifier' => 'media:' . $media,
+        'entity_type' => (string) ($entityType ?? ''),
+        'entity_id' => $entityId,
+    ]);
+
     return vendorPortalListingsBackResponse(
         'Photo details updated.',
         4,
@@ -498,6 +540,13 @@ Route::post('/portal/vendor/media/{media}/delete', function (Request $request, i
     $entityId = isset($mediaRecord->entity_id) ? (int) $mediaRecord->entity_id : null;
 
     vendorPortalDeleteMediaRecord($mediaRecord, $vendorUserId);
+
+    VendorPortalAuditLogger::log('vendor_media.deleted', [
+        'severity' => 'warn',
+        'target_identifier' => 'media:' . $media,
+        'entity_type' => $entityType,
+        'entity_id' => $entityId,
+    ]);
 
     return vendorPortalListingsBackResponse(
         'Photo removed.',

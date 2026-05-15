@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             '/portal/vendor/oauth/facebook/data-deletion',
             '/booking/payment/webhooks/*',
+            '/channel/webhooks/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

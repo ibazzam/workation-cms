@@ -2591,7 +2591,7 @@
         $pageCategoryClass = match ($categoryKey) {
             'accommodation' => 'category-accommodation',
             'sea_transport'  => 'category-sea-transport',
-            'liveaboard' => 'category-liveaboard',
+            'liveaboard' => 'category-default',
             default          => 'category-default',
         };
     @endphp
@@ -3658,44 +3658,36 @@
                                     ? (string) $thumbUrl
                                     : ($bannerUrl ?: ($fallbackImage !== '' ? $fallbackImage : $svgFallback));
                                 $laViewUrl   = '/liveaboard/' . $propertyId;
-                                $laReviewScore = max(0, min(5, (int) round((float) ($property->star_rating ?? $property->stars ?? $property->rating ?? 0))));
-                                $laReviewCount = (int) ($property->reviews_count ?? $property->rating_count ?? 0);
-                                $laReviewBadge = ($laReviewScore > 0 ? $laReviewScore : 'N/A') . ' (' . $laReviewCount . ')';
-                                $laStatusRaw = strtolower(trim((string) (
-                                    $propertyDetails['availability_status']
-                                    ?? $propertyDetails['booking_status']
-                                    ?? $propertyDetails['status']
-                                    ?? 'available'
-                                )));
-                                $laStatusLabel = match ($laStatusRaw) {
-                                    'closed', 'closed_for_booking' => 'Closed for booking',
-                                    'sold', 'sold_out' => 'Sold',
-                                    default => 'Available',
-                                };
+                                $laDescription = trim((string) (
+                                    $propertyDetails['description']
+                                    ?? $propertyDetails['summary']
+                                    ?? $property->description
+                                    ?? ''
+                                ));
+                                $laDescription = $laDescription !== ''
+                                    ? \Illuminate\Support\Str::limit(strip_tags($laDescription), 120)
+                                    : '';
                             @endphp
-                            <a class="card-link card-link-liveaboard" href="{{ $laViewUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
+                            <a class="card-link" href="{{ $laViewUrl }}" aria-label="Open {{ (string) ($property->name ?? 'listing') }} profile">
                                 <img src="{{ $resolvedImage }}" onerror="if(!this.dataset.fb && '{{ $fallbackImage }}' !== '' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $fallbackImage }}';}else{this.onerror=null;this.src='{{ $svgFallback }}';};" alt="{{ (string) ($property->name ?? 'Listing image') }}" loading="lazy">
-                                <div class="card-body card-body-liveaboard">
-                                    <div class="card-main">
+                                <div class="card-body">
+                                    <div class="card-main-col">
+                                        <span class="card-type-chip">{{ (string) ($categoryMeta['label'] ?? 'Liveaboard') }}</span>
                                         <h3>{{ (string) ($property->name ?? 'Safari Vessel') }}</h3>
-                                        <span class="card-route">Master Route: {{ $laStart !== '' ? $laStart : '?' }} -> {{ $laEnd !== '' ? $laEnd : '?' }}</span>
-                                        <div class="card-badges-row">
-                                            @if ($laDays > 0)
-                                                <span class="card-badge card-badge-days">
-                                                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i> {{ $laDays }}-day
-                                                </span>
-                                            @endif
-                                            <span class="card-badge card-badge-review">
-                                                <i class="fa-solid fa-star" aria-hidden="true"></i> {{ $laReviewBadge }}
-                                            </span>
-                                            <span class="card-badge card-badge-status">
-                                                <i class="fa-solid fa-circle" aria-hidden="true"></i> {{ $laStatusLabel }}
-                                            </span>
+                                        <span class="card-city"><i class="fa-solid fa-route" aria-hidden="true"></i> Master Route: {{ $laStart !== '' ? $laStart : '?' }} -> {{ $laEnd !== '' ? $laEnd : '?' }}</span>
+                                        @if ($laDescription !== '')
+                                            <p class="card-desc">{{ $laDescription }}</p>
+                                        @endif
+                                        <div class="card-review">
+                                            <span class="card-rating-badge">{{ $reviewScore }}</span>
+                                            <span>{{ number_format($reviewCount) }} reviews</span>
                                         </div>
                                     </div>
-                                    <div class="card-side">
+                                    <div class="card-meta-right">
                                         @if ($primaryDisplayPrice > 0)
                                             <div class="card-price">From {{ $primaryDisplayCurrency }} {{ number_format($primaryDisplayPrice, 2) }}</div>
+                                        @else
+                                            <div class="card-price">Price on request</div>
                                         @endif
                                         <span class="card-action-btn">Book Now <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
                                     </div>

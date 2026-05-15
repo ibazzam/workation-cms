@@ -1235,10 +1235,17 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
     // Vessel gallery (primary + additional photos).
     $galleryMedia = [];
     if (Schema::hasTable('vendor_listing_media')) {
+        $seaLookupEntityIds = collect(workationPropertyLookupIds($property))
+            ->map(static fn ($value) => (int) $value)
+            ->filter(static fn (int $value): bool => $value > 0)
+            ->unique()
+            ->values();
+
         $seaCanonicalId = collect([
             (int) ($property->vendor_property_id ?? 0),
             (int) ($property->property_id ?? 0),
             (int) ($property->id ?? 0),
+            (int) ($seaLookupEntityIds->first() ?? 0),
         ])->first(static fn (int $id): bool => $id > 0) ?? 0;
         $seaLegacyEntityIds = array_values(array_unique(array_filter([
             $seaCanonicalId,
@@ -1251,7 +1258,7 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
             (int) ($property->parent_property_id ?? 0),
         ], static fn (int $id): bool => $id > 0)));
         $seaVendorUserId = (int) ($property->vendor_user_id ?? 0);
-        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
+        $seaMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport', 'property', 'service'];
         $seaLegacyMediaTypes = ['sea_transport', 'transport', 'marine_transport', 'sea-transport'];
 
         // Always try canonical ID first so vendor-uploaded media (stored by canonical entity_id)
@@ -1262,7 +1269,11 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
                 ->whereIn('entity_type', $seaMediaTypes)
                 ->where('entity_id', $seaCanonicalId);
             if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
-                $canonicalSeaQuery->where('vendor_user_id', $seaVendorUserId);
+                $canonicalSeaQuery->where(function ($query) use ($seaVendorUserId) {
+                    $query->whereNull('vendor_user_id')
+                        ->orWhere('vendor_user_id', 0)
+                        ->orWhere('vendor_user_id', $seaVendorUserId);
+                });
             }
             $mediaRows = $canonicalSeaQuery
                 ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
@@ -1270,21 +1281,28 @@ Route::get('/sea-transport/{id}', function (Request $request, int $id) use ($res
                 ->get();
         }
 
-        // Fall back to legacy IDs only if canonical returned nothing.
-        if ($mediaRows->isEmpty() && !empty($seaLegacyEntityIds)) {
-            $legacySeaIds = array_values(array_diff($seaLegacyEntityIds, [$seaCanonicalId]));
-            if (!empty($legacySeaIds)) {
-                $legacySeaQuery = DB::table('vendor_listing_media')
-                    ->whereIn('entity_type', $seaLegacyMediaTypes)
-                    ->whereIn('entity_id', $legacySeaIds);
-                if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
-                    $legacySeaQuery->where('vendor_user_id', $seaVendorUserId);
-                }
-                $mediaRows = $legacySeaQuery
-                    ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
-                    ->orderBy('id')
-                    ->get();
+        // Fall back to all lookup IDs only if canonical returned nothing.
+        if ($mediaRows->isEmpty() && $seaLookupEntityIds->isNotEmpty()) {
+            $fallbackSeaQuery = DB::table('vendor_listing_media')
+                ->whereIn('entity_type', $seaMediaTypes)
+                ->whereIn('entity_id', $seaLookupEntityIds->all());
+
+            if (Schema::hasColumn('vendor_listing_media', 'vendor_user_id') && $seaVendorUserId > 0) {
+                $fallbackSeaQuery->where(function ($query) use ($seaVendorUserId) {
+                    $query->whereNull('vendor_user_id')
+                        ->orWhere('vendor_user_id', 0)
+                        ->orWhere('vendor_user_id', $seaVendorUserId);
+                });
             }
+
+            if ($seaCanonicalId > 0) {
+                $fallbackSeaQuery->orderByRaw('CASE WHEN entity_id = ? THEN 0 ELSE 1 END', [$seaCanonicalId]);
+            }
+
+            $mediaRows = $fallbackSeaQuery
+                ->orderByRaw("CASE WHEN is_primary = true THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->get();
         }
 
         foreach ($mediaRows as $mediaRow) {

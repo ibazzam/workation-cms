@@ -2,10 +2,12 @@
 
 use App\Models\User;
 use App\Support\ChannelManagerHealthReport;
+use App\Support\ChannelOutboundSyncDispatcher;
 use App\Support\ChannelReservationIngestor;
 use App\Support\ReservationPricingPolicy;
 use App\Support\VendorPortalAuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -22,20 +24,20 @@ Route::get('/vendor', function () {
     $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
 
     $activePortalPage = strtolower(trim((string) request()->query('page', 'overview')));
-    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions', 'distribution', 'compliance'], true)) {
+    if (!in_array($activePortalPage, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions', 'distribution', 'setup', 'compliance'], true)) {
         $activePortalPage = 'overview';
     }
 
     $isOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
     $loadListingsHeavyData = $activePortalPage === 'listings';
-    $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability'], true);
+    $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'distribution', 'setup'], true);
     $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
     $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'availability', 'billing'], true) || $loadEngagementData;
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
     $loadPricingData = $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
-    $loadDistributionData = $activePortalPage === 'distribution';
-    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions'], true);
+    $loadDistributionData = in_array($activePortalPage, ['distribution', 'setup', 'overview'], true);
+    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions', 'distribution', 'setup'], true);
     $vendorPortalCacheTtlSeconds = 900;
     $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
@@ -76,6 +78,8 @@ Route::get('/vendor', function () {
             'pending_events' => 0,
             'last_sync_at' => null,
             'setup_progress' => 0,
+            'go_live_ready' => false,
+            'readiness_checks' => [],
             'next_step' => 'Connect your first OTA channel to start receiving bookings.',
         ],
     ];
@@ -131,6 +135,8 @@ Route::get('/vendor', function () {
         'completed_reservations' => 0,
         'reservations_count' => 0,
         'gross_collections_total' => 0.0,
+        'bookings_today' => 0,
+        'revenue_today' => 0.0,
         'has_pricing_rules' => false,
         'has_availability' => false,
         'has_billing' => false,
@@ -452,6 +458,16 @@ Route::get('/vendor', function () {
                     $snapshot['confirmed_reservations'] = (int) ($aggregate->confirmed_reservations ?? 0);
                     $snapshot['completed_reservations'] = (int) ($aggregate->completed_reservations ?? 0);
                     $snapshot['gross_collections_total'] = (float) ($aggregate->gross_collections_total ?? 0);
+
+                    $todayAggregate = DB::table('vendor_reservations')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->whereDate('created_at', now()->toDateString())
+                        ->selectRaw('COUNT(*) as bookings_today')
+                        ->selectRaw('SUM(COALESCE(invoice_total_amount, total_amount, 0)) as revenue_today')
+                        ->first();
+
+                    $snapshot['bookings_today'] = (int) ($todayAggregate->bookings_today ?? 0);
+                    $snapshot['revenue_today'] = (float) ($todayAggregate->revenue_today ?? 0);
                 }
 
                 $snapshot['has_pricing_rules'] = Schema::hasTable('vendor_pricing_rules')
@@ -1094,6 +1110,38 @@ Route::get('/vendor', function () {
                 $nextStep = 'All set. Keep auto-sync enabled and monitor sync health daily.';
             }
 
+            $readinessChecks = [
+                [
+                    'label' => 'At least one OTA account connected',
+                    'passed' => $connectedChannels > 0,
+                    'detail' => $connectedChannels > 0
+                        ? $connectedChannels . ' connected account' . ($connectedChannels === 1 ? '' : 's')
+                        : 'No active OTA accounts connected yet.',
+                ],
+                [
+                    'label' => 'At least one room mapping active',
+                    'passed' => $mappedRooms > 0,
+                    'detail' => $mappedRooms > 0
+                        ? $mappedRooms . ' active room mapping' . ($mappedRooms === 1 ? '' : 's')
+                        : 'No OTA rooms mapped to internal inventory yet.',
+                ],
+                [
+                    'label' => 'No failed sync events blocking launch',
+                    'passed' => $failedEvents === 0,
+                    'detail' => $failedEvents === 0
+                        ? 'No failed or dead-letter events detected.'
+                        : $failedEvents . ' failed event' . ($failedEvents === 1 ? '' : 's') . ' still require action.',
+                ],
+                [
+                    'label' => 'No channel accounts in action required state',
+                    'passed' => $actionRequiredChannels === 0,
+                    'detail' => $actionRequiredChannels === 0
+                        ? 'All connected channels are healthy enough for launch review.'
+                        : $actionRequiredChannels . ' channel account' . ($actionRequiredChannels === 1 ? '' : 's') . ' need attention.',
+                ],
+            ];
+            $goLiveReady = collect($readinessChecks)->every(static fn (array $check): bool => (bool) ($check['passed'] ?? false));
+
             $vendorDistribution = [
                 'accounts' => $distributionAccounts,
                 'room_mappings' => $distributionRoomMappings,
@@ -1106,6 +1154,8 @@ Route::get('/vendor', function () {
                     'pending_events' => $pendingEvents,
                     'last_sync_at' => $lastSyncAt,
                     'setup_progress' => $setupProgress,
+                    'go_live_ready' => $goLiveReady,
+                    'readiness_checks' => $readinessChecks,
                     'next_step' => $nextStep,
                 ],
             ];
@@ -1174,7 +1224,15 @@ Route::get('/vendor/overview', function () {
         return redirect('/portal/vendor/login');
     }
 
-    return redirect('/vendor?page=overview')->with('portal_active_panel', 'overview');
+    return redirect('/vendor?page=overview&mode=simple')->with('portal_active_panel', 'overview');
+});
+
+Route::get('/vendor/setup', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    return redirect('/vendor?page=setup&mode=simple')->with('portal_active_panel', 'distribution');
 });
 
 Route::get('/vendor/profile', function () {
@@ -1721,7 +1779,7 @@ Route::get('/vendor/distribution', function () {
         'target_identifier' => 'workspace:distribution',
     ]);
 
-    return redirect('/vendor?page=distribution')->with('portal_active_panel', 'distribution');
+    return redirect('/vendor?page=distribution&mode=advanced')->with('portal_active_panel', 'distribution');
 });
 
 Route::get('/vendor/compliance', function () {
@@ -1735,6 +1793,362 @@ Route::get('/vendor/compliance', function () {
     ]);
 
     return redirect('/vendor?page=compliance')->with('portal_active_panel', 'compliance');
+});
+
+Route::post('/vendor/distribution/accounts/connect', function (Request $request) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_channel_accounts')) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Channel manager tables are not available yet.']);
+    }
+
+    $validated = $request->validate([
+        'channel_code' => ['required', Rule::in(['booking', 'agoda', 'airbnb'])],
+        'account_reference' => ['nullable', 'string', 'max:160'],
+        'vendor_property_id' => ['nullable', 'integer', 'min:1'],
+        'webhook_secret' => ['required', 'string', 'max:255'],
+        'inventory_sync_url' => ['nullable', 'url', 'max:255'],
+        'api_base' => ['nullable', 'url', 'max:255'],
+        'access_token' => ['nullable', 'string', 'max:5000'],
+    ]);
+
+    $channelCode = strtolower(trim((string) ($validated['channel_code'] ?? '')));
+    $accountReference = trim((string) ($validated['account_reference'] ?? ''));
+    $webhookSecret = trim((string) ($validated['webhook_secret'] ?? ''));
+    $inventorySyncUrl = trim((string) ($validated['inventory_sync_url'] ?? ''));
+    $apiBase = trim((string) ($validated['api_base'] ?? ''));
+    $accessToken = trim((string) ($validated['access_token'] ?? ''));
+    $vendorPropertyId = isset($validated['vendor_property_id']) ? (int) $validated['vendor_property_id'] : null;
+
+    if ($inventorySyncUrl === '' && $apiBase === '') {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Provide either Inventory Sync URL or API Base URL.'])
+            ->withInput();
+    }
+
+    if ($channelCode === 'booking' && $inventorySyncUrl === '') {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Booking.com requires an Inventory Sync URL.'])
+            ->withInput();
+    }
+
+    if (in_array($channelCode, ['agoda', 'airbnb'], true) && $apiBase === '') {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => strtoupper($channelCode) . ' requires an API Base URL.'])
+            ->withInput();
+    }
+
+    if ($vendorPropertyId !== null) {
+        $ownsProperty = \App\Support\VendorPropertyCompatibilityReader::vendorOwnsProperty($vendorPropertyId, $vendorUserId);
+        if (!$ownsProperty) {
+            return redirect('/vendor?page=distribution')
+                ->with('portal_active_panel', 'distribution')
+                ->withErrors(['distribution' => 'Selected listing/property is not valid for this vendor account.'])
+                ->withInput();
+        }
+    }
+
+    $existingQuery = DB::table('vendor_channel_accounts')
+        ->where('vendor_user_id', $vendorUserId)
+        ->where('channel_code', $channelCode);
+
+    if ($vendorPropertyId === null) {
+        $existingQuery->whereNull('vendor_property_id');
+    } else {
+        $existingQuery->where('vendor_property_id', $vendorPropertyId);
+    }
+
+    $existing = $existingQuery->first();
+
+    $connectionMeta = [];
+    if ($existing && is_string($existing->connection_meta ?? null) && trim((string) $existing->connection_meta) !== '') {
+        $decoded = json_decode((string) $existing->connection_meta, true);
+        if (is_array($decoded)) {
+            $connectionMeta = $decoded;
+        }
+    }
+
+    $connectionMeta['webhook_secret'] = $webhookSecret;
+    if ($inventorySyncUrl !== '') {
+        $connectionMeta['inventory_sync_url'] = $inventorySyncUrl;
+    }
+    if ($apiBase !== '') {
+        $connectionMeta['api_base'] = rtrim($apiBase, '/');
+    }
+    $connectionMeta['last_connected_at'] = now()->toIso8601String();
+    unset($connectionMeta['disconnected_at'], $connectionMeta['disconnect_reason']);
+
+    $payload = [
+        'vendor_user_id' => $vendorUserId,
+        'vendor_property_id' => $vendorPropertyId,
+        'channel_code' => $channelCode,
+        'account_reference' => $accountReference !== '' ? $accountReference : null,
+        'status' => 'connected',
+        'connection_meta' => json_encode($connectionMeta, JSON_UNESCAPED_SLASHES),
+        'connected_at' => $existing && !empty($existing->connected_at) ? $existing->connected_at : now(),
+        'updated_at' => now(),
+    ];
+
+    if ($accessToken !== '') {
+        $payload['access_token_encrypted'] = Crypt::encryptString($accessToken);
+        $connectionMeta['access_token_updated_at'] = now()->toIso8601String();
+    } elseif ($existing && !empty($existing->access_token_encrypted)) {
+        $payload['access_token_encrypted'] = $existing->access_token_encrypted;
+    }
+
+    $payload['connection_meta'] = json_encode($connectionMeta, JSON_UNESCAPED_SLASHES);
+
+    if ($existing) {
+        DB::table('vendor_channel_accounts')
+            ->where('id', (int) $existing->id)
+            ->update($payload);
+
+        VendorPortalAuditLogger::log('vendor_channel_account.updated', [
+            'severity' => 'info',
+            'target_identifier' => 'channel-account:' . (int) $existing->id,
+            'channel_code' => $channelCode,
+            'vendor_property_id' => $vendorPropertyId,
+        ]);
+
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->with('status', strtoupper($channelCode) . ' account updated successfully.');
+    }
+
+    $payload['created_at'] = now();
+    $accountId = (int) DB::table('vendor_channel_accounts')->insertGetId($payload);
+
+    VendorPortalAuditLogger::log('vendor_channel_account.connected', [
+        'severity' => 'info',
+        'target_identifier' => 'channel-account:' . $accountId,
+        'channel_code' => $channelCode,
+        'vendor_property_id' => $vendorPropertyId,
+    ]);
+
+    return redirect('/vendor?page=distribution')
+        ->with('portal_active_panel', 'distribution')
+        ->with('status', strtoupper($channelCode) . ' account connected successfully.');
+});
+
+Route::post('/vendor/distribution/accounts/{accountId}/disconnect', function (Request $request, int $accountId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_channel_accounts')) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Channel manager tables are not available yet.']);
+    }
+
+    $account = DB::table('vendor_channel_accounts')
+        ->where('id', $accountId)
+        ->where('vendor_user_id', $vendorUserId)
+        ->first(['id', 'channel_code', 'connection_meta']);
+
+    if (!$account) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Channel account not found or access denied.']);
+    }
+
+    DB::table('vendor_channel_accounts')
+        ->where('id', (int) $account->id)
+        ->update([
+            'status' => 'disconnected',
+            'connection_meta' => json_encode(array_merge((array) (json_decode((string) ($account->connection_meta ?? '{}'), true) ?: []), [
+                'disconnected_at' => now()->toIso8601String(),
+                'disconnect_reason' => 'manual_vendor_disconnect',
+            ]), JSON_UNESCAPED_SLASHES),
+            'updated_at' => now(),
+        ]);
+
+    VendorPortalAuditLogger::log('vendor_channel_account.disconnected', [
+        'severity' => 'warn',
+        'target_identifier' => 'channel-account:' . (int) $account->id,
+        'channel_code' => strtolower(trim((string) ($account->channel_code ?? 'unknown'))),
+    ]);
+
+    return redirect('/vendor?page=distribution')
+        ->with('portal_active_panel', 'distribution')
+        ->with('status', strtoupper(trim((string) ($account->channel_code ?? 'channel'))) . ' account disconnected.');
+});
+
+Route::post('/vendor/distribution/room-mappings/save', function (Request $request) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_channel_room_mappings') || !Schema::hasTable('vendor_channel_accounts')) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Channel mapping tables are not available yet.']);
+    }
+
+    $validated = $request->validate([
+        'vendor_channel_account_id' => ['required', 'integer', 'min:1'],
+        'external_room_id' => ['required', 'string', 'max:160'],
+        'external_room_name' => ['nullable', 'string', 'max:190'],
+        'external_rate_plan_id' => ['nullable', 'string', 'max:160'],
+        'external_rate_plan_name' => ['nullable', 'string', 'max:190'],
+        'internal_room_category_id' => ['required', 'integer', 'min:1'],
+    ]);
+
+    $account = DB::table('vendor_channel_accounts')
+        ->where('id', (int) $validated['vendor_channel_account_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->first(['id', 'channel_code']);
+
+    if (!$account) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Selected OTA account is not available for this vendor.'])
+            ->withInput();
+    }
+
+    if (!Schema::hasTable('vendor_property_room_categories')) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Internal room categories are not available yet.'])
+            ->withInput();
+    }
+
+    $roomCategory = DB::table('vendor_property_room_categories')
+        ->where('id', (int) $validated['internal_room_category_id'])
+        ->where('vendor_user_id', $vendorUserId)
+        ->first(['id', 'name']);
+
+    if (!$roomCategory) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Selected internal room category is invalid for this vendor.'])
+            ->withInput();
+    }
+
+    $externalRoomId = trim((string) $validated['external_room_id']);
+    $existing = DB::table('vendor_channel_room_mappings')
+        ->where('vendor_channel_account_id', (int) $account->id)
+        ->where('external_room_id', $externalRoomId)
+        ->first(['id']);
+
+    $payload = [
+        'vendor_channel_account_id' => (int) $account->id,
+        'external_room_id' => $externalRoomId,
+        'external_room_name' => trim((string) ($validated['external_room_name'] ?? '')) ?: null,
+        'external_rate_plan_id' => trim((string) ($validated['external_rate_plan_id'] ?? '')) ?: null,
+        'external_rate_plan_name' => trim((string) ($validated['external_rate_plan_name'] ?? '')) ?: null,
+        'internal_room_category_id' => (int) $roomCategory->id,
+        'mapping_status' => 'active',
+        'updated_at' => now(),
+    ];
+
+    if ($existing) {
+        DB::table('vendor_channel_room_mappings')
+            ->where('id', (int) $existing->id)
+            ->update($payload);
+
+        VendorPortalAuditLogger::log('vendor_channel_room_mapping.updated', [
+            'severity' => 'info',
+            'target_identifier' => 'channel-room-mapping:' . (int) $existing->id,
+            'channel_code' => strtolower(trim((string) ($account->channel_code ?? ''))),
+            'external_room_id' => $externalRoomId,
+            'internal_room_category_id' => (int) $roomCategory->id,
+        ]);
+
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->with('status', 'Room mapping updated successfully.');
+    }
+
+    $payload['created_at'] = now();
+    $mappingId = (int) DB::table('vendor_channel_room_mappings')->insertGetId($payload);
+
+    VendorPortalAuditLogger::log('vendor_channel_room_mapping.created', [
+        'severity' => 'info',
+        'target_identifier' => 'channel-room-mapping:' . $mappingId,
+        'channel_code' => strtolower(trim((string) ($account->channel_code ?? ''))),
+        'external_room_id' => $externalRoomId,
+        'internal_room_category_id' => (int) $roomCategory->id,
+    ]);
+
+    return redirect('/vendor?page=distribution')
+        ->with('portal_active_panel', 'distribution')
+        ->with('status', 'Room mapping created successfully.');
+});
+
+Route::post('/vendor/distribution/room-mappings/{mappingId}/deactivate', function (Request $request, int $mappingId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_channel_room_mappings') || !Schema::hasTable('vendor_channel_accounts')) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Channel mapping tables are not available yet.']);
+    }
+
+    $mapping = DB::table('vendor_channel_room_mappings as m')
+        ->join('vendor_channel_accounts as a', 'a.id', '=', 'm.vendor_channel_account_id')
+        ->where('m.id', $mappingId)
+        ->where('a.vendor_user_id', $vendorUserId)
+        ->first([
+            'm.id',
+            'm.external_room_id',
+            'm.internal_room_category_id',
+            'a.channel_code',
+        ]);
+
+    if (!$mapping) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Room mapping not found or access denied.']);
+    }
+
+    DB::table('vendor_channel_room_mappings')
+        ->where('id', (int) $mapping->id)
+        ->update([
+            'mapping_status' => 'inactive',
+            'updated_at' => now(),
+        ]);
+
+    VendorPortalAuditLogger::log('vendor_channel_room_mapping.deactivated', [
+        'severity' => 'warn',
+        'target_identifier' => 'channel-room-mapping:' . (int) $mapping->id,
+        'channel_code' => strtolower(trim((string) ($mapping->channel_code ?? ''))),
+        'external_room_id' => trim((string) ($mapping->external_room_id ?? '')),
+        'internal_room_category_id' => (int) ($mapping->internal_room_category_id ?? 0),
+    ]);
+
+    return redirect('/vendor?page=distribution')
+        ->with('portal_active_panel', 'distribution')
+        ->with('status', 'Room mapping deactivated.');
 });
 
 Route::post('/vendor/distribution/events/{eventId}/retry', function (Request $request, int $eventId) {
@@ -1756,12 +2170,13 @@ Route::post('/vendor/distribution/events/{eventId}/retry', function (Request $re
         ->join('vendor_channel_accounts as a', 'a.id', '=', 'e.vendor_channel_account_id')
         ->where('e.id', $eventId)
         ->where('a.vendor_user_id', $vendorUserId)
-        ->where('e.direction', 'inbound')
         ->first([
             'e.id',
             'e.vendor_channel_account_id',
+            'e.direction',
             'e.event_type',
             'e.status',
+            'e.retry_count',
             'e.http_method',
             'e.request_path',
             'e.signature_hash',
@@ -1774,10 +2189,33 @@ Route::post('/vendor/distribution/events/{eventId}/retry', function (Request $re
             ->withErrors(['distribution' => 'Event not found or access denied.']);
     }
 
+    $direction = strtolower(trim((string) ($event->direction ?? 'inbound')));
     $currentStatus = strtolower(trim((string) ($event->status ?? '')));
     if (!in_array($currentStatus, ['failed', 'error', 'dead_letter'], true)) {
         return redirect('/vendor?page=distribution')
-            ->withErrors(['distribution' => 'Only failed inbound events can be retried.']);
+            ->withErrors(['distribution' => 'Only failed events can be retried.']);
+    }
+
+    if ($direction === 'outbound') {
+        DB::table('vendor_channel_events')
+            ->where('id', $eventId)
+            ->update([
+                'status' => 'queued',
+                'error_message' => null,
+                'updated_at' => now(),
+            ]);
+
+        VendorPortalAuditLogger::log('vendor_channel_event.outbound_requeue_requested', [
+            'severity' => 'warn',
+            'target_identifier' => 'event:' . $eventId,
+            'channel_code' => strtolower(trim((string) ($event->channel_code ?? ''))),
+            'event_type' => trim((string) ($event->event_type ?? 'event')),
+            'retry_count_before' => (int) ($event->retry_count ?? 0),
+        ]);
+
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->with('status', 'Outbound event re-queued. Dispatcher will retry delivery automatically.');
     }
 
     $payload = [];
@@ -1866,6 +2304,99 @@ Route::post('/vendor/distribution/events/{eventId}/retry', function (Request $re
     return redirect('/vendor?page=distribution')
         ->with('portal_active_panel', 'distribution')
         ->withErrors(['distribution' => (string) ($result['message'] ?? 'Retry failed.')]);
+});
+
+Route::post('/vendor/distribution/events/{eventId}/dispatch-now', function (Request $request, int $eventId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    if (!Schema::hasTable('vendor_channel_events') || !Schema::hasTable('vendor_channel_accounts')) {
+        return redirect('/vendor?page=distribution')
+            ->withErrors(['distribution' => 'Channel manager tables are not available yet.']);
+    }
+
+    $rateLimitKey = 'portal_distribution_dispatch_now_last_at';
+    $lastDispatchAt = (int) session($rateLimitKey, 0);
+    $nowTimestamp = now()->timestamp;
+    $cooldownSeconds = 10;
+    if ($lastDispatchAt > 0 && ($nowTimestamp - $lastDispatchAt) < $cooldownSeconds) {
+        VendorPortalAuditLogger::log('vendor_channel_event.dispatch_now_rate_limited', [
+            'severity' => 'warn',
+            'target_identifier' => 'event:' . $eventId,
+            'cooldown_seconds' => $cooldownSeconds,
+        ]);
+
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Dispatch now is rate-limited. Please wait a few seconds and try again.']);
+    }
+
+    $event = DB::table('vendor_channel_events as e')
+        ->join('vendor_channel_accounts as a', 'a.id', '=', 'e.vendor_channel_account_id')
+        ->where('e.id', $eventId)
+        ->where('a.vendor_user_id', $vendorUserId)
+        ->where('e.direction', 'outbound')
+        ->first([
+            'e.id',
+            'e.vendor_channel_account_id',
+            'e.event_type',
+            'e.status',
+            'a.channel_code',
+        ]);
+
+    if (!$event) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Outbound event not found or access denied.']);
+    }
+
+    $currentStatus = strtolower(trim((string) ($event->status ?? 'queued')));
+    if (in_array($currentStatus, ['failed', 'error', 'dead_letter'], true)) {
+        DB::table('vendor_channel_events')
+            ->where('id', $eventId)
+            ->update([
+                'status' => 'queued',
+                'error_message' => null,
+                'updated_at' => now(),
+            ]);
+    } elseif (!in_array($currentStatus, ['queued', 'retrying'], true)) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Only queued, retrying, or failed outbound events can be dispatched now.']);
+    }
+
+    session([$rateLimitKey => $nowTimestamp]);
+
+    VendorPortalAuditLogger::log('vendor_channel_event.dispatch_now_requested', [
+        'severity' => 'warn',
+        'target_identifier' => 'event:' . $eventId,
+        'channel_code' => strtolower(trim((string) ($event->channel_code ?? ''))),
+        'event_type' => trim((string) ($event->event_type ?? 'event')),
+    ]);
+
+    $summary = ChannelOutboundSyncDispatcher::dispatchQueued(limit: 1, maxRetries: 5, dryRun: false, eventId: $eventId);
+
+    if ((int) ($summary['processed'] ?? 0) > 0) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->with('status', 'Outbound event dispatched successfully.');
+    }
+
+    if ((int) ($summary['retrying'] ?? 0) > 0 || (int) ($summary['dead_letter'] ?? 0) > 0 || (int) ($summary['failed'] ?? 0) > 0) {
+        return redirect('/vendor?page=distribution')
+            ->with('portal_active_panel', 'distribution')
+            ->withErrors(['distribution' => 'Dispatch attempt failed. Event remains in retry workflow.']);
+    }
+
+    return redirect('/vendor?page=distribution')
+        ->with('portal_active_panel', 'distribution')
+        ->withErrors(['distribution' => 'No outbound event was dispatched.']);
 });
 
 Route::get('/vendor/messages', function () {

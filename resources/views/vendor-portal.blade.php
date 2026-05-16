@@ -87,8 +87,17 @@
         $listingWizardStep = (int) session('listing_wizard_step', 1);
         $listingWizardStep = max(1, min(4, $listingWizardStep));
         $portalPageQuery = strtolower(trim((string) request()->query('page', '')));
-        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions', 'distribution', 'compliance'], true)
+        $activePortalPage = in_array($portalPageQuery, ['overview', 'reports', 'profile', 'listings', 'reservations', 'operations', 'availability', 'billing', 'messages', 'engagement', 'promotions', 'distribution', 'setup', 'compliance'], true)
             ? $portalPageQuery
+            : 'overview';
+        $portalModeQuery = strtolower(trim((string) request()->query('mode', 'simple')));
+        $portalMode = in_array($portalModeQuery, ['simple', 'advanced'], true) ? $portalModeQuery : 'simple';
+        if (!in_array($activePortalPage, ['overview', 'setup', 'distribution'], true)) {
+            $portalMode = 'advanced';
+        }
+        $distributionTabQuery = strtolower(trim((string) request()->query('dist_tab', 'overview')));
+        $distributionTab = in_array($distributionTabQuery, ['overview', 'connections', 'mapping', 'issues', 'logs'], true)
+            ? $distributionTabQuery
             : 'overview';
         $panelFromPageQuery = match ($activePortalPage) {
             'profile' => 'profile',
@@ -96,6 +105,7 @@
             'reservations', 'operations', 'availability' => 'reservations',
             'billing' => 'billing',
             'distribution' => 'distribution',
+            'setup' => 'distribution',
             'compliance' => 'compliance',
             'engagement', 'promotions' => 'engagement',
             'reports', 'overview' => 'overview',
@@ -107,20 +117,22 @@
         $showAvailabilityPage = $activePortalPage === 'availability';
         $showBillingPage = $activePortalPage === 'billing';
         $showDistributionPage = $activePortalPage === 'distribution';
+        $showSetupPage = $activePortalPage === 'setup';
         $showCompliancePage = $activePortalPage === 'compliance';
         $showMessagesPage = $activePortalPage === 'messages';
         $showEngagementPage = in_array($activePortalPage, ['engagement', 'promotions'], true);
         $showOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
         $portalPageMeta = [
-            'overview' => ['title' => 'Executive Dashboard', 'description' => 'Business performance, operational signals, and direct actions for daily vendor management.'],
+            'overview' => ['title' => 'Home', 'description' => 'One-screen clarity for setup progress, key metrics, and immediate actions.'],
             'reports' => ['title' => 'Performance Reports', 'description' => 'Commercial, operational, and partner-readiness reporting for accountable decisions.'],
+            'setup' => ['title' => 'Setup Wizard', 'description' => 'Guided onboarding: connect channels, map rooms, test sync, and go live checks.'],
             'profile' => ['title' => 'Partner Profile', 'description' => 'Business identity, compliance records, and account settings for partner trust.'],
             'listings' => ['title' => 'Listings Console', 'description' => 'Manage inventory presentation, content quality, and category-specific listing readiness.'],
             'reservations' => ['title' => 'Reservations Operations', 'description' => 'Track bookings, service recovery, and booking pipeline execution in one queue.'],
             'operations' => ['title' => 'Reservations Operations', 'description' => 'Track bookings, service recovery, and booking pipeline execution in one queue.'],
             'availability' => ['title' => 'Availability & Allotment', 'description' => 'Control sellable inventory, date-level availability, and operational capacity.'],
             'billing' => ['title' => 'Finance & Reconciliation', 'description' => 'Review collections, commissions, gateway fees, and payout visibility.'],
-            'distribution' => ['title' => 'Distribution & Connectivity', 'description' => 'Manage channels, room mappings, sync health, and OTA connectivity standards.'],
+            'distribution' => ['title' => 'Distribution Control Center', 'description' => 'Advanced controls for connections, mappings, issues, and sync logs.'],
             'messages' => ['title' => 'Guest Messaging', 'description' => 'Handle pre-arrival, in-stay, and after-stay communication with operational discipline.'],
             'engagement' => ['title' => 'Guest Experience & Growth', 'description' => 'Reviews, loyalty, promotions, and guest retention workflows.'],
             'promotions' => ['title' => 'Guest Experience & Growth', 'description' => 'Reviews, loyalty, promotions, and guest retention workflows.'],
@@ -128,10 +140,10 @@
         ];
         $currentPageMeta = $portalPageMeta[$activePortalPage] ?? $portalPageMeta['overview'];
         $workspaceShortcutActions = [
-            ['label' => 'Open Listings', 'href' => '/vendor/listings'],
-            ['label' => 'Reservations Queue', 'href' => '/vendor/reservations'],
-            ['label' => 'Channel Manager', 'href' => '/vendor/distribution'],
-            ['label' => 'Compliance Center', 'href' => '/vendor/compliance'],
+            ['label' => 'Home', 'href' => '/vendor?page=overview&mode=simple'],
+            ['label' => 'Setup', 'href' => '/vendor?page=setup&mode=simple'],
+            ['label' => 'Bookings', 'href' => '/vendor/reservations'],
+            ['label' => 'Advanced', 'href' => '/vendor?page=distribution&mode=advanced'],
         ];
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
@@ -407,11 +419,18 @@
             <div class="hero-top">
                 <div class="hero-head">
                     <span class="eyebrow">Vendor Workspace</span>
-                    <h1>Partner Operations Center</h1>
-                    <p>Enterprise-grade vendor console for inventory, reservations, finance, connectivity, and operational control.</p>
+                    <h1>Vendor Portal</h1>
+                    <p>Manage listings, bookings, payouts, and channel setup from one place.</p>
                 </div>
                 <div class="hero-actions">
                     <div class="auth-bar">
+                        @php
+                            $simpleModeUrl = url('/vendor?page=' . (in_array($activePortalPage, ['distribution'], true) ? 'overview' : $activePortalPage) . '&mode=simple');
+                            $advancedModeUrl = url('/vendor?page=' . (in_array($activePortalPage, ['overview', 'setup'], true) ? 'distribution' : $activePortalPage) . '&mode=advanced');
+                        @endphp
+                        <a class="hero-link" href="{{ $simpleModeUrl }}">Simple</a>
+                        <a class="hero-link" href="{{ $advancedModeUrl }}">Advanced</a>
+                        <a class="hero-link" href="/vendor/profile">Profile</a>
                         <span class="auth-user">Signed in as {{ $portalUser }}</span>
                         <span class="hero-status-pill {{ $heroOperationalStatusClass }}">Platform status: {{ $heroOperationalStatusLabel }}</span>
                         <form method="POST" action="/portal/vendor/logout">
@@ -453,9 +472,10 @@
 
         <div class="portal-content">
 
+        @if (!($showOverviewPage && $portalMode === 'simple'))
         <section class="workspace-command-bar" aria-label="Workspace command bar">
             <div class="workspace-command-main">
-                <p class="workspace-command-eyebrow">Enterprise vendor operations</p>
+                <p class="workspace-command-eyebrow">Workspace</p>
                 <h2 class="workspace-command-title">{{ $currentPageMeta['title'] }}</h2>
                 <p class="workspace-command-copy">{{ $currentPageMeta['description'] }}</p>
                 <div class="workspace-command-meta">
@@ -464,9 +484,9 @@
                     <span class="workspace-command-meta-item">Reservations: {{ $vendorReservationsCount }}</span>
                 </div>
                 <div class="workspace-command-chips">
-                    <span class="workspace-command-chip">Responsive vendor portal</span>
-                    <span class="workspace-command-chip">Operational control surface</span>
-                    <span class="workspace-command-chip">International OTA workflow</span>
+                    <span class="workspace-command-chip">Simple navigation</span>
+                    <span class="workspace-command-chip">Daily operations</span>
+                    <span class="workspace-command-chip">Channel setup</span>
                 </div>
             </div>
             <div class="workspace-command-actions">
@@ -475,9 +495,18 @@
                 @endforeach
             </div>
         </section>
+        @endif
 
         @if ($showOverviewPage)
-            @include('vendor-portal.partials.overview')
+            @if ($portalMode === 'simple')
+                @include('vendor-portal.partials.home-simple')
+            @else
+                @include('vendor-portal.partials.overview')
+            @endif
+        @endif
+
+        @if ($showSetupPage)
+            @include('vendor-portal.partials.setup-wizard')
         @endif
 
         @if (session('portal_notice'))

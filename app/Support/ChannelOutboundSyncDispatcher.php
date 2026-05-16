@@ -15,7 +15,7 @@ class ChannelOutboundSyncDispatcher
      *
      * @return array{processed:int,failed:int,retrying:int,dead_letter:int,skipped:int}
      */
-    public static function dispatchQueued(int $limit = 50, int $maxRetries = 5, bool $dryRun = false): array
+    public static function dispatchQueued(int $limit = 50, int $maxRetries = 5, bool $dryRun = false, ?int $eventId = null): array
     {
         $summary = [
             'processed' => 0,
@@ -29,11 +29,17 @@ class ChannelOutboundSyncDispatcher
             return $summary;
         }
 
-        $events = DB::table('vendor_channel_events as e')
+        $eventsQuery = DB::table('vendor_channel_events as e')
             ->join('vendor_channel_accounts as a', 'a.id', '=', 'e.vendor_channel_account_id')
             ->where('e.direction', 'outbound')
             ->whereIn('e.status', ['queued', 'retrying'])
-            ->orderBy('e.created_at')
+            ->orderBy('e.created_at');
+
+        if (($eventId ?? 0) > 0) {
+            $eventsQuery->where('e.id', (int) $eventId);
+        }
+
+        $events = $eventsQuery
             ->limit(max(1, $limit))
             ->get([
                 'e.id',

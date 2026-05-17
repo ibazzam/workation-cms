@@ -49,6 +49,12 @@
                     </div>
                 @endif
             </div>
+            @if ($forcedListingCategory !== '')
+                <div class="inline-actions" style="margin:0 0 10px;">
+                    <a class="btn btn-secondary" href="/vendor/reservations?category={{ urlencode($forcedListingCategory) }}#vendorAvailabilitySection">Open Availability Calendar</a>
+                    <a class="btn btn-secondary" href="/vendor/pricing?category={{ urlencode($forcedListingCategory) }}#vendorPricingSection">Open Pricing Rules</a>
+                </div>
+            @endif
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
             @endif

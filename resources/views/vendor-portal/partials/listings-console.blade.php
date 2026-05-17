@@ -45,12 +45,16 @@
                 @if ($forcedListingCategory !== '')
                     <div class="inline-actions">
                         <a class="btn btn-primary" href="/vendor/listings/{{ $forcedListingCategory }}/create">Add {{ $consoleCategoryLabel }}</a>
-                        <a class="btn btn-secondary" href="{{ '/vendor/reservations' . $categoryQuery }}#vendorAvailabilitySection">Reservations</a>
-                        <a class="btn btn-secondary" href="{{ '/vendor/pricing' . $categoryQuery }}#vendorPricingSection">Pricing</a>
-                        <a class="btn btn-secondary" href="/vendor/billing">Billing</a>
+                        <a class="btn btn-secondary" href="/vendor?page=setup&mode=simple">Open Setup Wizard</a>
                     </div>
                 @endif
             </div>
+            @if ($forcedListingCategory !== '')
+                <div class="inline-actions" style="margin:0 0 10px;">
+                    <a class="btn btn-secondary" href="/vendor/reservations?category={{ urlencode($forcedListingCategory) }}#vendorAvailabilitySection">Open Availability Calendar</a>
+                    <a class="btn btn-secondary" href="/vendor/pricing?category={{ urlencode($forcedListingCategory) }}#vendorPricingSection">Open Pricing Rules</a>
+                </div>
+            @endif
             @if (!$vendorCanManageListings)
                 <p class="wizard-note" style="margin-bottom:10px;">Listings, operations, and pricing are currently locked. Complete My Account compliance details and wait for admin verification approval.</p>
             @endif
@@ -106,6 +110,55 @@
                     </article>
                 @endif
             </div>
+
+            @if ($vendorCanManageListings && $hasSelectedCategories)
+                <article class="listing-setup-wizard" aria-label="New listing setup wizard">
+                    <div class="listing-setup-wizard-head">
+                        <div>
+                            <p class="listing-setup-wizard-label">New Listing Wizard</p>
+                            <h3>Build your listing in 4 clear steps</h3>
+                            <p>Follow the same booking-engine flow every time: create listing, add rooms or inventory, upload media, then submit for approval.</p>
+                        </div>
+                        <div class="listing-setup-wizard-actions">
+                            @if ($forcedListingCategory !== '')
+                                <a class="btn btn-primary" href="/vendor/listings/{{ $forcedListingCategory }}/create">Start New {{ $consoleCategoryLabel }}</a>
+                            @else
+                                <a class="btn btn-primary" href="/vendor/listings/create">Start New Listing</a>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="listing-setup-steps" role="list" aria-label="Listing creation steps">
+                        <div class="listing-setup-step" role="listitem">
+                            <span class="listing-setup-step-index">1</span>
+                            <div>
+                                <p class="listing-setup-step-title">Create Listing Basics</p>
+                                <p class="listing-setup-step-copy">Select category, pricing model, and core listing details.</p>
+                            </div>
+                        </div>
+                        <div class="listing-setup-step" role="listitem">
+                            <span class="listing-setup-step-index">2</span>
+                            <div>
+                                <p class="listing-setup-step-title">Add Rooms Or Inventory</p>
+                                <p class="listing-setup-step-copy">Define sellable units, capacities, and rate context.</p>
+                            </div>
+                        </div>
+                        <div class="listing-setup-step" role="listitem">
+                            <span class="listing-setup-step-index">3</span>
+                            <div>
+                                <p class="listing-setup-step-title">Upload Professional Media</p>
+                                <p class="listing-setup-step-copy">Attach photos or videos that match each listing and room.</p>
+                            </div>
+                        </div>
+                        <div class="listing-setup-step" role="listitem">
+                            <span class="listing-setup-step-index">4</span>
+                            <div>
+                                <p class="listing-setup-step-title">Submit For Approval</p>
+                                <p class="listing-setup-step-copy">Send the listing for moderation and publish when approved.</p>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            @endif
         </section>
 
 <script>

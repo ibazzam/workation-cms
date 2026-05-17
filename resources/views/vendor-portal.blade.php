@@ -148,7 +148,7 @@
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '';
-        $showWorkspaceTabs = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing', 'messages'], true);
+        $showWorkspaceTabs = $showListingsPage;
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
             $showAvailabilityPage => 'availability',
@@ -232,6 +232,16 @@
                 'href' => '/vendor/messages' . $workspaceCategoryQuery,
             ],
         ];
+        if ($showListingsPage) {
+            $workspacePrimaryTabs = [
+                [
+                    'key' => 'listings',
+                    'label' => 'My Listings',
+                    'active' => true,
+                    'href' => '/vendor/listings' . $workspaceCategoryQuery,
+                ],
+            ];
+        }
         $forcedMediaPanelType = strtolower(trim((string) session('portal_media_panel_type', '')));
         $forcedMediaPanelId = (int) session('portal_media_panel_id', 0);
         $propertyMediaAssets = $vendorMediaAssets->filter(static function ($media): bool {
@@ -344,6 +354,8 @@
             $collectionDay = strlen($collectionDate) >= 10 ? substr($collectionDate, 0, 10) : 'N/A';
 
             return [
+                'reservation_id' => (int) ($reservation->id ?? 0),
+                'reservation_code' => (string) ($reservation->reservation_code ?? ('RSV-' . str_pad((string) ($reservation->id ?? '0'), 6, '0', STR_PAD_LEFT))),
                 'invoice_ref' => $invoiceRef,
                 'customer_name' => (string) ($reservation->customer_name ?? 'N/A'),
                 'customer_email' => (string) ($reservation->customer_email ?? ''),

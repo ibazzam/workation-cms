@@ -61,6 +61,27 @@
                             </h3>
                             <span class="ops-chip">{{ $categoryLabel ?? ucwords(str_replace('_', ' ', $category)) }}</span>
                         </div>
+                        <div class="listing-form-quality-strip" aria-label="Listing form quality guide">
+                            <p class="small" style="margin:0 0 6px;"><strong>Simple 4-step listing process</strong></p>
+                            <div class="listing-form-quality-grid">
+                                <article>
+                                    <p class="small" style="margin:0;font-weight:700;">1. Listing Basics</p>
+                                    <p class="small" style="margin:4px 0 0;">Use a clear listing name and short description.</p>
+                                </article>
+                                <article>
+                                    <p class="small" style="margin:0;font-weight:700;">2. Address &amp; Location</p>
+                                    <p class="small" style="margin:4px 0 0;">Select country, atoll/state, island/city in order.</p>
+                                </article>
+                                <article>
+                                    <p class="small" style="margin:0;font-weight:700;">3. Pricing &amp; Capacity</p>
+                                    <p class="small" style="margin:4px 0 0;">Set capacity and cost fields clearly for operators.</p>
+                                </article>
+                                <article>
+                                    <p class="small" style="margin:0;font-weight:700;">4. Media Quality</p>
+                                    <p class="small" style="margin:4px 0 0;">Upload bright, clear photos after saving listing.</p>
+                                </article>
+                            </div>
+                        </div>
                         @include('vendor-portal.partials.forms.' . $formType . '.' . $category)
                     </div>
                 </section>
@@ -97,6 +118,15 @@
         });
 
         // ── Location tree (Maldives atoll/island cascade) ────────────────────
+        var COUNTRY_OPTIONS = [
+            'Maldives', 'Sri Lanka', 'India', 'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman',
+            'Singapore', 'Malaysia', 'Thailand', 'Indonesia', 'Philippines', 'Vietnam', 'Japan', 'South Korea', 'China',
+            'Australia', 'New Zealand', 'United Kingdom', 'Ireland', 'France', 'Germany', 'Italy', 'Spain', 'Netherlands',
+            'Switzerland', 'Austria', 'Sweden', 'Norway', 'Denmark', 'Finland', 'Portugal', 'Greece', 'Turkey', 'Egypt',
+            'South Africa', 'Kenya', 'Tanzania', 'Mauritius', 'Seychelles', 'Canada', 'United States', 'Mexico', 'Brazil',
+            'Argentina', 'Chile', 'Other'
+        ];
+
         var FALLBACK_LOCATION_TREE = {
             "Maldives": {
                 "Kaafu Atoll": ["Malé", "Hulhumalé", "Maafushi", "Guraidhoo", "Dhiffushi", "Thulusdhoo"],
@@ -204,6 +234,23 @@
             values.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
         }
 
+        function rebuildCountrySelect(sel, selectedValue) {
+            if (!sel) return;
+            var current = String(selectedValue || sel.value || 'Maldives').trim() || 'Maldives';
+            var options = COUNTRY_OPTIONS.slice();
+            if (options.indexOf(current) === -1) {
+                options.push(current);
+            }
+            sel.innerHTML = '';
+            options.forEach(function (countryName) {
+                var option = document.createElement('option');
+                option.value = countryName;
+                option.textContent = countryName;
+                if (countryName === current) option.selected = true;
+                sel.appendChild(option);
+            });
+        }
+
         function ensureSelectHasOption(sel, val) {
             if (!sel || !val) return;
             if (!Array.from(sel.options).some(function (o) { return o.value === val; })) {
@@ -222,19 +269,22 @@
         function refreshLocationSelectors() {
             if (!locationCountry || !locationState || !locationCity) return;
             var selectedCountry = locationCountry.dataset.selectedValue || locationCountry.value || 'Maldives';
+            rebuildCountrySelect(locationCountry, selectedCountry);
             ensureSelectHasOption(locationCountry, selectedCountry);
             locationCountry.value = selectedCountry;
             var country = locationCountry.value || 'Maldives';
             var tree = getCurrentLocationTree();
             var states = Object.keys(tree[country] || {});
-            rebuildSelect(locationState, states, 'Select state/province');
+            var statePlaceholder = country === 'Maldives' ? 'Select atoll' : 'Select state/province';
+            var cityPlaceholder = country === 'Maldives' ? 'Select island' : 'Select city';
+            rebuildSelect(locationState, states, statePlaceholder);
             var selectedState = locationState.dataset.selectedValue || '';
             ensureSelectHasOption(locationState, selectedState);
             if (selectedState && Array.from(locationState.options).some(function (o) { return o.value === selectedState; })) {
                 locationState.value = selectedState;
             } else { locationState.value = states[0] || ''; }
             var cities = (tree[country] || {})[locationState.value] || [];
-            rebuildSelect(locationCity, cities, 'Select city/island');
+            rebuildSelect(locationCity, cities, cityPlaceholder);
             var selectedCity = locationCity.dataset.selectedValue || '';
             ensureSelectHasOption(locationCity, selectedCity);
             if (selectedCity && Array.from(locationCity.options).some(function (o) { return o.value === selectedCity; })) {
@@ -254,7 +304,8 @@
                 var country = locationCountry.value || 'Maldives';
                 var tree = getCurrentLocationTree();
                 var cities = (tree[country] || {})[locationState.value] || [];
-                rebuildSelect(locationCity, cities, 'Select city/island');
+                var cityPlaceholder = country === 'Maldives' ? 'Select island' : 'Select city';
+                rebuildSelect(locationCity, cities, cityPlaceholder);
                 if (cities.length > 0) locationCity.value = cities[0];
             });
         }
@@ -314,19 +365,22 @@
         function refreshEditLocationSelectors() {
             if (!editLocationCountry || !editLocationState || !editLocationCity) return;
             var selectedCountry = editLocationCountry.dataset.selectedValue || editLocationCountry.value || 'Maldives';
+            rebuildCountrySelect(editLocationCountry, selectedCountry);
             ensureSelectHasOption(editLocationCountry, selectedCountry);
             editLocationCountry.value = selectedCountry;
             var country = editLocationCountry.value || 'Maldives';
             var tree = getCurrentLocationTree();
             var states = Object.keys(tree[country] || {});
-            rebuildSelect(editLocationState, states, 'Select atoll');
+            var editStatePlaceholder = country === 'Maldives' ? 'Select atoll' : 'Select state/province';
+            var editCityPlaceholder = country === 'Maldives' ? 'Select island' : 'Select city';
+            rebuildSelect(editLocationState, states, editStatePlaceholder);
             var selectedState = editLocationState.dataset.selectedValue || '';
             ensureSelectHasOption(editLocationState, selectedState);
             if (selectedState && Array.from(editLocationState.options).some(function (o) { return o.value === selectedState; })) {
                 editLocationState.value = selectedState;
             } else { editLocationState.value = states[0] || ''; }
             var cities = (tree[country] || {})[editLocationState.value] || [];
-            rebuildSelect(editLocationCity, cities, 'Select island');
+            rebuildSelect(editLocationCity, cities, editCityPlaceholder);
             var selectedCity = editLocationCity.dataset.selectedValue || '';
             ensureSelectHasOption(editLocationCity, selectedCity);
             if (selectedCity && Array.from(editLocationCity.options).some(function (o) { return o.value === selectedCity; })) {
@@ -345,7 +399,8 @@
                 var country = editLocationCountry.value || 'Maldives';
                 var tree = getCurrentLocationTree();
                 var cities = (tree[country] || {})[editLocationState.value] || [];
-                rebuildSelect(editLocationCity, cities, 'Select island');
+                var editCityPlaceholder = country === 'Maldives' ? 'Select island' : 'Select city';
+                rebuildSelect(editLocationCity, cities, editCityPlaceholder);
                 if (cities.length > 0) editLocationCity.value = cities[0];
             });
         }

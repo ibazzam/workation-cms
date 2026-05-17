@@ -50,11 +50,44 @@
         }
         $selectedPrimaryIndex = (string) old('primary_payout_account', (string) $defaultPrimaryIndex);
         $billingEmailsTextarea = old('billing_emails', implode(PHP_EOL, $decodedBillingEmails));
+        $logoPathCandidates = [
+            optional($billingRow)->letterhead_logo_path ?? null,
+            optional($billingRow)->logo_path ?? null,
+            optional($billingRow)->company_logo_path ?? null,
+            optional($billingRow)->brand_logo_path ?? null,
+        ];
+        $currentLogoPath = collect($logoPathCandidates)
+            ->map(static fn ($value): string => trim((string) ($value ?? '')))
+            ->first(static fn (string $value): bool => $value !== '') ?? '';
+        $currentLogoUrl = '';
+        if ($currentLogoPath !== '') {
+            $currentLogoUrl = preg_match('/^https?:\/\//i', $currentLogoPath)
+                ? $currentLogoPath
+                : \Illuminate\Support\Facades\Storage::disk('public')->url(ltrim($currentLogoPath, '/'));
+        }
     @endphp
 
     <div class="ops-header">
         <p class="ops-title">Bank &amp; Payout Accounts</p>
         <span class="ops-chip">Payout setup</span>
+    </div>
+    <div class="policy-box" style="margin:0 0 10px;border:1px solid #d3e2ec;border-radius:12px;background:#f8fcff;padding:10px 12px;">
+        <p class="small" style="margin:0 0 6px;"><strong>Document Template Settings</strong></p>
+        <p class="small" style="margin:0 0 8px;">Vendor Reservation + Invoice documents use your vendor letterhead. Address is sourced from Address section fields (street, city, state, country, full address).</p>
+        <form method="POST" action="/portal/vendor/billing/logo/upload" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+            @csrf
+            <div class="profile-field" style="min-width:260px;">
+                <label for="profile_letterhead_logo">Upload Vendor Logo</label>
+                <input id="profile_letterhead_logo" name="letterhead_logo" class="profile-input" type="file" accept=".png,.jpg,.jpeg,.webp,.svg" required>
+            </div>
+            <button class="btn btn-secondary" type="submit">Upload Logo</button>
+        </form>
+        @if ($currentLogoUrl !== '')
+            <div style="margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="small">Current logo:</span>
+                <img src="{{ $currentLogoUrl }}" alt="Current vendor logo" style="max-height:52px;max-width:220px;object-fit:contain;border:1px solid #d7e0e6;border-radius:8px;padding:4px;background:#fff;">
+            </div>
+        @endif
     </div>
     <div class="profile-grid">
         <div class="profile-field"><label>Business Name</label><input class="profile-input" type="text" value="{{ (string) (optional($billingRow)->business_name ?? '') }}" readonly></div>

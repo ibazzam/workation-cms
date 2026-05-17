@@ -57,7 +57,7 @@
             </button>
             <div class="nav-group-body {{ $sidebarListingsOpen ? 'is-open' : '' }}" data-vendor-nav-group="listings">
                 <a class="nav-item-link {{ ($activePortalPage ?? '') === 'listings' && ($forcedListingCategory ?? '') === '' ? 'prominent' : '' }}" href="/vendor/listings" data-panel-key="listings"><i class="fa-solid fa-list-check" aria-hidden="true"></i> My Listings</a>
-                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'availability' ? 'prominent' : '' }}" href="/vendor/availability" data-panel-key="reservations"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Calendar</a>
+                <a class="nav-item-link {{ ($activePortalPage ?? '') === 'availability' ? 'prominent' : '' }}" href="/vendor/availability" data-panel-key="availability"><i class="fa-solid fa-calendar-days" aria-hidden="true"></i> Calendar</a>
             </div>
         </div>
 

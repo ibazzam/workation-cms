@@ -431,6 +431,45 @@
             padding: 12px;
         }
 
+        .page-listing-form .ops-field label {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #23445f;
+        }
+
+        .page-listing-form .ops-input,
+        .page-listing-form .ops-select,
+        .page-listing-form .ops-textarea {
+            min-height: 44px;
+            font-size: 0.95rem;
+        }
+
+        .listing-form-quality-strip {
+            margin: 0 0 12px;
+            border: 1px solid #d3deec;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f6faff 0%, #ffffff 100%);
+            padding: 10px;
+        }
+
+        .listing-form-quality-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .listing-form-quality-grid article {
+            border: 1px solid #d8e3ee;
+            border-radius: 10px;
+            background: #fff;
+            padding: 8px;
+        }
+
+        .listing-form-quality-grid .small {
+            color: #35556f;
+            font-size: 0.8rem;
+        }
+
         .portal-nav a,
         .nav-item-link,
         .nav-sub-link {
@@ -1057,6 +1096,66 @@
             background: #f8fbff;
         }
 
+        .ops-section--reservations .panel-links {
+            margin: 0 0 8px;
+            gap: 6px;
+        }
+
+        .ops-section--reservations .panel-links a {
+            border-color: #c5d6e5;
+            background: #ffffff;
+            color: #214763;
+            font-size: 0.75rem;
+            font-weight: 800;
+        }
+
+        .reservation-command-bar {
+            margin: 0 0 12px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .reservation-command {
+            text-decoration: none;
+            border: 1px solid #d4e0ea;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #1a3f5b;
+            font-size: 0.79rem;
+            font-weight: 700;
+            padding: 9px 10px;
+            text-align: center;
+        }
+
+        .reservation-command:hover {
+            border-color: #afc4d8;
+            background: #f5f9fd;
+        }
+
+        .ops-section--reservations .billing-ledger-grid {
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .ops-section--reservations .billing-ledger-card {
+            border-color: #d3e0eb;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(23, 51, 78, 0.05);
+            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            padding: 10px;
+        }
+
+        .ops-section--reservations .billing-ledger-card .metric-label {
+            color: #55728b;
+            font-size: 0.7rem;
+        }
+
+        .ops-section--reservations .billing-ledger-card .metric-value {
+            font-size: 1.08rem;
+            color: #14324b;
+        }
+
         .feature-checklist {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1511,12 +1610,202 @@
             grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
         }
 
+        .availability-engine-shell {
+            margin: 10px 0 12px;
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.9fr);
+            gap: 10px;
+            align-items: start;
+        }
+
+        .availability-engine-main,
+        .availability-engine-channel-panel {
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 10px;
+        }
+
+        .availability-engine-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .availability-inventory-highlights {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .availability-inventory-card {
+            border: 1px solid #d8e3ee;
+            border-radius: 10px;
+            background: #f9fcff;
+            padding: 9px;
+        }
+
+        .availability-inventory-card .metric-label {
+            margin: 0;
+            font-size: 0.7rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #56708a;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .availability-inventory-card .metric-value {
+            margin: 6px 0 0;
+            font-size: 1.08rem;
+            font-weight: 800;
+            color: #17344d;
+        }
+
+        .availability-inventory-card .small {
+            margin: 4px 0 0;
+            color: #5b6d7f;
+        }
+
+        .availability-inventory-table-wrap {
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        .availability-channel-kpis {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .availability-channel-kpi {
+            border: 1px solid #d8e3ee;
+            border-radius: 10px;
+            background: #f9fcff;
+            padding: 8px;
+        }
+
+        .availability-channel-kpi .metric-label {
+            margin: 0;
+            font-size: 0.68rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #59748b;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .availability-channel-kpi .metric-value {
+            margin: 5px 0 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #17344d;
+        }
+
+        .availability-channel-feed {
+            margin-top: 8px;
+            display: grid;
+            gap: 8px;
+            max-height: 428px;
+            overflow-y: auto;
+        }
+
+        .availability-channel-event {
+            border: 1px solid #d8e3ee;
+            border-radius: 10px;
+            background: #f8fbff;
+            padding: 8px;
+        }
+
+        .availability-channel-event-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .availability-channel-event-actions {
+            margin-top: 7px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .availability-channel-event-actions .btn {
+            min-height: 30px;
+            padding: 5px 8px;
+            font-size: 0.74rem;
+        }
+
+        .migration-value-strip {
+            margin: 10px 0 10px;
+            border: 1px solid #cfe0eb;
+            border-radius: 12px;
+            background: linear-gradient(180deg, #f5fbff 0%, #ffffff 100%);
+            padding: 10px;
+        }
+
+        .migration-value-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .migration-value-grid {
+            margin-top: 8px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .migration-value-card {
+            border: 1px solid #d5e4ef;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 9px;
+        }
+
+        .migration-value-card .metric-label {
+            margin: 0;
+            font-size: 0.69rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #55718a;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .migration-value-card .metric-value {
+            margin: 6px 0 0;
+            font-size: 1.08rem;
+            font-weight: 800;
+            color: #15344d;
+        }
+
+        .migration-value-card .small {
+            margin: 4px 0 0;
+            color: #5b6f82;
+        }
+
         .availability-ops-grid .ops-form-availability {
             grid-column: 1 / -1;
         }
 
         @media (max-width: 1180px) {
             .availability-ops-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .availability-engine-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .availability-inventory-highlights {
+                grid-template-columns: 1fr;
+            }
+
+            .migration-value-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -1643,6 +1932,92 @@
             table-layout: fixed;
         }
 
+        .reservation-ops-table--enterprise {
+            min-width: 1380px;
+            table-layout: auto;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .reservation-ops-table--enterprise tbody td {
+            background: #ffffff;
+        }
+
+        .reservation-ops-table--enterprise tbody tr:nth-child(4n + 1) td,
+        .reservation-ops-table--enterprise tbody tr:nth-child(4n + 2) td {
+            border-bottom-color: #e8eff6;
+        }
+
+        .reservation-cell-sticky-left {
+            position: sticky;
+            left: 0;
+            z-index: 3;
+            box-shadow: 8px 0 12px -10px rgba(24, 52, 77, 0.24);
+            min-width: 210px;
+        }
+
+        .reservation-cell-sticky-right {
+            position: sticky;
+            right: 0;
+            z-index: 3;
+            box-shadow: -8px 0 12px -10px rgba(24, 52, 77, 0.24);
+            min-width: 210px;
+            background: #f9fcff;
+        }
+
+        .reservation-ops-table--enterprise thead .reservation-cell-sticky-left,
+        .reservation-ops-table--enterprise thead .reservation-cell-sticky-right {
+            z-index: 4;
+            background: #f8fbff;
+        }
+
+        .reservation-row-toggle {
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        .reservation-detail-row td {
+            background: #f8fbff;
+            border-top: none;
+        }
+
+        .reservation-detail-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 10px;
+            padding: 6px 2px;
+        }
+
+        .reservation-detail-grid > div {
+            border: 1px solid #d8e3ee;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 8px 10px;
+        }
+
+        .reservation-print-actions {
+            margin-top: 8px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .reservation-print-actions a {
+            text-decoration: none;
+            border: 1px solid #ccdae7;
+            border-radius: 999px;
+            padding: 4px 9px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #1e4563;
+            background: #f6fbff;
+        }
+
+        .reservation-print-actions a:hover {
+            border-color: #9fb8cd;
+            background: #eef6fd;
+        }
+
         .reservation-ops-table th,
         .reservation-ops-table td {
             white-space: normal;
@@ -1669,6 +2044,10 @@
         .reservation-ops-table td:last-child > form .btn {
             width: 100%;
             margin: 0;
+        }
+
+        .reservation-ops-table .inline-status-form {
+            margin-top: 0;
         }
 
         .ops-table th,
@@ -1990,6 +2369,29 @@
             color: #1f3346;
         }
 
+        .billing-row-print-links {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        .billing-row-print-links a {
+            text-decoration: none;
+            border: 1px solid #cbd9e6;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #214761;
+            background: #f8fbff;
+        }
+
+        .billing-row-print-links a:hover {
+            border-color: #9eb7cc;
+            background: #edf5fc;
+        }
+
         .ops-metric {
             border: 1px solid #d7e0e6;
             border-radius: 10px;
@@ -2014,6 +2416,92 @@
             font-size: 1.05rem;
             font-weight: 700;
             color: #1f3346;
+        }
+
+        .listing-setup-wizard {
+            margin-top: 12px;
+            border: 1px solid #d6e2ec;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+            padding: 12px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .listing-setup-wizard-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .listing-setup-wizard-label {
+            margin: 0;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #59748a;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .listing-setup-wizard h3 {
+            margin: 2px 0 0;
+            font-size: 1.06rem;
+            color: #173550;
+        }
+
+        .listing-setup-wizard p {
+            margin: 5px 0 0;
+            font-size: 0.82rem;
+            color: #566f82;
+            line-height: 1.45;
+            max-width: 760px;
+        }
+
+        .listing-setup-steps {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .listing-setup-step {
+            border: 1px solid #d8e3ec;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .listing-setup-step-index {
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+            border: 1px solid #b7cce0;
+            background: #eef4fb;
+            color: #294b66;
+            font-size: 0.72rem;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .listing-setup-step-title {
+            margin: 0;
+            font-size: 0.81rem;
+            font-weight: 700;
+            color: #1f3f5b;
+        }
+
+        .listing-setup-step-copy {
+            margin: 3px 0 0;
+            font-size: 0.75rem;
+            color: #577288;
+            line-height: 1.35;
         }
 
         .wizard-grid {
@@ -2386,6 +2874,50 @@
 
         .listing-summary-line strong {
             margin-right: 4px;
+        }
+
+        .listing-management-table {
+            border-collapse: separate;
+            border-spacing: 0 10px;
+        }
+
+        .listing-management-table thead th {
+            background: transparent;
+            border-bottom: none;
+            padding-bottom: 2px;
+        }
+
+        .listing-management-table tbody td {
+            background: #ffffff;
+            border-top: 1px solid #dce7f0;
+            border-bottom: 1px solid #dce7f0;
+            padding-top: 11px;
+            padding-bottom: 11px;
+        }
+
+        .listing-management-table tbody td:first-child {
+            border-left: 1px solid #dce7f0;
+            border-radius: 12px 0 0 12px;
+        }
+
+        .listing-management-table tbody td:last-child {
+            border-right: 1px solid #dce7f0;
+            border-radius: 0 12px 12px 0;
+        }
+
+        .listing-summary-line {
+            gap: 7px;
+        }
+
+        .listing-summary-line strong {
+            font-size: 0.95rem;
+            color: #193852;
+        }
+
+        .listing-actions-compact .btn {
+            padding: 5px 10px;
+            border-radius: 7px;
+            font-size: 0.77rem;
         }
 
         .listing-actions-inline {
@@ -3020,6 +3552,25 @@
                 width: 100%;
             }
 
+            .listing-setup-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .reservation-command-bar {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .reservation-detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reservation-cell-sticky-left,
+            .reservation-cell-sticky-right {
+                position: static;
+                box-shadow: none;
+                min-width: 0;
+            }
+
             .auth-bar {
                 align-items: flex-start;
             }
@@ -3126,6 +3677,16 @@
 
             .guided-steps {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .listing-form-quality-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-listing-form .ops-input,
+            .page-listing-form .ops-select,
+            .page-listing-form .ops-textarea {
+                font-size: 1rem;
             }
 
             .listing-category-shortcuts-row {

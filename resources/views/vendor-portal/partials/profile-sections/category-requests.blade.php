@@ -5,22 +5,31 @@
             : [];
     @endphp
     <div class="ops-header">
-        <p class="ops-title">Category Subscription / Open / Release Requests</p>
+        <p class="ops-title">Category Access Requests</p>
         <span class="ops-chip">Step {{ $vendorOnboardingStep }} of 4</span>
     </div>
     <p class="profile-help">Current selected categories: {{ $selectedCategoryLabels->isNotEmpty() ? $selectedCategoryLabels->join(', ') : 'None selected yet' }}</p>
+    <div class="policy-box" style="margin:0 0 10px;border:1px solid #d3e2ec;border-radius:12px;background:#f8fcff;padding:10px 12px;">
+        <p class="small" style="margin:0 0 6px;"><strong>Category Opening Procedure</strong></p>
+        <ol class="small" style="margin:0;padding-left:18px;display:grid;gap:4px;">
+            <li>Select request type: Add, Open, or Remove category access.</li>
+            <li>Select target categories and provide business justification.</li>
+            <li>Upload required licenses/certificates for the selected category scope.</li>
+            <li>Admin compliance validates and updates your access status (SLA: 1-3 business days).</li>
+        </ol>
+    </div>
 
     <details class="ops-form">
-        <summary class="btn btn-secondary" style="cursor:pointer;display:inline-flex;">Request Category Change (with docs)</summary>
+        <summary class="btn btn-secondary" style="cursor:pointer;display:inline-flex;">Submit Category Access Request</summary>
         <form class="ops-form" method="POST" action="/portal/vendor/categories/update" enctype="multipart/form-data" style="margin-top:12px;">
             @csrf
             <input type="hidden" name="onboarding_step" value="{{ (int) $vendorOnboardingStep }}">
             <div class="ops-field">
                 <label for="category_request_action">Request Type</label>
                 <select id="category_request_action" name="request_action" class="ops-select" required>
-                    <option value="subscribe" @selected(old('request_action') === 'subscribe')>Subscribe / Add Category</option>
-                    <option value="open" @selected(old('request_action') === 'open')>Open Existing Category</option>
-                    <option value="release" @selected(old('request_action') === 'release')>Release / Remove Category</option>
+                    <option value="subscribe" @selected(old('request_action') === 'subscribe')>Add New Category Access</option>
+                    <option value="open" @selected(old('request_action') === 'open')>Re-Open Existing Category</option>
+                    <option value="release" @selected(old('request_action') === 'release')>Release / Remove Category Access</option>
                 </select>
             </div>
             <div class="ops-field">

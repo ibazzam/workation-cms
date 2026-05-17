@@ -95,15 +95,15 @@
             </select>
         </div>
         <div class="ops-field">
-            <label for="location_state">Atoll / Province</label>
+            <label for="location_state">Atoll / State / Province</label>
             <select id="location_state" name="location_state" class="ops-select" data-edit-state data-selected-value="{{ old('location_state', $propertyDetails['location_state'] ?? '') }}" required>
-                <option value="">Select atoll</option>
+                <option value="">Select atoll/state</option>
             </select>
         </div>
         <div class="ops-field">
             <label for="location_city">Island / City</label>
             <select id="location_city" name="location_city" class="ops-select" data-edit-city data-selected-value="{{ old('location_city', $propertyDetails['location_city'] ?? '') }}" required>
-                <option value="">Select island</option>
+                <option value="">Select island/city</option>
             </select>
         </div>
         <input name="map_latitude" type="hidden" value="{{ old('map_latitude', $propertyDetails['map_latitude'] ?? '') }}">

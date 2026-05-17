@@ -36,7 +36,7 @@ Route::get('/vendor', function () {
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
     $loadPricingData = $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
-    $loadDistributionData = in_array($activePortalPage, ['distribution', 'setup', 'overview'], true);
+    $loadDistributionData = in_array($activePortalPage, ['distribution', 'setup', 'overview', 'operations', 'availability'], true);
     $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions', 'distribution', 'setup'], true);
     $vendorPortalCacheTtlSeconds = 900;
     $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
@@ -2553,4 +2553,358 @@ Route::get('/vendor/reports/export', function () {
         'Cache-Control' => 'no-store, no-cache, must-revalidate',
         'Pragma' => 'no-cache',
     ]);
+});
+
+if (!function_exists('vendorPortalFindReservationForPrint')) {
+    function vendorPortalFindReservationForPrint(int $vendorUserId, int $reservationId): ?object
+    {
+        if ($vendorUserId <= 0 || $reservationId <= 0) {
+            return null;
+        }
+
+        $reservationTables = ['vendor_reservations', 'reservations', 'bookings', 'vendor_bookings'];
+        foreach ($reservationTables as $table) {
+            if (!Schema::hasTable($table)) {
+                continue;
+            }
+
+            $columns = Schema::getColumnListing($table);
+            $colSet = array_flip($columns);
+            $vendorColumn = null;
+            foreach (['vendor_user_id', 'vendor_id', 'user_id'] as $candidate) {
+                if (isset($colSet[$candidate])) {
+                    $vendorColumn = $candidate;
+                    break;
+                }
+            }
+
+            if (!is_string($vendorColumn) || $vendorColumn === '') {
+                continue;
+            }
+
+            $row = DB::table($table)
+                ->where('id', $reservationId)
+                ->where($vendorColumn, $vendorUserId)
+                ->first();
+
+            if ($row) {
+                $row->__source_table = $table;
+
+                return $row;
+            }
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('vendorPortalPrintVendorLetterhead')) {
+    function vendorPortalPrintVendorLetterhead(int $vendorUserId): array
+    {
+        $fallbackName = 'Vendor';
+        if ($vendorUserId > 0) {
+            $user = User::query()->find($vendorUserId);
+            if ($user instanceof User) {
+                $fallbackName = trim((string) ($user->name ?? 'Vendor')) ?: 'Vendor';
+            }
+        }
+
+        $letterhead = [
+            'name' => $fallbackName,
+            'email' => '',
+            'phone' => '',
+            'address' => '',
+            'logo_path' => '',
+            'logo_url' => '',
+        ];
+
+        $resolveStoredLogo = static function (?string $path): string {
+            $raw = trim((string) $path);
+            if ($raw === '') {
+                return '';
+            }
+            if (preg_match('/^https?:\/\//i', $raw)) {
+                return $raw;
+            }
+
+            return Storage::disk('public')->url(ltrim($raw, '/'));
+        };
+
+        if (Schema::hasTable('vendor_billing_details')) {
+            $billing = DB::table('vendor_billing_details')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first();
+
+            if ($billing) {
+                $letterhead['name'] = trim((string) ($billing->business_name ?? $letterhead['name'])) ?: $letterhead['name'];
+                $letterhead['email'] = trim((string) ($billing->billing_email ?? ''));
+                $letterhead['phone'] = trim((string) ($billing->billing_phone ?? ''));
+                $letterhead['address'] = trim((string) ($billing->billing_address ?? ''));
+
+                foreach (['letterhead_logo_path', 'logo_path', 'company_logo_path', 'brand_logo_path'] as $logoColumn) {
+                    if (isset($billing->{$logoColumn}) && trim((string) ($billing->{$logoColumn} ?? '')) !== '') {
+                        $letterhead['logo_path'] = trim((string) ($billing->{$logoColumn} ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($letterhead['logo_path'] === '' && Schema::hasTable('vendor_profiles')) {
+            $profile = DB::table('vendor_profiles')
+                ->where('vendor_user_id', $vendorUserId)
+                ->first();
+            if ($profile) {
+                foreach (['logo_path', 'company_logo_path', 'brand_logo_path'] as $logoColumn) {
+                    if (isset($profile->{$logoColumn}) && trim((string) ($profile->{$logoColumn} ?? '')) !== '') {
+                        $letterhead['logo_path'] = trim((string) ($profile->{$logoColumn} ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($letterhead['logo_path'] === '' && Schema::hasTable('users')) {
+            $user = DB::table('users')->where('id', $vendorUserId)->first();
+            if ($user) {
+                foreach (['profile_photo_path', 'logo_path', 'avatar_path'] as $logoColumn) {
+                    if (isset($user->{$logoColumn}) && trim((string) ($user->{$logoColumn} ?? '')) !== '') {
+                        $letterhead['logo_path'] = trim((string) ($user->{$logoColumn} ?? ''));
+                        break;
+                    }
+                }
+            }
+        }
+
+        $letterhead['logo_url'] = $resolveStoredLogo($letterhead['logo_path']);
+
+        return $letterhead;
+    }
+}
+
+if (!function_exists('vendorPortalPrintWorkationLetterhead')) {
+    function vendorPortalPrintWorkationLetterhead(): array
+    {
+        return [
+            'name' => (string) config('app.name', 'Workation'),
+            'email' => '',
+            'phone' => '',
+            'address' => '',
+        ];
+    }
+}
+
+Route::get('/vendor/print/reservation/{reservationId}', function (int $reservationId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $reservation = vendorPortalFindReservationForPrint($vendorUserId, $reservationId);
+    if (!$reservation) {
+        return redirect('/vendor?page=reservations')->withErrors(['reservation' => 'Reservation not found or access denied.']);
+    }
+
+    $reservationCode = trim((string) ($reservation->reservation_code ?? ''));
+    if ($reservationCode === '') {
+        $reservationCode = 'RSV-' . str_pad((string) ($reservation->id ?? 0), 6, '0', STR_PAD_LEFT);
+    }
+    $vendorLetterhead = vendorPortalPrintVendorLetterhead($vendorUserId);
+
+    VendorPortalAuditLogger::log('vendor_print.reservation', [
+        'severity' => 'info',
+        'target_identifier' => 'reservation:' . (int) ($reservation->id ?? 0),
+        'source_table' => (string) ($reservation->__source_table ?? 'unknown'),
+    ]);
+
+    $html = '<!doctype html><html><head><meta charset="utf-8"><title>Reservation ' . e($reservationCode) . '</title>'
+        . '<style>body{font-family:Segoe UI,Arial,sans-serif;color:#1e2f42;padding:20px}h1{font-size:20px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.card{border:1px solid #d6e1ea;border-radius:10px;padding:10px}.lbl{font-size:11px;letter-spacing:.06em;color:#567089;text-transform:uppercase}.val{margin-top:4px;font-weight:700}</style>'
+        . '</head><body onload="window.print()">'
+        . '<div style="border:1px solid #d6e1ea;border-radius:10px;padding:10px;margin-bottom:12px;background:#f8fbff">'
+        . (trim((string) ($vendorLetterhead['logo_url'] ?? '')) !== ''
+            ? '<div style="margin-bottom:8px;"><img src="' . e((string) ($vendorLetterhead['logo_url'] ?? '')) . '" alt="Vendor logo" style="max-height:52px;max-width:220px;object-fit:contain;"></div>'
+            : '')
+        . '<div style="font-size:18px;font-weight:800;">' . e((string) ($vendorLetterhead['name'] ?? 'Vendor')) . '</div>'
+        . '<div style="font-size:12px;color:#5e7489;">Vendor Letterhead · Powered by ' . e((string) config('app.name', 'Workation')) . '</div>'
+        . '</div>'
+        . '<h1>Reservation Summary</h1>'
+        . '<div class="grid">'
+        . '<div class="card"><div class="lbl">Reservation Code</div><div class="val">' . e($reservationCode) . '</div></div>'
+        . '<div class="card"><div class="lbl">Booking Status</div><div class="val">' . e(strtoupper((string) ($reservation->status ?? 'pending'))) . '</div></div>'
+        . '<div class="card"><div class="lbl">Guest Name</div><div class="val">' . e((string) ($reservation->customer_name ?? 'N/A')) . '</div></div>'
+        . '<div class="card"><div class="lbl">Guest Email</div><div class="val">' . e((string) ($reservation->customer_email ?? 'N/A')) . '</div></div>'
+        . '<div class="card"><div class="lbl">Check-In</div><div class="val">' . e((string) ($reservation->start_at ?? 'N/A')) . '</div></div>'
+        . '<div class="card"><div class="lbl">Check-Out</div><div class="val">' . e((string) ($reservation->end_at ?? 'N/A')) . '</div></div>'
+        . '</div>'
+        . '</body></html>';
+
+    return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+});
+
+Route::get('/vendor/print/invoice/{reservationId}', function (int $reservationId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $reservation = vendorPortalFindReservationForPrint($vendorUserId, $reservationId);
+    if (!$reservation) {
+        return redirect('/vendor?page=billing')->withErrors(['billing' => 'Invoice record not found or access denied.']);
+    }
+
+    $invoiceRef = 'INV-' . str_pad((string) ($reservation->id ?? 0), 6, '0', STR_PAD_LEFT);
+    $currency = (string) ($reservation->currency ?? 'MVR');
+    $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+    $subtotal = (float) ($reservation->subtotal_amount ?? $reservation->total_amount ?? 0);
+    $taxTotal = (float) ($reservation->total_tax_amount ?? 0);
+    $vendorLetterhead = vendorPortalPrintVendorLetterhead($vendorUserId);
+
+    VendorPortalAuditLogger::log('vendor_print.invoice', [
+        'severity' => 'info',
+        'target_identifier' => 'invoice:' . $invoiceRef,
+        'reservation_id' => (int) ($reservation->id ?? 0),
+    ]);
+
+    $html = '<!doctype html><html><head><meta charset="utf-8"><title>Invoice ' . e($invoiceRef) . '</title>'
+        . '<style>body{font-family:Segoe UI,Arial,sans-serif;color:#1e2f42;padding:20px}h1{font-size:20px;margin:0 0 12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d9e4ee;padding:8px;text-align:left}th{background:#f5faff;font-size:12px;text-transform:uppercase;color:#48637b}</style>'
+        . '</head><body onload="window.print()">'
+        . '<div style="border:1px solid #d6e1ea;border-radius:10px;padding:10px;margin-bottom:12px;background:#f8fbff">'
+        . (trim((string) ($vendorLetterhead['logo_url'] ?? '')) !== ''
+            ? '<div style="margin-bottom:8px;"><img src="' . e((string) ($vendorLetterhead['logo_url'] ?? '')) . '" alt="Vendor logo" style="max-height:52px;max-width:220px;object-fit:contain;"></div>'
+            : '')
+        . '<div style="font-size:18px;font-weight:800;">' . e((string) ($vendorLetterhead['name'] ?? 'Vendor')) . '</div>'
+        . '<div style="font-size:12px;color:#5e7489;">Vendor Invoice Template · Powered by ' . e((string) config('app.name', 'Workation')) . '</div>'
+        . '</div>'
+        . '<h1>Invoice ' . e($invoiceRef) . '</h1>'
+        . '<p><strong>Customer:</strong> ' . e((string) ($reservation->customer_name ?? 'N/A')) . ' (' . e((string) ($reservation->customer_email ?? 'N/A')) . ')</p>'
+        . '<table><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody>'
+        . '<tr><td>Subtotal</td><td>' . e($currency) . ' ' . number_format($subtotal, 2) . '</td></tr>'
+        . '<tr><td>Tax</td><td>' . e($currency) . ' ' . number_format($taxTotal, 2) . '</td></tr>'
+        . '<tr><td><strong>Total</strong></td><td><strong>' . e($currency) . ' ' . number_format($gross, 2) . '</strong></td></tr>'
+        . '</tbody></table>'
+        . '</body></html>';
+
+    return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+});
+
+Route::get('/vendor/print/bill/{reservationId}', function (int $reservationId) {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $reservation = vendorPortalFindReservationForPrint($vendorUserId, $reservationId);
+    if (!$reservation) {
+        return redirect('/vendor?page=billing')->withErrors(['billing' => 'Billing record not found or access denied.']);
+    }
+
+    $commissionRate = 0.12;
+    $currency = (string) ($reservation->currency ?? 'MVR');
+    $gross = (float) ($reservation->invoice_total_amount ?? $reservation->total_amount ?? 0);
+    $paymentStatus = strtolower(trim((string) ($reservation->payment_status ?? 'unpaid')));
+    $bookingStatus = strtolower(trim((string) ($reservation->status ?? 'pending')));
+    $isSettled = $paymentStatus === 'paid' && in_array($bookingStatus, ['confirmed', 'completed'], true);
+    $commission = $isSettled ? round((float) ($reservation->commission_amount ?? ($gross * $commissionRate)), 2) : 0.0;
+    $gatewayFee = $isSettled ? round((float) ($reservation->gateway_fee_amount ?? 0), 2) : 0.0;
+    $payout = max(0, round($gross - $commission - $gatewayFee, 2));
+    $billRef = 'BILL-' . str_pad((string) ($reservation->id ?? 0), 6, '0', STR_PAD_LEFT);
+    $workationLetterhead = vendorPortalPrintWorkationLetterhead();
+
+    VendorPortalAuditLogger::log('vendor_print.bill', [
+        'severity' => 'info',
+        'target_identifier' => 'bill:' . $billRef,
+        'reservation_id' => (int) ($reservation->id ?? 0),
+    ]);
+
+    $html = '<!doctype html><html><head><meta charset="utf-8"><title>Bill ' . e($billRef) . '</title>'
+        . '<style>body{font-family:Segoe UI,Arial,sans-serif;color:#1e2f42;padding:20px}h1{font-size:20px;margin:0 0 12px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #d9e4ee;padding:8px;text-align:left}th{background:#f5faff;font-size:12px;text-transform:uppercase;color:#48637b}</style>'
+        . '</head><body onload="window.print()">'
+        . '<div style="border:1px solid #d6e1ea;border-radius:10px;padding:10px;margin-bottom:12px;background:#f8fbff">'
+        . '<div style="font-size:18px;font-weight:800;">' . e((string) ($workationLetterhead['name'] ?? 'Workation')) . '</div>'
+        . '<div style="font-size:12px;color:#5e7489;">Workation Settlement Template</div>'
+        . '</div>'
+        . '<h1>Vendor Bill ' . e($billRef) . '</h1>'
+        . '<table><thead><tr><th>Line Item</th><th>Amount</th></tr></thead><tbody>'
+        . '<tr><td>Gross Collection</td><td>' . e($currency) . ' ' . number_format($gross, 2) . '</td></tr>'
+        . '<tr><td>Platform Commission</td><td>' . e($currency) . ' ' . number_format($commission, 2) . '</td></tr>'
+        . '<tr><td>Gateway Fee</td><td>' . e($currency) . ' ' . number_format($gatewayFee, 2) . '</td></tr>'
+        . '<tr><td><strong>Net Payout</strong></td><td><strong>' . e($currency) . ' ' . number_format($payout, 2) . '</strong></td></tr>'
+        . '</tbody></table>'
+        . '</body></html>';
+
+    return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+});
+
+Route::get('/vendor/print/report', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $reservationTables = ['vendor_reservations', 'reservations', 'bookings', 'vendor_bookings'];
+    $rows = collect();
+    foreach ($reservationTables as $table) {
+        if (!Schema::hasTable($table)) {
+            continue;
+        }
+
+        $columns = Schema::getColumnListing($table);
+        $colSet = array_flip($columns);
+        $vendorColumn = null;
+        foreach (['vendor_user_id', 'vendor_id', 'user_id'] as $candidate) {
+            if (isset($colSet[$candidate])) {
+                $vendorColumn = $candidate;
+                break;
+            }
+        }
+        if (!is_string($vendorColumn) || $vendorColumn === '') {
+            continue;
+        }
+
+        $rows = DB::table($table)
+            ->where($vendorColumn, $vendorUserId)
+            ->orderByDesc('id')
+            ->limit(300)
+            ->get();
+
+        if ($rows->isNotEmpty()) {
+            break;
+        }
+    }
+
+    $gross = (float) $rows->sum(static fn ($r) => (float) ($r->invoice_total_amount ?? $r->total_amount ?? 0));
+    $paidCount = (int) $rows->filter(static fn ($r) => strtolower(trim((string) ($r->payment_status ?? 'unpaid'))) === 'paid')->count();
+    $pendingCount = (int) $rows->filter(static fn ($r) => strtolower(trim((string) ($r->status ?? 'pending'))) === 'pending')->count();
+    $cancelledCount = (int) $rows->filter(static fn ($r) => in_array(strtolower(trim((string) ($r->status ?? ''))), ['cancelled', 'cancel_requested'], true))->count();
+    $workationLetterhead = vendorPortalPrintWorkationLetterhead();
+
+    VendorPortalAuditLogger::log('vendor_print.report', [
+        'severity' => 'info',
+        'target_identifier' => 'report:print',
+        'rows' => (int) $rows->count(),
+    ]);
+
+    $html = '<!doctype html><html><head><meta charset="utf-8"><title>Workation Vendor Report</title>'
+        . '<style>body{font-family:Segoe UI,Arial,sans-serif;color:#1e2f42;padding:20px}h1{font-size:20px;margin:0 0 12px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.card{border:1px solid #d6e1ea;border-radius:10px;padding:10px}.lbl{font-size:11px;letter-spacing:.06em;color:#567089;text-transform:uppercase}.val{margin-top:4px;font-weight:700}.small{font-size:12px;color:#5f7489;margin-top:8px}</style>'
+        . '</head><body onload="window.print()">'
+        . '<div style="border:1px solid #d6e1ea;border-radius:10px;padding:10px;margin-bottom:12px;background:#f8fbff">'
+        . '<div style="font-size:18px;font-weight:800;">' . e((string) ($workationLetterhead['name'] ?? 'Workation')) . '</div>'
+        . '<div style="font-size:12px;color:#5e7489;">Workation Reporting Template</div>'
+        . '</div>'
+        . '<h1>Workation Vendor Report</h1>'
+        . '<div class="grid">'
+        . '<div class="card"><div class="lbl">Total Reservations</div><div class="val">' . (int) $rows->count() . '</div></div>'
+        . '<div class="card"><div class="lbl">Paid Reservations</div><div class="val">' . $paidCount . '</div></div>'
+        . '<div class="card"><div class="lbl">Pending Reservations</div><div class="val">' . $pendingCount . '</div></div>'
+        . '<div class="card"><div class="lbl">Cancelled</div><div class="val">' . $cancelledCount . '</div></div>'
+        . '</div>'
+        . '<p class="small">Gross collection (approx): MVR ' . number_format($gross, 2) . '</p>'
+        . '<p class="small">Generated on: ' . e(now()->format('Y-m-d H:i')) . '</p>'
+        . '</body></html>';
+
+    return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
 });

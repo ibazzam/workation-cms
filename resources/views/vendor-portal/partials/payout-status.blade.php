@@ -74,6 +74,7 @@
                     <th>Your Payout</th>
                     <th>Payout Status</th>
                     <th>Flags</th>
+                    <th>Print</th>
                 </tr>
             </thead>
             <tbody>
@@ -134,6 +135,18 @@
                         @endif
 
                         @if(!($row->has_open_dispute ?? false) && !($row->has_refund_case ?? false))
+                            <span style="color:#9aabb8;font-size:.76rem;">—</span>
+                        @endif
+                    </td>
+                    <td>
+                        @php $printReservationId = (int) ($row->id ?? 0); @endphp
+                        @if($printReservationId > 0)
+                            <div style="display:inline-flex;gap:6px;flex-wrap:wrap;">
+                                <a href="{{ url('/vendor/print/reservation/' . $printReservationId) }}" target="_blank" rel="noopener" style="text-decoration:none;border:1px solid #cbd9e6;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700;color:#214761;background:#f8fbff;">Reservation</a>
+                                <a href="{{ url('/vendor/print/invoice/' . $printReservationId) }}" target="_blank" rel="noopener" style="text-decoration:none;border:1px solid #cbd9e6;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700;color:#214761;background:#f8fbff;">Invoice</a>
+                                <a href="{{ url('/vendor/print/bill/' . $printReservationId) }}" target="_blank" rel="noopener" style="text-decoration:none;border:1px solid #cbd9e6;border-radius:999px;padding:3px 8px;font-size:.72rem;font-weight:700;color:#214761;background:#f8fbff;">Bill</a>
+                            </div>
+                        @else
                             <span style="color:#9aabb8;font-size:.76rem;">—</span>
                         @endif
                     </td>

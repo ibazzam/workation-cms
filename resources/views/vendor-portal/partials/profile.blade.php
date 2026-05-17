@@ -19,6 +19,52 @@
     @endphp
 
     <p class="label">My Account</p>
+    @php
+        $profileRequiredValues = [
+            (string) ($vendorProfile['name'] ?? ''),
+            (string) ($vendorProfile['phone'] ?? ''),
+            (string) ($vendorProfile['company_name'] ?? ''),
+            (string) ($vendorProfile['business_registration_number'] ?? ''),
+            (string) ($vendorProfile['contact_person_name'] ?? ''),
+            (string) ($vendorProfile['contact_person_phone'] ?? ''),
+            (string) ($vendorProfile['contact_person_email'] ?? ''),
+            (string) ($billingRow->billing_street_name ?? ''),
+            (string) ($billingRow->billing_city ?? ''),
+            (string) ($billingRow->billing_state ?? ''),
+            (string) ($billingRow->billing_country ?? ''),
+        ];
+        $profileRequiredCount = count($profileRequiredValues);
+        $profileCompleteCount = collect($profileRequiredValues)->filter(static fn ($value) => trim((string) $value) !== '')->count();
+        $profileCompletionPercent = $profileRequiredCount > 0
+            ? (int) round(($profileCompleteCount / $profileRequiredCount) * 100)
+            : 0;
+        $profileCompletionLabel = $profileCompletionPercent >= 90
+            ? 'Operationally ready'
+            : ($profileCompletionPercent >= 70 ? 'Nearly ready' : 'Action required');
+        $templateLogoConfigured = trim((string) (($billingRow->letterhead_logo_path ?? $billingRow->logo_path ?? $billingRow->company_logo_path ?? $billingRow->brand_logo_path ?? ''))) !== '';
+    @endphp
+    <div class="summary-grid summary-grid-compact" style="margin:8px 0 10px;">
+        <article class="summary-card">
+            <p class="summary-label">Verification</p>
+            <p class="summary-value">{{ $verificationLabel }}</p>
+            <p class="summary-meta">Profile governance status</p>
+        </article>
+        <article class="summary-card">
+            <p class="summary-label">Profile Completion</p>
+            <p class="summary-value">{{ $profileCompletionPercent }}%</p>
+            <p class="summary-meta">{{ $profileCompletionLabel }}</p>
+        </article>
+        <article class="summary-card">
+            <p class="summary-label">Approved Categories</p>
+            <p class="summary-value">{{ $approvedCategoryLabels->count() }}</p>
+            <p class="summary-meta">Out of {{ $selectedCategoryLabels->count() > 0 ? $selectedCategoryLabels->count() : 0 }} requested</p>
+        </article>
+        <article class="summary-card">
+            <p class="summary-label">Template Readiness</p>
+            <p class="summary-value">{{ $templateLogoConfigured ? 'Configured' : 'Pending' }}</p>
+            <p class="summary-meta">Logo + billing address for print docs</p>
+        </article>
+    </div>
     <div class="panel-links" aria-label="My account sections">
         <a href="/vendor/profile?section=profile" class="{{ $activeProfileSection === 'profile' ? 'is-active' : '' }}">Profile &amp; Business</a>
         <a href="/vendor/profile?section=categories" class="{{ $activeProfileSection === 'categories' ? 'is-active' : '' }}">Category Requests</a>

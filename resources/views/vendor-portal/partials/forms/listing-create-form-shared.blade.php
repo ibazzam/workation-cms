@@ -1,8 +1,8 @@
 <form id="propertyCreateForm" class="ops-form" method="POST" action="/portal/vendor/properties/create" @if (!$showCreatePropertyForm) hidden @endif>
                         @csrf
                         <input type="hidden" name="property_form_intent" value="1">
-                        <p class="guided-wizard-title" id="propertyCreateFormTitle">Accommodation Enlisting</p>
-                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Fill required fields and save.</p>
+                        <p class="guided-wizard-title" id="propertyCreateFormTitle">Create Listing</p>
+                        <p class="guided-wizard-subtitle" id="propertyCreateFormSubtitle">Complete each section in order, then save.</p>
                         <div class="ops-form-grid">
                             @php
                                 $isCategoryScopedListingPage = is_string($forcedListingCategory ?? null)
@@ -36,7 +36,7 @@
                                 </select>
                             </div>
                             <div class="ops-field ops-field-wide">
-                                <label for="property_name">Name</label>
+                                <label for="property_name">Listing Name</label>
                                 <input id="property_name" name="name" class="ops-input" type="text" maxlength="160" value="{{ old('name') }}" required>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
@@ -49,15 +49,15 @@
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="location_state">State / Province / Atoll</label>
+                                <label for="location_state">Atoll / State / Province</label>
                                 <select id="location_state" name="location_state" class="ops-select" data-selected-value="{{ old('location_state') }}" required>
-                                    <option value="">Select state/province</option>
+                                    <option value="">Select atoll/state/state</option>
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
-                                <label for="location_city">City / Island</label>
+                                <label for="location_city">Island / City</label>
                                 <select id="location_city" name="location_city" class="ops-select" data-selected-value="{{ old('location_city') }}" required>
-                                    <option value="">Select city/island</option>
+                                    <option value="">Select island/city/city</option>
                                 </select>
                             </div>
                             <div class="ops-field" data-category-scope="geo">
@@ -166,12 +166,12 @@
                                 <input id="property_registration_plate" name="registration_plate" class="ops-input" type="text" maxlength="80" value="{{ old('registration_plate') }}" placeholder="AB-1234 / Vessel Reg ID">
                             </div>
                             <div class="ops-field" data-category-scope="transport">
-                                <label for="property_contact_name">Contact Name</label>
-                                <input id="property_contact_name" name="contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('contact_name') }}" placeholder="Dispatcher / Driver / Captain" required>
+                                <label for="property_transport_contact_name">Contact Name</label>
+                                <input id="property_transport_contact_name" name="contact_name" class="ops-input" type="text" maxlength="120" value="{{ old('contact_name') }}" placeholder="Dispatcher / Driver / Captain" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
-                                <label for="property_contact_number">Contact Number</label>
-                                <input id="property_contact_number" name="contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('contact_number') }}" placeholder="+960 7xxxxxx" required>
+                                <label for="property_transport_contact_number">Contact Number</label>
+                                <input id="property_transport_contact_number" name="contact_number" class="ops-input" type="text" maxlength="60" value="{{ old('contact_number') }}" placeholder="+960 7xxxxxx" required>
                             </div>
                             <div class="ops-field" data-category-scope="transport">
                                 <label for="property_transport_trip_type">Trip Type</label>

@@ -121,7 +121,7 @@
         </div>
         <div class="ops-field">
             <label for="location_country">Operating Country</label>
-            <select id="location_country" name="location_country" class="ops-select" data-selected-value="{{ old('location_country', $propertyDetails['location_country'] ?? 'Maldives') }}" required>
+            <select id="location_country" name="location_country" class="ops-select" data-edit-country data-selected-value="{{ old('location_country', $propertyDetails['location_country'] ?? 'Maldives') }}" required>
                 <option value="Maldives" @selected(old('location_country', $propertyDetails['location_country'] ?? 'Maldives') === 'Maldives')>Maldives</option>
                 <option value="Sri Lanka" @selected(old('location_country', $propertyDetails['location_country'] ?? '') === 'Sri Lanka')>Sri Lanka</option>
                 <option value="India" @selected(old('location_country', $propertyDetails['location_country'] ?? '') === 'India')>India</option>
@@ -129,15 +129,15 @@
             </select>
         </div>
         <div class="ops-field">
-            <label for="location_state">Atoll / Province</label>
-            <select id="location_state" name="location_state" class="ops-select" data-selected-value="{{ old('location_state', $propertyDetails['location_state'] ?? '') }}" required>
-                <option value="">Select atoll</option>
+            <label for="location_state">Atoll / State / Province</label>
+            <select id="location_state" name="location_state" class="ops-select" data-edit-state data-selected-value="{{ old('location_state', $propertyDetails['location_state'] ?? '') }}" required>
+                <option value="">Select atoll/state</option>
             </select>
         </div>
         <div class="ops-field">
             <label for="location_city">Island / City</label>
-            <select id="location_city" name="location_city" class="ops-select" data-selected-value="{{ old('location_city', $propertyDetails['location_city'] ?? '') }}" required>
-                <option value="">Select island</option>
+            <select id="location_city" name="location_city" class="ops-select" data-edit-city data-selected-value="{{ old('location_city', $propertyDetails['location_city'] ?? '') }}" required>
+                <option value="">Select island/city</option>
             </select>
         </div>
 

@@ -1190,6 +1190,93 @@ Route::post('/portal/vendor/billing/update', function (Request $request) {
     return back()->with('portal_notice', 'Billing details updated.');
 });
 
+Route::post('/portal/vendor/billing/logo/upload', function (Request $request) {
+    if (!session('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    if ($vendorUserId <= 0) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $validated = $request->validate([
+        'letterhead_logo' => ['required', 'file', 'image', 'mimes:png,jpg,jpeg,webp,svg', 'max:2048'],
+    ]);
+
+    $logoFile = $request->file('letterhead_logo');
+    if (!$logoFile) {
+        return back()->withErrors(['letterhead_logo' => 'Please choose a logo file to upload.']);
+    }
+
+    $storedPath = $logoFile->store('vendor-logos/' . $vendorUserId, 'public');
+    if (!is_string($storedPath) || trim($storedPath) === '') {
+        return back()->withErrors(['letterhead_logo' => 'Logo upload failed. Please try again.']);
+    }
+
+    $saved = false;
+
+    if (Schema::hasTable('vendor_billing_details')) {
+        foreach (['letterhead_logo_path', 'logo_path', 'company_logo_path', 'brand_logo_path'] as $logoColumn) {
+            if (!Schema::hasColumn('vendor_billing_details', $logoColumn)) {
+                continue;
+            }
+
+            DB::table('vendor_billing_details')->updateOrInsert(
+                ['vendor_user_id' => $vendorUserId],
+                [$logoColumn => $storedPath, 'updated_at' => now(), 'created_at' => now()]
+            );
+            $saved = true;
+            break;
+        }
+    }
+
+    if (!$saved && Schema::hasTable('vendor_profiles')) {
+        foreach (['logo_path', 'company_logo_path', 'brand_logo_path'] as $logoColumn) {
+            if (!Schema::hasColumn('vendor_profiles', $logoColumn)) {
+                continue;
+            }
+
+            DB::table('vendor_profiles')->updateOrInsert(
+                ['vendor_user_id' => $vendorUserId],
+                [$logoColumn => $storedPath, 'updated_at' => now(), 'created_at' => now()]
+            );
+            $saved = true;
+            break;
+        }
+    }
+
+    if (!$saved && Schema::hasTable('users')) {
+        foreach (['profile_photo_path', 'logo_path', 'avatar_path'] as $logoColumn) {
+            if (!Schema::hasColumn('users', $logoColumn)) {
+                continue;
+            }
+
+            DB::table('users')
+                ->where('id', $vendorUserId)
+                ->update([$logoColumn => $storedPath, 'updated_at' => now()]);
+            $saved = true;
+            break;
+        }
+    }
+
+    if (!$saved) {
+        Storage::disk('public')->delete($storedPath);
+
+        return back()->withErrors(['letterhead_logo' => 'Logo field is not configured in database yet. Ask admin to enable a logo path column.']);
+    }
+
+    Cache::forget('vendor:portal:billing:v2:' . $vendorUserId);
+
+    VendorPortalAuditLogger::log('vendor_billing.letterhead_logo_uploaded', [
+        'severity' => 'info',
+        'target_identifier' => 'vendor-logo:' . $vendorUserId,
+        'logo_path' => $storedPath,
+    ]);
+
+    return back()->with('portal_notice', 'Letterhead logo uploaded successfully.');
+});
+
 Route::post('/portal/vendor/address/update', function (Request $request) {
     if (!session('portal_vendor_authenticated', false)) {
         return redirect('/portal/vendor/login');

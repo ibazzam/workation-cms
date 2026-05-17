@@ -3,6 +3,9 @@
                 <p class="ops-title">Billing, Payouts, and Refunds</p>
                 <span class="ops-chip">Commission {{ (int) ($commissionRate * 100) }}% + Gateway Fees</span>
             </div>
+            <div class="billing-print-actions" style="margin:0 0 10px;">
+                <a class="btn btn-secondary" href="{{ url('/vendor/print/report') }}" target="_blank" rel="noopener">Print Report</a>
+            </div>
 
                 @php
                     $localGatewayWindow = \App\Support\ReservationSettlementCalculator::payoutSettlementWindow('bml_mvr', 'bml');
@@ -88,6 +91,7 @@
                             <th>Gross</th>
                             <th>Total Deductions</th>
                             <th>Payout</th>
+                            <th>Print</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,10 +103,20 @@
                                 <td>{{ $entry['currency'] }} {{ number_format((float) $entry['gross'], 2) }}</td>
                                 <td>{{ $entry['currency'] }} {{ number_format((float) $entry['commission'] + (float) ($entry['gateway_fee'] ?? 0), 2) }}</td>
                                 <td>{{ $entry['currency'] }} {{ number_format((float) $entry['payout'], 2) }}</td>
+                                <td>
+                                    @if ((int) ($entry['reservation_id'] ?? 0) > 0)
+                                        <div class="billing-row-print-links">
+                                            <a href="{{ url('/vendor/print/invoice/' . (int) ($entry['reservation_id'] ?? 0)) }}" target="_blank" rel="noopener">Invoice</a>
+                                            <a href="{{ url('/vendor/print/bill/' . (int) ($entry['reservation_id'] ?? 0)) }}" target="_blank" rel="noopener">Bill</a>
+                                        </div>
+                                    @else
+                                        <span class="small" style="color:#6c8195;">N/A</span>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="ops-empty">No invoice ledger data yet.</td>
+                                <td colspan="7" class="ops-empty">No invoice ledger data yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

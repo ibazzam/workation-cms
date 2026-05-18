@@ -36,20 +36,12 @@
             @if ($showReservationsPanel)
             <div class="panel-links" aria-label="Category operations actions">
                 @if ($showReservationsPanel)
-                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active') : '?scope=active') }}">Active</a>
-                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending') : '?scope=pending') }}">Pending</a>
-                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history') : '?scope=history') }}">History</a>
-                    <a href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=all') : '?scope=all') }}">All</a>
+                    <a class="{{ $reservationScope === 'active' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active') : '?scope=active') }}">Active</a>
+                    <a class="{{ $reservationScope === 'pending' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending') : '?scope=pending') }}">Pending</a>
+                    <a class="{{ $reservationScope === 'history' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history') : '?scope=history') }}">History</a>
+                    <a class="{{ $reservationScope === 'all' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=all') : '?scope=all') }}">All</a>
                 @endif
             </div>
-            @endif
-            @if ($showReservationsPanel)
-                <div class="reservation-command-bar" aria-label="Reservation quick actions">
-                    <a class="reservation-command" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active') : '?scope=active') }}">Open Active Queue</a>
-                    <a class="reservation-command" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending') : '?scope=pending') }}">Open Pending Queue</a>
-                    <a class="reservation-command" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history') : '?scope=history') }}">View History</a>
-                    <a class="reservation-command" href="{{ '/vendor/availability' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '') }}">Go To Calendar</a>
-                </div>
             @endif
             @php
                 $propertyById = $vendorProperties->keyBy(static fn ($property) => (int) ($property->id ?? 0));
@@ -621,27 +613,6 @@
                     }
                 }
             @endphp
-
-            @if (!empty($allVendorCategoryKeys))
-                <div class="ops-category-filter-strip" aria-label="{{ $showAvailabilityPanel ? 'Calendar' : 'Booking' }} category toggles">
-                    <button
-                        class="ops-category-filter-btn is-active"
-                        type="button"
-                        data-vendor-ops-category-filter="all"
-                        data-vendor-ops-mode="{{ $showAvailabilityPanel ? 'availability' : 'reservations' }}"
-                        aria-pressed="true"
-                    >All Categories</button>
-                    @foreach ($allVendorCategoryKeys as $categoryKey)
-                        <button
-                            class="ops-category-filter-btn"
-                            type="button"
-                            data-vendor-ops-category-filter="{{ $categoryKey }}"
-                            data-vendor-ops-mode="{{ $showAvailabilityPanel ? 'availability' : 'reservations' }}"
-                            aria-pressed="false"
-                        >{{ $labelForCategory($categoryKey) }}</button>
-                    @endforeach
-                </div>
-            @endif
 
             <div class="ops-grid" style="grid-template-columns:1fr;">
                 @foreach ($allVendorCategoryKeys as $categoryKey)
@@ -1642,19 +1613,9 @@
                                     </div>
 
                                     <div class="vendor-booking-actions">
-                                        <button type="button" class="btn btn-secondary reservation-row-toggle" data-reservation-row-toggle="rsv-{{ $rsvId }}" aria-expanded="false" aria-controls="rsv-detail-{{ $rsvId }}">Details</button>
-                                        <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
-                                            @csrf
-                                            <select class="ops-select" name="status" required>
-                                                @foreach ($timelineOptions as $timelineValue => $timelineLabel)
-                                                    <option value="{{ $timelineValue }}" @selected($rowStatus === $timelineValue)>{{ $timelineLabel }}</option>
-                                                @endforeach
-                                            </select>
-                                            <textarea name="cancel_reason" class="ops-input" rows="2" maxlength="1000" placeholder="Cancellation reason (required for paid booking cancellation request)">{{ old('cancel_reason', '') }}</textarea>
-                                            <button class="btn btn-secondary" type="submit">Save Timeline</button>
-                                        </form>
+                                        <button type="button" class="btn btn-secondary reservation-row-toggle reservation-action reservation-action--details" data-reservation-row-toggle="rsv-{{ $rsvId }}" aria-expanded="false" aria-controls="rsv-detail-{{ $rsvId }}">Details</button>
                                         @if ($canDeleteReservation)
-                                            <form method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:0;">
+                                            <form class="reservation-action reservation-action--danger" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:0;">
                                                 @csrf
                                                 <button class="btn btn-danger" type="submit">Delete Booking</button>
                                             </form>
@@ -1688,6 +1649,19 @@
                                                         </div>
                                                     @endif
                                                 </div>
+                                            </div>
+                                            <div class="reservation-manage-box">
+                                                <p class="small" style="margin:0 0 8px;font-weight:700;color:#1f3e59;">Update Reservation Timeline</p>
+                                                <form class="inline-status-form inline-status-form--detail" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
+                                                    @csrf
+                                                    <select class="ops-select" name="status" required>
+                                                        @foreach ($timelineOptions as $timelineValue => $timelineLabel)
+                                                            <option value="{{ $timelineValue }}" @selected($rowStatus === $timelineValue)>{{ $timelineLabel }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                    <textarea name="cancel_reason" class="ops-input" rows="2" maxlength="1000" placeholder="Cancellation reason (required for paid booking cancellation request)">{{ old('cancel_reason', '') }}</textarea>
+                                                    <button class="btn btn-secondary" type="submit">Save Timeline</button>
+                                                </form>
                                             </div>
                                         </div>
                                     </div>
@@ -1847,12 +1821,12 @@
                                                 @endphp
                                                 <button
                                                     type="button"
-                                                    class="btn btn-secondary reservation-row-toggle"
+                                                    class="btn btn-secondary reservation-row-toggle reservation-action reservation-action--details"
                                                     data-reservation-row-toggle="adv-rsv-{{ $rsvId }}"
                                                     aria-expanded="false"
                                                     aria-controls="adv-rsv-detail-{{ $rsvId }}"
                                                 >Details</button>
-                                                <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
+                                                <form class="inline-status-form reservation-action reservation-action--manage" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
                                                     @csrf
                                                     <select class="ops-select" name="status" required>
                                                         @foreach ($timelineOptions as $timelineValue => $timelineLabel)
@@ -1869,7 +1843,7 @@
                                                     <button class="btn btn-secondary" type="submit">Save Timeline</button>
                                                 </form>
                                                 @if ($canDeleteReservation)
-                                                    <form method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:8px;">
+                                                    <form class="reservation-action reservation-action--danger" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:8px;">
                                                         @csrf
                                                         <button class="btn btn-danger" type="submit">Delete Booking</button>
                                                     </form>

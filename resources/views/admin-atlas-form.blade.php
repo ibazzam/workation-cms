@@ -6,7 +6,7 @@
     <title>{{ $mode === 'edit' ? 'Edit' : 'Create' }} {{ ucfirst($entity) }}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #13212f; }
-        .wrap { width: min(860px, calc(100% - 24px)); margin: 24px auto 40px; }
+        .wrap { width: min(1180px, calc(100% - 24px)); margin: 24px auto 40px; }
         .card { background: #fff; border: 1px solid #dbe3ed; border-radius: 12px; padding: 16px; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }

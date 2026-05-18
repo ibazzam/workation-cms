@@ -450,6 +450,7 @@
                                                                     @if ($categoryKey === 'water_sports')
                                                                         <button class="btn btn-secondary" type="button" data-open-rental-item-form data-property-id="{{ $propertyId }}">Add Equipment</button>
                                                                     @endif
+                                                                    <span class="listing-actions-break" aria-hidden="true"></span>
                                                                     @if ($listingModerationStatus === 'pending_review')
                                                                         <span class="ops-chip is-pending">Under Review</span>
                                                                     @else
@@ -708,6 +709,7 @@
                                                                                                 <div class="listing-actions-row">
                                                                                                     <button class="btn btn-secondary" type="button" data-open-room-edit data-room-edit-id="{{ $roomId }}">Edit Room</button>
                                                                                                     <button class="btn btn-secondary" type="button" data-toggle-room-media="{{ $roomId }}">Manage Media</button>
+                                                                                                    <span class="listing-actions-break" aria-hidden="true"></span>
                                                                                                     <form method="POST" action="/portal/vendor/rooms/{{ $roomId }}/delete" onsubmit="return confirm('Remove this room category?');">
                                                                                                         @csrf
                                                                                                         <button class="btn btn-danger" type="submit">Remove Room</button>
@@ -1001,6 +1003,7 @@
                                                                                             <div class="inline-actions listing-actions-inline listing-actions-compact">
                                                                                                 <div class="listing-actions-row">
                                                                                                     <button class="btn btn-secondary" type="button" data-open-rental-item-edit data-rental-item-edit-id="{{ $rentalItemId }}">Edit</button>
+                                                                                                    <span class="listing-actions-break" aria-hidden="true"></span>
                                                                                                     <form method="POST" action="/portal/vendor/water-sports-equipment/{{ $rentalItemId }}/delete" onsubmit="return confirm('Remove this rental item?');">
                                                                                                         @csrf
                                                                                                         <button class="btn btn-danger" type="submit">Remove</button>

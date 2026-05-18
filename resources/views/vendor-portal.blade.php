@@ -102,7 +102,8 @@
         $panelFromPageQuery = match ($activePortalPage) {
             'profile' => 'profile',
             'listings' => 'listings',
-            'reservations', 'operations', 'availability' => 'reservations',
+            'reservations', 'operations' => 'reservations',
+            'availability' => 'availability',
             'billing' => 'billing',
             'distribution' => 'distribution',
             'setup' => 'distribution',
@@ -148,7 +149,7 @@
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
         $forcedListingCategory = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '';
-        $showWorkspaceTabs = $showListingsPage;
+        $showWorkspaceTabs = $showListingsPage || $showReservationsPage || $showAvailabilityPage || $showBillingPage || $showMessagesPage;
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
             $showAvailabilityPage => 'availability',
@@ -668,6 +669,7 @@
             const panelGroups = Array.from(document.querySelectorAll('[data-panel-group]'));
             const listingStepPanels = Array.from(document.querySelectorAll('[data-listing-step]'));
             const categoryOpsCards = Array.from(document.querySelectorAll('[data-ops-category-section]'));
+            const categoryOpsFilterButtons = Array.from(document.querySelectorAll('[data-vendor-ops-category-filter]'));
             const validPanelKeys = new Set(navLinks.map((link) => String(link.dataset.panelKey || "")).filter(Boolean));
             const forcedListingMode = "{{ $forcedListingMode }}";
             const forcedListingCategory = "{{ $forcedListingCategory }}";
@@ -724,7 +726,7 @@
             const guidedWizardPrev = document.getElementById("guidedWizardPrev");
             const guidedWizardResume = document.getElementById("guidedWizardResume");
             const guidedWizardNext = document.getElementById("guidedWizardNext");
-            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'billing', 'reservations', 'engagement', 'distribution', 'compliance', 'api'], true) ? $forcedPanelKey : '' }}";
+            const serverPanelKey = "{{ in_array($forcedPanelKey, ['overview', 'profile', 'listings', 'availability', 'billing', 'reservations', 'messages', 'engagement', 'distribution', 'compliance', 'api'], true) ? $forcedPanelKey : '' }}";
             const forcedMediaPanelType = "{{ in_array($forcedMediaPanelType, ['property', 'room'], true) ? $forcedMediaPanelType : '' }}";
             const forcedMediaPanelId = Number("{{ $forcedMediaPanelId }}") || 0;
             const listingWizardStep = Number("{{ $listingWizardStep }}") || 1;
@@ -1246,6 +1248,16 @@
 
             function applyVendorCategoryOperationsFilter(categoryKey) {
                 const normalized = normalizeVendorOpsCategoryKey(categoryKey || 'all');
+
+                if (categoryOpsFilterButtons.length > 0) {
+                    categoryOpsFilterButtons.forEach((button) => {
+                        const buttonCategory = normalizeVendorOpsCategoryKey(String(button.getAttribute('data-vendor-ops-category-filter') || 'all'));
+                        const isActive = buttonCategory === normalized;
+                        button.classList.toggle('is-active', isActive);
+                        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                    });
+                }
+
                 if (categoryOpsCards.length === 0) {
                     return;
                 }
@@ -2643,7 +2655,17 @@
                 showPanelGroup(resolvePanelFromHash(window.location.hash));
             });
 
-            applyVendorCategoryOperationsFilter('all');
+            const initialOpsCategory = forcedListingCategory !== '' ? forcedListingCategory : 'all';
+            applyVendorCategoryOperationsFilter(initialOpsCategory);
+
+            if (categoryOpsFilterButtons.length > 0) {
+                categoryOpsFilterButtons.forEach((button) => {
+                    button.addEventListener('click', function () {
+                        const targetCategory = normalizeVendorOpsCategoryKey(String(button.getAttribute('data-vendor-ops-category-filter') || 'all'));
+                        applyVendorCategoryOperationsFilter(targetCategory);
+                    });
+                });
+            }
 
             if (guidedTrackProperty) {
                 guidedTrackProperty.addEventListener("click", function () {

@@ -1694,7 +1694,7 @@ Route::get('/vendor/availability', function () {
     }
 
     return redirect($query)
-        ->with('portal_active_panel', 'reservations')
+        ->with('portal_active_panel', 'availability')
         ->with('portal_listing_category', $category);
 });
 

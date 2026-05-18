@@ -218,9 +218,9 @@
     }
 
     .uniform-account-panel {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 0;
+        position: fixed;
+        top: 76px;
+        right: 12px;
         width: min(270px, calc(100vw - 24px));
         border: 1px solid #c9ddeb;
         border-radius: 14px;
@@ -514,8 +514,24 @@
             }
 
             function setMenuOpen(isOpen) {
+                if (isOpen) {
+                    positionMenuPanel();
+                }
                 menuPanel.hidden = !isOpen;
                 menuToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+
+            function positionMenuPanel() {
+                const toggleRect = menuToggle.getBoundingClientRect();
+                const panelWidth = Math.min(270, Math.max(220, window.innerWidth - 24));
+                let left = toggleRect.right - panelWidth;
+                left = Math.max(12, Math.min(left, window.innerWidth - panelWidth - 12));
+                const top = Math.max(12, toggleRect.bottom + 8);
+
+                menuPanel.style.width = panelWidth + 'px';
+                menuPanel.style.left = left + 'px';
+                menuPanel.style.top = top + 'px';
+                menuPanel.style.right = 'auto';
             }
 
             menuToggle.addEventListener('click', function (event) {
@@ -523,6 +539,18 @@
                 event.stopPropagation();
                 setMenuOpen(menuPanel.hidden);
             });
+
+            window.addEventListener('resize', function () {
+                if (!menuPanel.hidden) {
+                    positionMenuPanel();
+                }
+            });
+
+            window.addEventListener('scroll', function () {
+                if (!menuPanel.hidden) {
+                    positionMenuPanel();
+                }
+            }, { passive: true });
 
             document.addEventListener('click', function (event) {
                 if (!menuRoot.contains(event.target)) {

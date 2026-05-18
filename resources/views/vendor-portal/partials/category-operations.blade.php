@@ -25,7 +25,7 @@
         $allVendorCategoryKeys = [$forcedOperationsCategory];
     }
 @endphp
-<section id="vendorAvailabilitySection" class="card ops-section {{ $showReservationsPanel ? 'ops-section--reservations' : 'ops-section--availability' }}" aria-label="Vendor availability calendar" data-panel-group="reservations">
+<section id="vendorAvailabilitySection" class="card ops-section {{ $showReservationsPanel ? 'ops-section--reservations' : 'ops-section--availability' }}" aria-label="Vendor availability calendar" data-panel-group="{{ $showAvailabilityPanel ? 'availability' : 'reservations' }}">
             <div class="ops-header">
                 <p class="ops-title">{{ $showAvailabilityPanel ? 'Availability Operations' : 'Reservation Operations' }}</p>
                 <span class="ops-chip">{{ count($allVendorCategoryKeys ?? []) }} categories</span>
@@ -92,6 +92,55 @@
 
                     return $fallback;
                 };
+                $mediaUrlFromRecord = static function ($media, string $variant = 'thumb'): string {
+                    if (!$media) {
+                        return '';
+                    }
+
+                    $mediaId = (int) ($media->id ?? 0);
+                    if ($mediaId > 0) {
+                        return '/media/vendor/' . $mediaId . '/' . $variant;
+                    }
+
+                    foreach (['public_url', 'url', 'media_url', 'file_url'] as $urlKey) {
+                        $candidate = trim((string) ($media->{$urlKey} ?? ''));
+                        if ($candidate !== '') {
+                            return str_starts_with($candidate, 'http://')
+                                ? ('https://' . ltrim(substr($candidate, 7), '/'))
+                                : $candidate;
+                        }
+                    }
+
+                    foreach (['path', 'storage_path', 'file_path', 'relative_path'] as $pathKey) {
+                        $rawPath = trim((string) ($media->{$pathKey} ?? ''));
+                        if ($rawPath === '') {
+                            continue;
+                        }
+
+                        $resolved = function_exists('portalManagedMediaUrlFromPath')
+                            ? portalManagedMediaUrlFromPath($rawPath)
+                            : null;
+
+                        if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                            $resolved = vendorMediaStorageUrlFromPath($rawPath);
+                        }
+
+                        if (is_string($resolved) && trim($resolved) !== '') {
+                            return trim($resolved);
+                        }
+                    }
+
+                    return '';
+                };
+                $pickPrimaryMediaRecord = static function ($items) {
+                    return collect($items)
+                        ->sortByDesc(static fn ($media): int => (int) ($media->is_primary ?? 0))
+                        ->sortByDesc(static fn ($media): int => strtotime((string) ($media->created_at ?? '')) ?: 0)
+                        ->first();
+                };
+                $serviceMediaByServiceId = collect($vendorMediaAssets ?? collect())
+                    ->filter(static fn ($media): bool => in_array(strtolower(trim((string) ($media->entity_type ?? ''))), ['service', 'equipment', 'rental_item'], true))
+                    ->groupBy(static fn ($media): int => (int) ($media->entity_id ?? 0));
 
                 $availabilityTargetsByCategory = [];
                 $availabilityRowsByCategory = [];
@@ -389,6 +438,17 @@
                         $reservationTargetValue = 'property:' . $reservationPropertyId;
                     }
 
+                    $reservationThumbnailUrl = trim((string) ($reservationNotes['thumbnail_url'] ?? $reservationNotes['room_thumbnail_url'] ?? $reservationNotes['service_thumbnail_url'] ?? ''));
+                    if ($reservationThumbnailUrl === '' && $reservationRoomId > 0) {
+                        $reservationThumbnailUrl = $mediaUrlFromRecord($pickPrimaryMediaRecord($roomMediaByRoomId->get($reservationRoomId, collect())));
+                    }
+                    if ($reservationThumbnailUrl === '' && $reservationServiceId > 0) {
+                        $reservationThumbnailUrl = $mediaUrlFromRecord($pickPrimaryMediaRecord($serviceMediaByServiceId->get($reservationServiceId, collect())));
+                    }
+                    if ($reservationThumbnailUrl === '' && $reservationPropertyId > 0) {
+                        $reservationThumbnailUrl = $mediaUrlFromRecord($pickPrimaryMediaRecord($propertyMediaByPropertyId->get($reservationPropertyId, collect())));
+                    }
+
                     $startDay = null;
                     $endDay = null;
                     try {
@@ -432,6 +492,7 @@
                         'target_label' => $reservationTargetLabel,
                         'target_value' => $reservationTargetValue,
                         'room_label' => trim((string) ($reservationNotes['room_name'] ?? $reservationTargetLabel)),
+                        'thumbnail_url' => $reservationThumbnailUrl,
                         'meal_plan' => (function () use ($reservationNotes, $roomPricingBreakdown): string {
                             $rawMealPlan = trim((string) (
                                 $reservationNotes['meal_plan_label']
@@ -560,6 +621,27 @@
                     }
                 }
             @endphp
+
+            @if (!empty($allVendorCategoryKeys))
+                <div class="ops-category-filter-strip" aria-label="{{ $showAvailabilityPanel ? 'Calendar' : 'Booking' }} category toggles">
+                    <button
+                        class="ops-category-filter-btn is-active"
+                        type="button"
+                        data-vendor-ops-category-filter="all"
+                        data-vendor-ops-mode="{{ $showAvailabilityPanel ? 'availability' : 'reservations' }}"
+                        aria-pressed="true"
+                    >All Categories</button>
+                    @foreach ($allVendorCategoryKeys as $categoryKey)
+                        <button
+                            class="ops-category-filter-btn"
+                            type="button"
+                            data-vendor-ops-category-filter="{{ $categoryKey }}"
+                            data-vendor-ops-mode="{{ $showAvailabilityPanel ? 'availability' : 'reservations' }}"
+                            aria-pressed="false"
+                        >{{ $labelForCategory($categoryKey) }}</button>
+                    @endforeach
+                </div>
+            @endif
 
             <div class="ops-grid" style="grid-template-columns:1fr;">
                 @foreach ($allVendorCategoryKeys as $categoryKey)
@@ -724,7 +806,7 @@
                             ? 'You are already connected to channel infrastructure. Workation centralizes inventory, calendar, and channel responses into one operating window.'
                             : 'Workation removes spreadsheet-driven updates by giving a single calendar, inventory, and channel response window for daily operations.';
                     @endphp
-                    <article class="ops-category-card" data-ops-category-section="category-operations-{{ $categoryKey }}">
+                    <article class="ops-category-card" data-ops-category-section="category-operations-{{ $categoryKey }}" data-ops-category-key="{{ $categoryKey }}">
                         <button
                             class="ops-category-toggle"
                             type="button"
@@ -1473,7 +1555,151 @@
                             </article>
                         </div>
 
-                        <div class="ops-table-wrap reservation-table-wrap">
+                        <div class="vendor-booking-card-list" aria-label="{{ $labelForCategory($categoryKey) }} reservation cards">
+                            @forelse ($reservationScopeFiltered->take(30) as $reservationRow)
+                                @php
+                                    $rsvId = (int) ($reservationRow['id'] ?? 0);
+                                    $adults = max(1, (int) ($reservationRow['adult_guests'] ?? 1));
+                                    $children = max(0, (int) ($reservationRow['child_guests'] ?? 0));
+                                    $infants = max(0, (int) ($reservationRow['infant_guests'] ?? 0));
+                                    $bookedGuests = max(1, (int) ($reservationRow['guests'] ?? 1));
+                                    $totalGuests = max($bookedGuests, ($adults + $children + $infants));
+                                    if (($children + $infants) === 0 && $adults < $totalGuests) {
+                                        $adults = $totalGuests;
+                                    }
+                                    $nights = 0;
+                                    try {
+                                        $startDate = new \DateTimeImmutable((string) ($reservationRow['start_at'] ?? ''));
+                                        $endDate = new \DateTimeImmutable((string) ($reservationRow['end_at'] ?? ''));
+                                        $nights = max(0, (int) $startDate->diff($endDate)->days);
+                                    } catch (\Exception $ignored) {
+                                        $nights = 0;
+                                    }
+                                    $checkInDateLabel = trim((string) ($reservationRow['start_at'] ?? '')) !== ''
+                                        ? substr((string) ($reservationRow['start_at'] ?? ''), 0, 10)
+                                        : '-';
+                                    $checkOutDateLabel = trim((string) ($reservationRow['end_at'] ?? '')) !== ''
+                                        ? substr((string) ($reservationRow['end_at'] ?? ''), 0, 10)
+                                        : '-';
+                                    $paymentStatusValue = strtolower(trim((string) ($reservationRow['payment_status'] ?? 'unpaid')));
+                                    $paymentStatusClass = in_array($paymentStatusValue, ['paid', 'captured', 'settled'], true)
+                                        ? 'ok'
+                                        : (in_array($paymentStatusValue, ['partially_paid', 'pending'], true) ? 'warn' : 'err');
+                                    $bookingStatusValue = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
+                                    $bookingStatusClass = in_array($bookingStatusValue, ['confirmed', 'checked_in', 'checked_out', 'completed'], true)
+                                        ? 'ok'
+                                        : (in_array($bookingStatusValue, ['pending', 'cancel_requested'], true) ? 'warn' : 'err');
+                                    $rowStatus = strtolower(trim((string) ($reservationRow['status'] ?? 'pending')));
+                                    $rowPaymentStatus = strtolower(trim((string) ($reservationRow['payment_status'] ?? 'unpaid')));
+                                    $timelineOptions = [
+                                        'pending' => 'Booked (Pending Confirmation)',
+                                        'cancel_requested' => 'Cancel Requested (Customer)',
+                                        'confirmed' => 'Confirmed',
+                                        'checked_in' => 'Guest Checked-In',
+                                        'checked_out' => 'Guest Checked-Out',
+                                        'completed' => 'Stay Completed (Ready for Payout)',
+                                        'cancelled' => 'Cancelled',
+                                    ];
+                                    $canDeleteReservation = in_array($rowStatus, ['cancelled', 'failed', 'expired', 'rejected'], true)
+                                        && in_array($rowPaymentStatus, ['unpaid', 'failed', 'cancelled', 'refunded'], true)
+                                        && !((bool) ($reservationRow['has_open_dispute'] ?? false))
+                                        && !((bool) ($reservationRow['has_refund_case'] ?? false));
+                                @endphp
+                                <article class="vendor-booking-card">
+                                    <div class="vendor-booking-meta-bar">
+                                        <span>
+                                            Reservation <span class="vendor-booking-ref">{{ (string) ($reservationRow['reservation_code'] ?? ('RSV-' . str_pad((string) (int) ($reservationRow['id'] ?? 0), 6, '0', STR_PAD_LEFT))) }}</span>
+                                            &middot; Booked: {{ trim((string) ($reservationRow['created_at'] ?? '')) !== '' ? substr((string) ($reservationRow['created_at'] ?? ''), 0, 10) : 'N/A' }}
+                                        </span>
+                                        <span class="status-pill {{ $bookingStatusClass }}">{{ strtoupper((string) ($reservationRow['status'] ?? 'pending')) }}</span>
+                                    </div>
+
+                                    <div class="vendor-booking-body">
+                                        @php
+                                            $reservationThumb = trim((string) ($reservationRow['thumbnail_url'] ?? ''));
+                                            $reservationThumbFallback = '/images/placeholders/listing-fallback.svg';
+                                        @endphp
+                                        <div class="vendor-booking-thumb" aria-hidden="true">
+                                            @if ($reservationThumb !== '')
+                                                <img src="{{ $reservationThumb }}" alt="{{ (string) ($reservationRow['room_label'] ?? $reservationRow['target_label'] ?? 'Reservation') }} thumbnail" loading="lazy" onerror="if(!this.dataset.fb && '{{ $reservationThumbFallback }}' !== '' && this.src !== '{{ $reservationThumbFallback }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $reservationThumbFallback }}';}else{this.onerror=null;}">
+                                            @else
+                                                <i class="fa-solid fa-hotel"></i>
+                                            @endif
+                                        </div>
+                                        <div class="vendor-booking-info">
+                                            <div class="vendor-booking-title-row">
+                                                <span class="vendor-booking-title">{{ (string) ($reservationRow['target_label'] ?? 'Global / Unlinked') }}</span>
+                                                <span class="vendor-booking-price">{{ (string) ($reservationRow['currency'] ?? 'MVR') }} {{ number_format((float) ($reservationRow['invoice_total_amount'] ?? 0), 2) }}</span>
+                                            </div>
+                                            <div class="vendor-booking-line"><strong>Guest:</strong> {{ (string) ($reservationRow['customer_name'] ?? '') }} &middot; {{ (string) ($reservationRow['customer_email'] ?? '') }}</div>
+                                            <div class="vendor-booking-line"><strong>Stay:</strong> {{ $checkInDateLabel }} to {{ $checkOutDateLabel }} @if($categoryKey !== 'excursion')&middot; {{ $nights }} night{{ $nights !== 1 ? 's' : '' }}@endif</div>
+                                            <div class="vendor-booking-line"><strong>Occupancy:</strong> {{ $totalGuests }} total (A{{ $adults }} / C{{ $children }} / I{{ $infants }})</div>
+                                            <div class="vendor-booking-line"><strong>Payment:</strong> <span class="status-pill {{ $paymentStatusClass }}">{{ strtoupper((string) ($reservationRow['payment_status'] ?? 'unpaid')) }}</span></div>
+                                            @if (trim((string) ($reservationRow['special_request'] ?? '')) !== '')
+                                                <div class="vendor-booking-line"><strong>Special request:</strong> {{ (string) ($reservationRow['special_request'] ?? '') }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    <div class="vendor-booking-actions">
+                                        <button type="button" class="btn btn-secondary reservation-row-toggle" data-reservation-row-toggle="rsv-{{ $rsvId }}" aria-expanded="false" aria-controls="rsv-detail-{{ $rsvId }}">Details</button>
+                                        <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
+                                            @csrf
+                                            <select class="ops-select" name="status" required>
+                                                @foreach ($timelineOptions as $timelineValue => $timelineLabel)
+                                                    <option value="{{ $timelineValue }}" @selected($rowStatus === $timelineValue)>{{ $timelineLabel }}</option>
+                                                @endforeach
+                                            </select>
+                                            <textarea name="cancel_reason" class="ops-input" rows="2" maxlength="1000" placeholder="Cancellation reason (required for paid booking cancellation request)">{{ old('cancel_reason', '') }}</textarea>
+                                            <button class="btn btn-secondary" type="submit">Save Timeline</button>
+                                        </form>
+                                        @if ($canDeleteReservation)
+                                            <form method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/delete" onsubmit="return confirm('Remove this cancelled booking from your vendor portal list?');" style="margin-top:0;">
+                                                @csrf
+                                                <button class="btn btn-danger" type="submit">Delete Booking</button>
+                                            </form>
+                                        @endif
+                                    </div>
+
+                                    <div id="rsv-detail-{{ $rsvId }}" class="reservation-detail-row" hidden>
+                                        <div style="padding:10px 12px;">
+                                            <div class="reservation-detail-grid">
+                                                <div>
+                                                    <p class="small" style="margin:0;font-weight:700;color:#1f3e59;">Payment Breakdown</p>
+                                                    <p class="small" style="margin:3px 0 0;">Subtotal: {{ number_format((float) ($reservationRow['subtotal_amount'] ?? 0), 2) }} {{ (string) ($reservationRow['currency'] ?? 'MVR') }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Tax: {{ number_format((float) ($reservationRow['total_tax_amount'] ?? 0), 2) }} | Service: {{ number_format((float) ($reservationRow['service_charge_total'] ?? 0), 2) }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Invoice total: {{ number_format((float) ($reservationRow['invoice_total_amount'] ?? 0), 2) }} {{ (string) ($reservationRow['currency'] ?? 'MVR') }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="small" style="margin:0;font-weight:700;color:#1f3e59;">Payout & Refund</p>
+                                                    <p class="small" style="margin:3px 0 0;">Payout: {{ strtoupper((string) ($reservationRow['payout_status'] ?? 'queued')) }}{{ trim((string) ($reservationRow['payout_expected_at'] ?? '')) !== '' ? (' | ETA ' . substr((string) ($reservationRow['payout_expected_at'] ?? ''), 0, 10)) : '' }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Refund case: {{ (bool) ($reservationRow['has_refund_case'] ?? false) ? 'Yes' : 'No' }}{{ trim((string) ($reservationRow['refund_status'] ?? '')) !== '' ? (' | ' . strtoupper((string) ($reservationRow['refund_status'] ?? ''))) : '' }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Open dispute: {{ (bool) ($reservationRow['has_open_dispute'] ?? false) ? 'Yes' : 'No' }}</p>
+                                                </div>
+                                                <div>
+                                                    <p class="small" style="margin:0;font-weight:700;color:#1f3e59;">Operational Timeline</p>
+                                                    <p class="small" style="margin:3px 0 0;">Booked at: {{ trim((string) ($reservationRow['created_at'] ?? '')) !== '' ? substr((string) ($reservationRow['created_at'] ?? ''), 0, 16) : 'N/A' }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Stay window: {{ trim((string) ($reservationRow['start_at'] ?? '')) !== '' ? substr((string) ($reservationRow['start_at'] ?? ''), 0, 10) : '-' }} to {{ trim((string) ($reservationRow['end_at'] ?? '')) !== '' ? substr((string) ($reservationRow['end_at'] ?? ''), 0, 10) : '-' }}</p>
+                                                    <p class="small" style="margin:3px 0 0;">Payment ref: {{ trim((string) ($reservationRow['payment_reference'] ?? '')) !== '' ? (string) ($reservationRow['payment_reference'] ?? '') : 'N/A' }}</p>
+                                                    @if ($rsvId > 0)
+                                                        <div class="reservation-print-actions">
+                                                            <a href="{{ url('/vendor/print/reservation/' . $rsvId) }}" target="_blank" rel="noopener">Print Reservation</a>
+                                                            <a href="{{ url('/vendor/print/invoice/' . $rsvId) }}" target="_blank" rel="noopener">Print Invoice</a>
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </article>
+                            @empty
+                                <div class="ops-empty">No reservations for {{ strtolower($labelForCategory($categoryKey)) }} in {{ $reservationScope }} scope.</div>
+                            @endforelse
+                        </div>
+
+                        <details class="vendor-reservation-advanced">
+                            <summary>Open Advanced Reservation Table View</summary>
+                            <div class="ops-table-wrap reservation-table-wrap">
                             <table class="ops-table is-compact reservation-ops-table reservation-ops-table--enterprise" aria-label="{{ $labelForCategory($categoryKey) }} reservations table">
                                 <thead>
                                     <tr>
@@ -1622,9 +1848,9 @@
                                                 <button
                                                     type="button"
                                                     class="btn btn-secondary reservation-row-toggle"
-                                                    data-reservation-row-toggle="rsv-{{ $rsvId }}"
+                                                    data-reservation-row-toggle="adv-rsv-{{ $rsvId }}"
                                                     aria-expanded="false"
-                                                    aria-controls="rsv-detail-{{ $rsvId }}"
+                                                    aria-controls="adv-rsv-detail-{{ $rsvId }}"
                                                 >Details</button>
                                                 <form class="inline-status-form" method="POST" action="/portal/vendor/reservations/{{ (int) ($reservationRow['id'] ?? 0) }}/status">
                                                     @csrf
@@ -1650,7 +1876,7 @@
                                                 @endif
                                             </td>
                                         </tr>
-                                        <tr id="rsv-detail-{{ $rsvId }}" class="reservation-detail-row" hidden>
+                                        <tr id="adv-rsv-detail-{{ $rsvId }}" class="reservation-detail-row" hidden>
                                             <td colspan="{{ $categoryKey === 'excursion' ? 10 : 11 }}">
                                                 <div class="reservation-detail-grid">
                                                     <div>
@@ -1687,7 +1913,8 @@
                                     @endforelse
                                 </tbody>
                             </table>
-                        </div>
+                            </div>
+                        </details>
 
                         @endif
                         </div>
@@ -1714,7 +1941,13 @@
             return;
         }
 
-        const detail = document.getElementById('rsv-detail-' + rowKey.replace('rsv-', ''));
+        let detailId = '';
+        if (rowKey.indexOf('adv-rsv-') === 0) {
+            detailId = 'adv-rsv-detail-' + rowKey.replace('adv-rsv-', '');
+        } else if (rowKey.indexOf('rsv-') === 0) {
+            detailId = 'rsv-detail-' + rowKey.replace('rsv-', '');
+        }
+        const detail = detailId !== '' ? document.getElementById(detailId) : null;
         if (!detail) {
             return;
         }

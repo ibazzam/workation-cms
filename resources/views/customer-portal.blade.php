@@ -1313,8 +1313,16 @@
                                         </div>
 
                                         <div class="booking-card-body">
+                                            @php
+                                                $bookingThumb = trim((string) ($booking['thumbnail_url'] ?? ''));
+                                                $bookingThumbFallback = '/images/placeholders/listing-fallback.svg';
+                                            @endphp
                                             <div class="booking-card-thumb-wrap" aria-hidden="true">
-                                                <i class="fa-solid fa-building"></i>
+                                                @if ($bookingThumb !== '')
+                                                    <img src="{{ $bookingThumb }}" alt="{{ (string) ($booking['service_label'] ?? $booking['property_name'] ?? 'Booking') }} thumbnail" loading="lazy" onerror="if(!this.dataset.fb && '{{ $bookingThumbFallback }}' !== '' && this.src !== '{{ $bookingThumbFallback }}' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='{{ $bookingThumbFallback }}';}else{this.onerror=null;}">
+                                                @else
+                                                    <i class="fa-solid fa-building"></i>
+                                                @endif
                                             </div>
                                             <div class="booking-card-info">
                                                 <div class="booking-card-title-row">

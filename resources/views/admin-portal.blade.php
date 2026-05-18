@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     @include('partials.favicon')
     <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700|space-grotesk:500,700" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -36,18 +37,21 @@
         }
 
         .page {
-            width: min(1180px, calc(100% - 24px));
+            width: 100%;
             max-width: none;
-            margin: 14px auto 28px;
-            padding: 10px 0 20px;
+            margin: 0;
+            padding: 0 12px 16px;
         }
 
         .hero {
             background: linear-gradient(130deg, var(--hero-1) 0%, var(--hero-2) 48%, var(--hero-3) 100%);
-            border-radius: 12px;
+            border-radius: 0 0 10px 10px;
             color: #fff;
-            padding: 12px 14px;
+            padding: 10px 12px;
             box-shadow: 0 10px 24px rgba(18, 38, 58, 0.18);
+            position: sticky;
+            top: 0;
+            z-index: 40;
         }
 
         .eyebrow {
@@ -91,10 +95,66 @@
         .portal-shell {
             margin-top: 10px;
             display: grid;
-            grid-template-columns: 240px minmax(0, 1fr);
-            gap: 10px;
+            grid-template-columns: 248px minmax(0, 1fr);
+            gap: 12px;
             align-items: start;
-            min-height: calc(100vh - 86px);
+            min-height: calc(100vh - 64px);
+        }
+
+        .admin-workspace-nav {
+            margin-top: 10px;
+            border: 1px solid #d7e0e6;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 8px;
+            box-shadow: 0 4px 16px rgba(14, 39, 61, 0.06);
+        }
+
+        .admin-workspace-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .admin-workspace-tab {
+            text-decoration: none;
+            border: 1px solid #cfe0ec;
+            border-radius: 999px;
+            background: #f2f8fd;
+            color: #1f4967;
+            padding: 7px 12px;
+            font-size: 0.79rem;
+            font-weight: 700;
+            transition: all 0.16s ease;
+        }
+
+        .admin-workspace-tab:hover {
+            border-color: #98b7cf;
+            background: #e8f3fb;
+            color: #123f5d;
+        }
+
+        .admin-workspace-tab.is-active {
+            border-color: #638baa;
+            background: #dcefff;
+            color: #123f5d;
+            box-shadow: inset 0 0 0 1px rgba(99, 139, 170, 0.24);
+        }
+
+        .portal-nav-mobile-toggle {
+            display: none;
+            width: 100%;
+            margin: 0 0 8px;
+            border: 1px solid #d9e3ec;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #304b63;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 8px 10px;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
         }
 
         .portal-content {
@@ -134,15 +194,16 @@
 
         .portal-nav {
             position: sticky;
-            top: 8px;
+            top: 54px;
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 4px;
             padding: 10px;
-            border: 1px solid var(--line);
+            border: 1px solid #d9e3ec;
             border-radius: 12px;
-            background: #ffffff;
-            max-height: calc(100vh - 16px);
+            background: linear-gradient(180deg, #ffffff 0%, #f9fbfd 100%);
+            box-shadow: 0 10px 24px rgba(16, 39, 63, 0.06);
+            max-height: calc(100vh - 64px);
             overflow-y: auto;
         }
 
@@ -203,16 +264,79 @@
             color: #6f8598;
         }
 
+        .nav-group + .nav-group {
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid #edf3f7;
+        }
+
+        .nav-group-header {
+            width: 100%;
+            border: none;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 7px;
+            color: #304b63;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .nav-group-header:hover {
+            background: #f3f8fc;
+            border-radius: 8px;
+        }
+
+        .nav-chevron {
+            font-size: 0.72rem;
+            color: #7990a5;
+            transition: transform 0.2s ease;
+        }
+
+        .nav-group-header[aria-expanded="false"] .nav-chevron {
+            transform: rotate(-90deg);
+        }
+
+        .nav-group-body {
+            display: grid;
+            gap: 3px;
+            padding: 0 0 4px 0;
+        }
+
+        .nav-group-body:not(.is-open) {
+            display: none;
+        }
+
+        @media (min-width: 901px) {
+            .nav-group-body,
+            .nav-group-body:not(.is-open) {
+                display: grid;
+            }
+        }
+
         .portal-nav a {
             text-decoration: none;
             border: 1px solid transparent;
-            border-radius: 8px;
+            border-radius: 9px;
             padding: 8px 10px;
-            font-size: 0.82rem;
+            min-height: 34px;
+            font-size: 0.79rem;
             font-weight: 700;
-            color: #1e4456;
-            background: #f7fbff;
+            color: #2e4c66;
+            background: transparent;
             transition: all 0.15s ease;
+        }
+
+        .portal-nav a i {
+            width: 1.1rem;
+            margin-right: 6px;
+            text-align: center;
+            color: #2d5a70;
         }
 
         .portal-nav a:hover {
@@ -222,9 +346,9 @@
         }
 
         .portal-nav a.prominent {
-            background: #ebf4fb;
-            color: #0a4a65;
-            border-color: #bcd8ea;
+            border-color: #8fb0c8;
+            background: #ebf3fb;
+            color: #173e5c;
         }
 
         .logout {
@@ -312,6 +436,7 @@
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 14px;
+            box-shadow: 0 6px 18px rgba(16, 39, 63, 0.05);
         }
 
         .widget-title {
@@ -373,6 +498,7 @@
             border: 1px solid var(--line);
             border-radius: 14px;
             padding: 14px;
+            box-shadow: 0 6px 18px rgba(16, 39, 63, 0.05);
         }
 
         .label {
@@ -480,12 +606,12 @@
         .role-pill {
             display: inline-block;
             border-radius: 999px;
-            padding: 4px 8px;
+            padding: 5px 10px;
             font-size: 0.72rem;
             font-weight: 700;
-            border: 1px solid #c8d4df;
-            background: #f2f7fb;
-            color: #1b3856;
+            border: 1px solid #b8d1e3;
+            background: #eaf4fd;
+            color: #163f5d;
         }
 
         .user-list {
@@ -532,10 +658,13 @@
 
         .bulk-delete-btn {
             border: 0;
-            border-radius: 8px;
+            border-radius: 9px;
             background: #8a1f1f;
             color: #fff;
-            padding: 8px 10px;
+            padding: 8px 12px;
+            min-height: 35px;
+            font-size: 0.8rem;
+            line-height: 1.2;
             font-weight: 700;
             cursor: pointer;
         }
@@ -619,10 +748,13 @@
 
         .manage-form button {
             border: 0;
-            border-radius: 8px;
+            border-radius: 9px;
             background: #155f83;
             color: #fff;
-            padding: 8px 10px;
+            padding: 8px 12px;
+            min-height: 35px;
+            font-size: 0.8rem;
+            line-height: 1.2;
             font-weight: 700;
             cursor: pointer;
         }
@@ -739,10 +871,13 @@
         .finance-table th {
             background: #f8fbff;
             font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
-            letter-spacing: 0.06em;
+            letter-spacing: 0.08em;
             text-transform: uppercase;
             color: #456077;
-            font-size: 0.7rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding-top: 9px;
+            padding-bottom: 9px;
         }
 
         .finance-table tr:last-child td {
@@ -828,9 +963,12 @@
 
         .registration-actions button {
             border: 0;
-            border-radius: 8px;
+            border-radius: 9px;
             color: #fff;
-            padding: 8px 10px;
+            padding: 8px 12px;
+            min-height: 35px;
+            font-size: 0.8rem;
+            line-height: 1.2;
             font-weight: 700;
             cursor: pointer;
         }
@@ -891,6 +1029,20 @@
 
 
         @media (max-width: 980px) {
+            .admin-workspace-tabs {
+                gap: 6px;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+            }
+
+            .admin-workspace-tab {
+                flex: 0 0 auto;
+                padding: 7px 10px;
+                font-size: 0.76rem;
+            }
+
             .manage-form {
                 grid-template-columns: 1fr 1fr;
             }
@@ -946,17 +1098,34 @@
                 overflow-y: visible;
                 white-space: normal;
             }
+
+            .portal-nav-mobile-toggle {
+                display: flex;
+            }
+
+            .portal-nav {
+                display: none;
+                max-height: none;
+            }
+
+            .portal-nav.is-open {
+                display: flex;
+            }
         }
         .prominent {
-            font-size: 1.05rem;
+            font-size: 0.79rem;
             font-weight: 700;
-            box-shadow: 0 2px 12px rgba(220, 38, 38, 0.08);
-            border-width: 2px;
-            animation: fade-in 0.4s;
+            box-shadow: none;
+            border-width: 1px;
+            animation: none;
         }
-        @keyframes fade-in {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        .portal-nav-mobile-toggle .portal-nav-toggle-icon {
+            transition: transform 0.2s ease;
+        }
+
+        .portal-nav-mobile-toggle[aria-expanded="true"] .portal-nav-toggle-icon {
+            transform: rotate(180deg);
         }
     </style>
     @include('partials.uniform-buttons')
@@ -965,6 +1134,11 @@
     <main class="page" data-api-base="{{ $apiBase }}">
         @php
             $adminPage = strtolower((string) ($adminPage ?? 'overview'));
+            $adminOverviewOpen = in_array($adminPage, ['overview', 'permissions', 'audit'], true);
+            $adminFinanceOpen = in_array($adminPage, ['finance', 'media', 'catalog'], true);
+            $adminContentOpen = $adminPage === 'content';
+            $adminModerationOpen = in_array($adminPage, ['moderation', 'listings'], true);
+            $adminToolsOpen = $adminPage === 'tools';
         @endphp
         <section class="hero">
             <div class="hero-top">
@@ -993,8 +1167,38 @@
             </div>
         </section>
 
+        <section class="admin-workspace-nav" aria-label="Admin workspace tabs">
+            <div class="admin-workspace-tabs" role="tablist" aria-label="Admin sections">
+                @if (in_array('overview', $adminAllowedPages))
+                    <a class="admin-workspace-tab {{ $adminPage === 'overview' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('overview') }}" role="tab" aria-selected="{{ $adminPage === 'overview' ? 'true' : 'false' }}">Dashboard</a>
+                @endif
+                @if (in_array('permissions', $adminAllowedPages))
+                    <a class="admin-workspace-tab {{ $adminPage === 'permissions' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('permissions') }}" role="tab" aria-selected="{{ $adminPage === 'permissions' ? 'true' : 'false' }}">Roles</a>
+                @endif
+                @if (in_array('moderation', $adminAllowedPages))
+                    <a class="admin-workspace-tab {{ $adminPage === 'moderation' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('moderation') }}" role="tab" aria-selected="{{ $adminPage === 'moderation' ? 'true' : 'false' }}">Moderation</a>
+                @endif
+                @if (in_array('listings', $adminAllowedPages) && $canModerateListings)
+                    <a class="admin-workspace-tab {{ $adminPage === 'listings' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('listings') }}" role="tab" aria-selected="{{ $adminPage === 'listings' ? 'true' : 'false' }}">Listing Review</a>
+                @endif
+                @if (in_array('finance', $adminAllowedPages) && $canModerateFinance)
+                    <a class="admin-workspace-tab {{ $adminPage === 'finance' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('finance') }}" role="tab" aria-selected="{{ $adminPage === 'finance' ? 'true' : 'false' }}">Finance</a>
+                @endif
+                @if (in_array('content', $adminAllowedPages) && (($canManageContent ?? false) === true))
+                    <a class="admin-workspace-tab {{ $adminPage === 'content' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('content') }}" role="tab" aria-selected="{{ $adminPage === 'content' ? 'true' : 'false' }}">Content</a>
+                @endif
+                @if (in_array('tools', $adminAllowedPages))
+                    <a class="admin-workspace-tab {{ $adminPage === 'tools' ? 'is-active' : '' }}" href="{{ adminPortalEntryPath('tools') }}" role="tab" aria-selected="{{ $adminPage === 'tools' ? 'true' : 'false' }}">Tools</a>
+                @endif
+            </div>
+        </section>
+
         <div class="portal-shell">
-        <nav class="portal-nav" aria-label="Admin navigation">
+        <button class="portal-nav-mobile-toggle" id="adminNavMobileToggle" type="button" aria-expanded="false" aria-controls="adminNavMenu">
+            <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-bars" aria-hidden="true"></i> Menu</span>
+            <i class="fa-solid fa-chevron-down portal-nav-toggle-icon" aria-hidden="true"></i>
+        </button>
+        <nav class="portal-nav" id="adminNavMenu" aria-label="Admin navigation">
             <div class="admin-nav-head">
                 <div class="admin-nav-avatar" aria-hidden="true">{{ strtoupper(substr((string) ($portalUser ?? 'A'), 0, 1)) }}</div>
                 <div class="admin-nav-user-meta">
@@ -1003,50 +1207,89 @@
                 </div>
             </div>
 
-            <p class="nav-group-title">Overview</p>
-            @if (in_array('overview', $adminAllowedPages))
-            <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('overview') }}">Dashboard</a>
-            @endif
-            @if (in_array('permissions', $adminAllowedPages))
-            <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('permissions') }}">Role Permissions</a>
-            @endif
-            @if (in_array('audit', $adminAllowedPages))
-            <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('audit') }}">Audit History</a>
+            @if (in_array('overview', $adminAllowedPages) || in_array('permissions', $adminAllowedPages) || in_array('audit', $adminAllowedPages))
+            <div class="nav-group">
+                <button class="nav-group-header" type="button" data-admin-nav-toggle="overview" aria-expanded="{{ $adminOverviewOpen ? 'true' : 'false' }}">
+                    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-house" aria-hidden="true"></i> Overview</span>
+                    <span class="nav-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div class="nav-group-body {{ $adminOverviewOpen ? 'is-open' : '' }}" data-admin-nav-group="overview">
+                    @if (in_array('overview', $adminAllowedPages))
+                    <a class="{{ $adminPage === 'overview' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('overview') }}"><i class="fa-solid fa-gauge-high" aria-hidden="true"></i>Dashboard</a>
+                    @endif
+                    @if (in_array('permissions', $adminAllowedPages))
+                    <a class="{{ $adminPage === 'permissions' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('permissions') }}"><i class="fa-solid fa-key" aria-hidden="true"></i>Role Permissions</a>
+                    @endif
+                    @if (in_array('audit', $adminAllowedPages))
+                    <a class="{{ $adminPage === 'audit' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('audit') }}"><i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>Audit History</a>
+                    @endif
+                </div>
+            </div>
             @endif
 
-            <p class="nav-group-title">Finance &amp; Catalog</p>
-            @if (in_array('finance', $adminAllowedPages) && $canModerateFinance)
-            <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('finance') }}">Finance Moderation</a>
-            @endif
-            @if (in_array('media', $adminAllowedPages) && $canManageVendorUsers)
-            <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('media') }}">Hero Image Settings</a>
-            @endif
-            @if (in_array('catalog', $adminAllowedPages) && $canManageVendorUsers)
-            <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('catalog') }}">Listing Options</a>
+            @if ((in_array('finance', $adminAllowedPages) && $canModerateFinance) || (in_array('media', $adminAllowedPages) && $canManageVendorUsers) || (in_array('catalog', $adminAllowedPages) && $canManageVendorUsers))
+            <div class="nav-group">
+                <button class="nav-group-header" type="button" data-admin-nav-toggle="finance" aria-expanded="{{ $adminFinanceOpen ? 'true' : 'false' }}">
+                    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-wallet" aria-hidden="true"></i> Finance &amp; Catalog</span>
+                    <span class="nav-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div class="nav-group-body {{ $adminFinanceOpen ? 'is-open' : '' }}" data-admin-nav-group="finance">
+                    @if (in_array('finance', $adminAllowedPages) && $canModerateFinance)
+                    <a class="{{ $adminPage === 'finance' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('finance') }}"><i class="fa-solid fa-money-check-dollar" aria-hidden="true"></i>Finance Moderation</a>
+                    @endif
+                    @if (in_array('media', $adminAllowedPages) && $canManageVendorUsers)
+                    <a class="{{ $adminPage === 'media' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('media') }}"><i class="fa-solid fa-image" aria-hidden="true"></i>Hero Image Settings</a>
+                    @endif
+                    @if (in_array('catalog', $adminAllowedPages) && $canManageVendorUsers)
+                    <a class="{{ $adminPage === 'catalog' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('catalog') }}"><i class="fa-solid fa-list-check" aria-hidden="true"></i>Listing Options</a>
+                    @endif
+                </div>
+            </div>
             @endif
 
             @if (in_array('content', $adminAllowedPages) && (($canManageContent ?? false) === true))
-            <p class="nav-group-title">Content &amp; Media</p>
-            <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('content') }}">Content Hub</a>
-            <a href="/portal/admin/blog">Blog Manager</a>
-            <a href="/portal/admin/atlas">Island Atlas Manager</a>
-            <a href="/portal/admin/newsletter">Newsletter Manager</a>
-            <a href="/portal/admin/announcement">Announcement Manager</a>
+            <div class="nav-group">
+                <button class="nav-group-header" type="button" data-admin-nav-toggle="content" aria-expanded="{{ $adminContentOpen ? 'true' : 'false' }}">
+                    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-photo-film" aria-hidden="true"></i> Content &amp; Media</span>
+                    <span class="nav-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div class="nav-group-body {{ $adminContentOpen ? 'is-open' : '' }}" data-admin-nav-group="content">
+                    <a class="{{ $adminPage === 'content' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('content') }}"><i class="fa-solid fa-folder-open" aria-hidden="true"></i>Content Hub</a>
+                    <a href="/portal/admin/blog"><i class="fa-solid fa-blog" aria-hidden="true"></i>Blog Manager</a>
+                    <a href="/portal/admin/atlas"><i class="fa-solid fa-earth-asia" aria-hidden="true"></i>Island Atlas Manager</a>
+                    <a href="/portal/admin/newsletter"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>Newsletter Manager</a>
+                    <a href="/portal/admin/announcement"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i>Announcement Manager</a>
+                </div>
+            </div>
             @endif
 
-            @if (in_array('moderation', $adminAllowedPages) || in_array('listings', $adminAllowedPages))
-            <p class="nav-group-title">Moderation &amp; Vendors</p>
-            @endif
-            @if (in_array('moderation', $adminAllowedPages))
-            <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('moderation') }}" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn">Moderation</a>
-            @endif
-            @if (in_array('listings', $adminAllowedPages) && $canModerateListings)
-            <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('listings') }}">Listing Moderation</a>
+            @if (in_array('moderation', $adminAllowedPages) || (in_array('listings', $adminAllowedPages) && $canModerateListings))
+            <div class="nav-group">
+                <button class="nav-group-header" type="button" data-admin-nav-toggle="moderation" aria-expanded="{{ $adminModerationOpen ? 'true' : 'false' }}">
+                    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-user-shield" aria-hidden="true"></i> Moderation &amp; Vendors</span>
+                    <span class="nav-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div class="nav-group-body {{ $adminModerationOpen ? 'is-open' : '' }}" data-admin-nav-group="moderation">
+                    @if (in_array('moderation', $adminAllowedPages))
+                    <a class="{{ $adminPage === 'moderation' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('moderation') }}" data-open-panel="moderationPanel" data-toggle-button="toggleModerationBtn"><i class="fa-solid fa-user-shield" aria-hidden="true"></i>Moderation</a>
+                    @endif
+                    @if (in_array('listings', $adminAllowedPages) && $canModerateListings)
+                    <a class="{{ $adminPage === 'listings' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('listings') }}"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>Listing Moderation</a>
+                    @endif
+                </div>
+            </div>
             @endif
 
             @if (in_array('tools', $adminAllowedPages))
-            <p class="nav-group-title">Tools</p>
-            <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('tools') }}">Session + API</a>
+            <div class="nav-group">
+                <button class="nav-group-header" type="button" data-admin-nav-toggle="tools" aria-expanded="{{ $adminToolsOpen ? 'true' : 'false' }}">
+                    <span style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i> Tools</span>
+                    <span class="nav-chevron" aria-hidden="true">▾</span>
+                </button>
+                <div class="nav-group-body {{ $adminToolsOpen ? 'is-open' : '' }}" data-admin-nav-group="tools">
+                    <a class="{{ $adminPage === 'tools' ? 'prominent' : '' }}" href="{{ adminPortalEntryPath('tools') }}"><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>Session + API</a>
+                </div>
+            </div>
             @endif
         </nav>
 
@@ -1056,12 +1299,12 @@
             <article class="widget-card">
                 <p class="widget-title">Portal Users</p>
                 <p class="widget-value">{{ $dashboardStats['total_users'] }}</p>
-                <div class="widget-sub">Admins: {{ $dashboardStats['admin_users'] }} · Vendors: {{ $dashboardStats['vendor_users'] }}</div>
+                <div class="widget-sub">Admins: {{ $dashboardStats['admin_users'] }} &middot; Vendors: {{ $dashboardStats['vendor_users'] }}</div>
             </article>
             <article class="widget-card">
                 <p class="widget-title">Account Status</p>
                 <p class="widget-value">{{ $dashboardStats['active_users'] }}</p>
-                <div class="widget-sub">Active users · Suspended: {{ $dashboardStats['suspended_users'] }}</div>
+                <div class="widget-sub">Active users &middot; Suspended: {{ $dashboardStats['suspended_users'] }}</div>
             </article>
             <article class="widget-card">
                 <p class="widget-title">Vendor Requests</p>
@@ -1106,7 +1349,7 @@
         <section class="permissions-section" id="rolePermissionsPanel" style="{{ $adminPage === 'permissions' ? '' : 'display:none;' }}">
             <p class="label">Role Permissions</p>
             @if ($currentRolePermissions)
-                <p class="small">Current session role: <span class="role-pill">{{ $currentRolePermissions['label'] }}</span> — {{ $currentRolePermissions['summary'] }}</p>
+                <p class="small">Current session role: <span class="role-pill">{{ $currentRolePermissions['label'] }}</span> ÔÇö {{ $currentRolePermissions['summary'] }}</p>
             @else
                 <p class="small">Current session role: <span class="role-pill">{{ strtoupper((string) $portalRole) }}</span></p>
             @endif
@@ -1549,7 +1792,7 @@
 
         <section class="card manage" id="heroImageSettingsPanel" style="{{ $adminPage === 'media' ? '' : 'display:none;' }}">
             <p class="label">Hero Image Settings</p>
-            <p class="small">Update the homepage banner and category catalogue hero images. Each slot saves independently — upload an image, paste an HTTPS URL, or remove the current one.</p>
+            <p class="small">Update the homepage banner and category catalogue hero images. Each slot saves independently ÔÇö upload an image, paste an HTTPS URL, or remove the current one.</p>
             <div style="margin-top:10px;padding:10px 12px;border:1px solid #cfe0ec;border-radius:10px;background:#f4f9fd;">
                 <p style="margin:0 0 6px;font-weight:700;font-size:0.82rem;color:#18435c;">Upload guidance</p>
                 <p class="small" style="margin:0;line-height:1.45;">
@@ -1585,7 +1828,7 @@
                     @endif
                     <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
                         @csrf
-                        <label for="home_hero_image_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (JPG, PNG, WebP · max 4 MB · 16:9 recommended)</label>
+                        <label for="home_hero_image_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (JPG, PNG, WebP &middot; max 4 MB &middot; 16:9 recommended)</label>
                         <input id="home_hero_image_file" name="home_hero_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
                         <label for="home_hero_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS URL</label>
                         <input id="home_hero_image_url" name="home_hero_image_url" type="text" maxlength="2048" value="{{ old('home_hero_image_url', $homeHeroExternalValue) }}" placeholder="https://cdn.example.com/homepage-banner.jpg" style="display:block;width:100%;max-width:540px;margin-bottom:12px;">
@@ -1619,7 +1862,7 @@
                             @endif
                             <form method="POST" action="/portal/admin/media-hero/update" enctype="multipart/form-data" style="margin-bottom:10px;">
                                 @csrf
-                                <label for="{{ $fieldName }}_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (max 4 MB · 16:9 recommended)</label>
+                                <label for="{{ $fieldName }}_file" style="display:block;margin-bottom:4px;font-size:0.85rem;">Upload new image (max 4 MB &middot; 16:9 recommended)</label>
                                 <input id="{{ $fieldName }}_file" name="{{ $fieldName }}_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
                                 <label for="{{ $fieldName }}" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an HTTPS URL</label>
                                 <input id="{{ $fieldName }}" name="{{ $fieldName }}" type="text" maxlength="2048" value="{{ old($fieldName, $fieldExternalValue) }}" placeholder="https://cdn.example.com/{{ $categoryKey }}.jpg" style="display:block;width:100%;margin-bottom:12px;">
@@ -1657,7 +1900,7 @@
                                 </select>
                             </div>
                         </div>
-                        <label for="destination_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload replacement image (JPG, PNG, WebP · max 4 MB · 16:9 recommended)</label>
+                        <label for="destination_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload replacement image (JPG, PNG, WebP &middot; max 4 MB &middot; 16:9 recommended)</label>
                         <input id="destination_image_file" name="destination_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
                         <label for="destination_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS URL</label>
                         <input id="destination_image_url" name="destination_image_url" type="text" maxlength="2048" value="{{ old('destination_image_url') }}" placeholder="https://cdn.example.com/destinations/maafushi.jpg" style="display:block;width:100%;max-width:640px;margin-bottom:12px;">
@@ -1727,7 +1970,7 @@
                             </div>
                         </div>
 
-                        <label for="blog_sidebar_ad_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload ad image (JPG, PNG, WebP · max 4 MB)</label>
+                        <label for="blog_sidebar_ad_image_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload ad image (JPG, PNG, WebP &middot; max 4 MB)</label>
                         <input id="blog_sidebar_ad_image_file" name="blog_sidebar_ad_image_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
 
                         <label for="blog_sidebar_ad_image_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS image URL</label>
@@ -1822,7 +2065,7 @@
                             </div>
                         </div>
 
-                        <label for="branding_logo_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload logo (JPG, PNG, WebP · max 4 MB)</label>
+                        <label for="branding_logo_file" style="display:block;margin:12px 0 4px;font-size:0.85rem;">Upload logo (JPG, PNG, WebP &middot; max 4 MB)</label>
                         <input id="branding_logo_file" name="branding_logo_file" type="file" accept="image/png,image/jpeg,image/webp" style="display:block;margin-bottom:12px;">
 
                         <label for="branding_logo_url" style="display:block;margin-bottom:4px;font-size:0.85rem;">Or paste an external HTTPS logo URL</label>
@@ -2246,7 +2489,7 @@
                                             <div class="small"><strong>Vendor ID:</strong> {{ $historyRequest->target_vendor_id }}</div>
                                         @endif
                                         <div class="small">Requested by: {{ $historyRequest->requested_by_name ?: 'Unknown' }}{{ $historyRequest->requested_by_role ? ' (' . $historyRequest->requested_by_role . ')' : '' }}</div>
-                                        <div class="small">Reviewed by: {{ $historyRequest->approved_by_name ?: 'Unknown' }}{{ $historyRequest->approved_by_role ? ' (' . $historyRequest->approved_by_role . ')' : '' }} · {{ $historyRequest->approved_at ? \Illuminate\Support\Carbon::parse($historyRequest->approved_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
+                                        <div class="small">Reviewed by: {{ $historyRequest->approved_by_name ?: 'Unknown' }}{{ $historyRequest->approved_by_role ? ' (' . $historyRequest->approved_by_role . ')' : '' }} &middot; {{ $historyRequest->approved_at ? \Illuminate\Support\Carbon::parse($historyRequest->approved_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
                                         @if (!empty($historyRequest->reason))
                                             <div class="small">Request note: {{ $historyRequest->reason }}</div>
                                         @endif
@@ -2338,9 +2581,9 @@
                                 </div>
                                 <div class="small">Service Category: {{ ucwords(str_replace('_', ' ', (string) ($historyRow->vendor_type ?: 'other'))) }}</div>
                                 <div class="small">Business Reg #: {{ $historyRow->business_registration_number ?: 'N/A' }} | License #: {{ $historyRow->license_number ?: 'N/A' }}</div>
-                                <div class="small">Reviewed by: {{ $historyRow->reviewed_by_name ?: 'Unknown' }}{{ $historyRow->reviewed_by_role ? ' (' . $historyRow->reviewed_by_role . ')' : '' }} · {{ $historyRow->reviewed_at ? \Illuminate\Support\Carbon::parse($historyRow->reviewed_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
+                                <div class="small">Reviewed by: {{ $historyRow->reviewed_by_name ?: 'Unknown' }}{{ $historyRow->reviewed_by_role ? ' (' . $historyRow->reviewed_by_role . ')' : '' }} &middot; {{ $historyRow->reviewed_at ? \Illuminate\Support\Carbon::parse($historyRow->reviewed_at)->format('Y-m-d H:i:s') : 'N/A' }}</div>
                                 @if (!empty($historyRow->approved_username) || !empty($historyRow->approved_vendor_id))
-                                    <div class="small">Approved portal account: {{ $historyRow->approved_username ?: 'n/a' }}{{ $historyRow->approved_vendor_id ? ' · Vendor ID: ' . $historyRow->approved_vendor_id : '' }}</div>
+                                    <div class="small">Approved portal account: {{ $historyRow->approved_username ?: 'n/a' }}{{ $historyRow->approved_vendor_id ? ' &middot; Vendor ID: ' . $historyRow->approved_vendor_id : '' }}</div>
                                 @endif
                                 @if (!empty($historyRow->review_notes))
                                     <div class="small">Review notes: {{ \Illuminate\Support\Str::limit((string) $historyRow->review_notes, 260) }}</div>
@@ -2766,7 +3009,7 @@
                         <div class="audit-details">
                             <strong>{{ strtoupper(str_replace('_', ' ', (string) $auditLog->action)) }}</strong>
                             @if (!empty($auditLog->target_identifier))
-                                · target: {{ $auditLog->target_identifier }}
+                                &middot; target: {{ $auditLog->target_identifier }}
                             @endif
                             @if (!empty($auditLog->target_role))
                                 ({{ $auditLog->target_role }})
@@ -2790,6 +3033,28 @@
     <script>
     // User creation AJAX logic (with role/status)
     document.addEventListener('DOMContentLoaded', function () {
+        var navToggle = document.getElementById('adminNavMobileToggle');
+        var navMenu = document.getElementById('adminNavMenu');
+        if (navToggle && navMenu) {
+            navToggle.addEventListener('click', function () {
+                var isOpen = navMenu.classList.toggle('is-open');
+                navToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+
+        var navGroupToggles = document.querySelectorAll('[data-admin-nav-toggle]');
+        navGroupToggles.forEach(function (toggleButton) {
+            toggleButton.addEventListener('click', function () {
+                var groupKey = toggleButton.getAttribute('data-admin-nav-toggle');
+                var groupBody = groupKey ? document.querySelector('[data-admin-nav-group="' + groupKey + '"]') : null;
+                if (!groupBody) {
+                    return;
+                }
+                var isOpen = groupBody.classList.toggle('is-open');
+                toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        });
+
         var userCreateForm = document.getElementById('userCreateForm');
         var userCreateNotice = document.getElementById('userCreateNotice');
         if (userCreateForm) {

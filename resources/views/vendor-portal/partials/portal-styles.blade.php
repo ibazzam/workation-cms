@@ -19,6 +19,12 @@
 
         * { box-sizing: border-box; }
 
+        html,
+        body {
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+
         body {
             margin: 0;
             font-family: "Outfit", "Trebuchet MS", sans-serif;
@@ -927,6 +933,149 @@
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         }
 
+        .vendor-booking-card-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .vendor-booking-card {
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .vendor-booking-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--line);
+            font-size: 0.78rem;
+            color: #5a6a7a;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .vendor-booking-ref {
+            color: #1a6abf;
+            font-weight: 700;
+        }
+
+        .vendor-booking-body {
+            display: grid;
+            grid-template-columns: 94px 1fr;
+        }
+
+        .vendor-booking-thumb {
+            width: 94px;
+            border-right: 1px solid var(--line);
+            background: linear-gradient(135deg, #d7e8f5 0%, #c6dded 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7a9ab4;
+            font-size: 1.55rem;
+            min-height: 88px;
+        }
+
+        .vendor-booking-thumb img {
+            width: 100%;
+            height: 100%;
+            min-height: 88px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .vendor-booking-info {
+            padding: 12px 14px;
+            display: grid;
+            gap: 4px;
+        }
+
+        .vendor-booking-title-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .vendor-booking-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #16212e;
+        }
+
+        .vendor-booking-price {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #16212e;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .vendor-booking-line {
+            font-size: 0.8rem;
+            color: #5a6a7a;
+            line-height: 1.45;
+        }
+
+        .vendor-booking-line strong {
+            color: #2e495f;
+        }
+
+        .vendor-booking-actions {
+            border-top: 1px solid var(--line);
+            padding: 10px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 7px;
+        }
+
+        .vendor-booking-actions .btn,
+        .vendor-booking-actions .ops-select,
+        .vendor-booking-actions .ops-input {
+            min-height: 36px;
+        }
+
+        .vendor-booking-actions .inline-status-form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(170px, 1fr));
+            gap: 8px;
+            width: 100%;
+            align-items: stretch;
+        }
+
+        .vendor-booking-actions .inline-status-form .btn {
+            white-space: nowrap;
+            grid-column: 1 / -1;
+            justify-self: end;
+        }
+
+        .vendor-reservation-advanced {
+            margin-top: 10px;
+            border: 1px solid #d7e0e6;
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .vendor-reservation-advanced > summary {
+            cursor: pointer;
+            padding: 10px 12px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #23445f;
+            background: #f7fbff;
+            border-bottom: 1px solid #e4edf5;
+            list-style: none;
+        }
+
+        .vendor-reservation-advanced > summary::-webkit-details-marker {
+            display: none;
+        }
+
         .profile-card {
             margin-top: 12px;
         }
@@ -1353,6 +1502,40 @@
             border-radius: 12px;
             background: #f9fcff;
             padding: 10px;
+        }
+
+        .ops-category-filter-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .ops-category-filter-btn {
+            border: 1px solid #c6d8e7;
+            background: #f4f9ff;
+            color: #204562;
+            border-radius: 999px;
+            padding: 7px 12px;
+            min-height: 34px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.16s ease;
+            white-space: nowrap;
+        }
+
+        .ops-category-filter-btn:hover {
+            border-color: #8aaeca;
+            background: #ecf5ff;
+        }
+
+        .ops-category-filter-btn.is-active {
+            border-color: #5f8fb4;
+            background: #dff0ff;
+            color: #123f5c;
+            box-shadow: inset 0 0 0 1px rgba(95, 143, 180, 0.24);
         }
 
         .ops-category-card + .ops-category-card {
@@ -2942,6 +3125,14 @@
             min-width: 0;
         }
 
+        .listing-actions-break {
+            flex-basis: 100%;
+            width: 100%;
+            height: 0;
+            margin: 0;
+            padding: 0;
+        }
+
         .listing-actions-compact .btn {
             margin: 0;
             padding: 4px 10px;
@@ -3602,7 +3793,8 @@
             }
 
             .ops-grid,
-            .ops-form-grid {
+            .ops-form-grid,
+            .ops-form-grid-compact {
                 grid-template-columns: 1fr;
             }
 
@@ -3617,6 +3809,26 @@
 
             .workspace-command-actions {
                 grid-template-columns: 1fr 1fr;
+            }
+
+            .vendor-booking-actions .inline-status-form {
+                grid-template-columns: 1fr;
+            }
+
+            .vendor-booking-actions .inline-status-form .btn {
+                justify-self: stretch;
+            }
+
+            .ops-category-filter-strip {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 4px;
+                margin-bottom: 12px;
+            }
+
+            .ops-category-filter-btn {
+                flex: 0 0 auto;
             }
 
             .listing-transfer-head {
@@ -3818,6 +4030,21 @@
             }
 
             .workspace-command-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .vendor-booking-body {
+                grid-template-columns: 1fr;
+            }
+
+            .vendor-booking-thumb {
+                width: 100%;
+                border-right: 0;
+                border-bottom: 1px solid var(--line);
+                min-height: 62px;
+            }
+
+            .reservation-command-bar {
                 grid-template-columns: 1fr;
             }
 

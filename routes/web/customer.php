@@ -226,10 +226,39 @@ Route::get('/customer', function (Request $request) {
         }
 
         $propertyNamesById = collect();
+        $reservationServiceIds = collect();
+        $reservationRoomIds = collect();
         $reservationPropertyIds = $reservationRows
             ->pluck('vendor_property_id')
             ->map(static fn ($id) => (int) $id)
             ->filter(static fn (int $id) => $id > 0)
+            ->unique()
+            ->values();
+
+        $reservationRows->each(function ($row) use (&$reservationServiceIds, &$reservationRoomIds): void {
+            $notes = json_decode((string) ($row->notes ?? ''), true);
+            $notes = is_array($notes) ? $notes : [];
+
+            $serviceId = (int) ($notes['service_id'] ?? $notes['vendor_service_id'] ?? 0);
+            if ($serviceId > 0) {
+                $reservationServiceIds->push($serviceId);
+            }
+
+            $roomId = (int) ($notes['room_id'] ?? $notes['vendor_room_category_id'] ?? 0);
+            if ($roomId > 0) {
+                $reservationRoomIds->push($roomId);
+            }
+        });
+
+        $reservationServiceIds = $reservationServiceIds
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $reservationRoomIds = $reservationRoomIds
+            ->map(static fn ($id): int => (int) $id)
+            ->filter(static fn (int $id): bool => $id > 0)
             ->unique()
             ->values();
 
@@ -259,6 +288,58 @@ Route::get('/customer', function (Request $request) {
                 ->keyBy('id');
         }
 
+        if (Schema::hasTable('vendor_listing_media') && ($reservationPropertyIds->isNotEmpty() || $reservationRoomIds->isNotEmpty() || $reservationServiceIds->isNotEmpty())) {
+            $bookingMediaRows = DB::table('vendor_listing_media')
+                ->where(function ($query) use ($reservationPropertyIds, $reservationRoomIds, $reservationServiceIds) {
+                    $hasCondition = false;
+
+                    if ($reservationPropertyIds->isNotEmpty()) {
+                        $query->where(function ($inner) use ($reservationPropertyIds) {
+                            $inner->whereIn('entity_type', ['property', 'transport', 'sea_transport', 'land_transport', 'liveaboard', 'marine_transport'])
+                                ->whereIn('entity_id', $reservationPropertyIds->all());
+                        });
+                        $hasCondition = true;
+                    }
+
+                    if ($reservationRoomIds->isNotEmpty()) {
+                        $method = $hasCondition ? 'orWhere' : 'where';
+                        $query->{$method}(function ($inner) use ($reservationRoomIds) {
+                            $inner->where('entity_type', 'room')
+                                ->whereIn('entity_id', $reservationRoomIds->all());
+                        });
+                        $hasCondition = true;
+                    }
+
+                    if ($reservationServiceIds->isNotEmpty()) {
+                        $method = $hasCondition ? 'orWhere' : 'where';
+                        $query->{$method}(function ($inner) use ($reservationServiceIds) {
+                            $inner->whereIn('entity_type', ['service', 'equipment', 'rental_item'])
+                                ->whereIn('entity_id', $reservationServiceIds->all());
+                        });
+                    }
+                })
+                ->orderByDesc('is_primary')
+                ->orderByDesc('created_at')
+                ->limit(1000)
+                ->get();
+
+            $propertyMediaByProperty = $bookingMediaRows
+                ->filter(static function ($media): bool {
+                    return strtolower(trim((string) ($media->entity_type ?? ''))) !== 'room';
+                })
+                ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+
+            $roomMediaByRoom = $bookingMediaRows
+                ->filter(static fn ($media) => strtolower(trim((string) ($media->entity_type ?? ''))) === 'room')
+                ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+
+            $serviceMediaByService = $bookingMediaRows
+                ->filter(static fn ($media) => in_array(strtolower(trim((string) ($media->entity_type ?? ''))), ['service', 'equipment', 'rental_item'], true))
+                ->groupBy(static fn ($media) => (int) ($media->entity_id ?? 0));
+        } else {
+            $serviceMediaByService = collect();
+        }
+
         $today = now()->startOfDay();
         $summary['upcoming_bookings'] = $reservationRows->filter(function ($row) use ($today) {
             $startAt = $row->start_at ? Carbon::parse((string) $row->start_at)->startOfDay() : null;
@@ -276,7 +357,55 @@ Route::get('/customer', function (Request $request) {
 
         $supportEmail = strtolower(trim((string) env('WORKATION_CUSTOMER_SUPPORT_EMAIL', 'support@workation.mv')));
 
-        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta, $latestRefundCaseByReservation, $supportEmail) {
+        $resolveMediaUrl = static function ($media, string $variant = 'thumb'): string {
+            if (!$media) {
+                return '';
+            }
+
+            $mediaId = (int) ($media->id ?? 0);
+            if ($mediaId > 0) {
+                return '/media/vendor/' . $mediaId . '/' . $variant;
+            }
+
+            foreach (['public_url', 'url', 'media_url', 'file_url'] as $urlKey) {
+                $candidate = trim((string) ($media->{$urlKey} ?? ''));
+                if ($candidate !== '') {
+                    return Str::startsWith($candidate, 'http://')
+                        ? ('https://' . ltrim(substr($candidate, 7), '/'))
+                        : $candidate;
+                }
+            }
+
+            foreach (['path', 'storage_path', 'file_path', 'relative_path'] as $pathKey) {
+                $rawPath = trim((string) ($media->{$pathKey} ?? ''));
+                if ($rawPath === '') {
+                    continue;
+                }
+
+                $resolved = function_exists('portalManagedMediaUrlFromPath')
+                    ? portalManagedMediaUrlFromPath($rawPath)
+                    : null;
+
+                if (($resolved === null || trim((string) $resolved) === '') && function_exists('vendorMediaStorageUrlFromPath')) {
+                    $resolved = vendorMediaStorageUrlFromPath($rawPath);
+                }
+
+                if (is_string($resolved) && trim($resolved) !== '') {
+                    return trim($resolved);
+                }
+            }
+
+            return '';
+        };
+
+        $pickPrimaryMedia = static function ($items) {
+            return collect($items)
+                ->sortByDesc(static fn ($media): int => (int) ($media->is_primary ?? 0))
+                ->sortByDesc(static fn ($media): int => strtotime((string) ($media->created_at ?? '')) ?: 0)
+                ->first();
+        };
+
+        $categorized = $reservationRows->map(function ($row) use ($propertyNamesById, $categoryMeta, $latestRefundCaseByReservation, $supportEmail, $roomMediaByRoom, $propertyMediaByProperty, $serviceMediaByService, $resolveMediaUrl, $pickPrimaryMedia) {
             $notes = json_decode((string) ($row->notes ?? ''), true);
             if (!is_array($notes)) {
                 $notes = [];
@@ -290,6 +419,8 @@ Route::get('/customer', function (Request $request) {
 
             $propertyId = (int) ($row->vendor_property_id ?? 0);
             $propertyRow = $propertyNamesById->get($propertyId);
+            $roomId = (int) ($notes['room_id'] ?? $notes['vendor_room_category_id'] ?? 0);
+            $serviceId = (int) ($notes['service_id'] ?? $notes['vendor_service_id'] ?? 0);
 
             $categoryKey = strtolower(trim((string) ($notes['category_key'] ?? '')));
             if ($categoryKey === '' && $propertyRow) {
@@ -348,12 +479,24 @@ Route::get('/customer', function (Request $request) {
                 ?? ($propertyRow->property_contact_email ?? $propertyRow->contact_email ?? '')
             )));
 
+            $thumbnailUrl = trim((string) ($notes['thumbnail_url'] ?? $notes['room_thumbnail_url'] ?? $notes['service_thumbnail_url'] ?? ''));
+            if ($thumbnailUrl === '' && $roomId > 0) {
+                $thumbnailUrl = $resolveMediaUrl($pickPrimaryMedia($roomMediaByRoom->get($roomId, collect())));
+            }
+            if ($thumbnailUrl === '' && $serviceId > 0) {
+                $thumbnailUrl = $resolveMediaUrl($pickPrimaryMedia($serviceMediaByService->get($serviceId, collect())));
+            }
+            if ($thumbnailUrl === '' && $propertyId > 0) {
+                $thumbnailUrl = $resolveMediaUrl($pickPrimaryMedia($propertyMediaByProperty->get($propertyId, collect())));
+            }
+
             return [
                 'id' => (int) ($row->id ?? 0),
                 'category_key' => $categoryKey,
                 'category_label' => (string) ($categoryMeta[$categoryKey]['label'] ?? 'Category'),
                 'property_name' => trim((string) ($propertyRow->name ?? 'Property')),
                 'service_label' => $serviceLabel,
+                'thumbnail_url' => $thumbnailUrl,
                 'start_at' => $row->start_at ? Carbon::parse((string) $row->start_at)->format('Y-m-d') : '-',
                 'end_at' => $row->end_at ? Carbon::parse((string) $row->end_at)->format('Y-m-d') : '-',
                 'status' => strtoupper(trim((string) ($row->status ?? 'pending'))),

@@ -417,21 +417,47 @@
                                                 @endphp
                                                 <tr data-property-row="{{ $propertyId }}" data-listing-category="{{ $categoryKey }}">
                                                     <td class="listing-cell-main">
-                                                        <div class="listing-summary-line">
-                                                            <strong>{{ $property->name }}</strong>
-                                                            <span class="ops-chip">ID {{ $propertyId }}</span>
-                                                            <span class="ops-chip">{{ $listingType }}</span>
-                                                            <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
-                                                            <span class="ops-chip listing-status-chip {{ $moderationChipClass }}" title="Moderation status">{{ $moderationLabel }}</span>
-                                                            @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true))
-                                                                <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
-                                                            @elseif ($categoryKey === 'water_sports')
-                                                                <span class="ops-chip">Equipment: {{ $propertyRentalItems->count() }}</span>
-                                                            @endif
+                                                        @php
+                                                            $primaryPropertyMedia = $propertyMediaItems->firstWhere('is_primary', true);
+                                                            if (!$primaryPropertyMedia) {
+                                                                $primaryPropertyMedia = $propertyMediaItems->first();
+                                                            }
+                                                            $listingThumbUrl = '';
+                                                            if ($primaryPropertyMedia) {
+                                                                $listingMediaId = (int) ($primaryPropertyMedia->id ?? 0);
+                                                                if ($listingMediaId > 0) {
+                                                                    $listingThumbUrl = '/media/vendor/' . $listingMediaId . '/thumb';
+                                                                } else {
+                                                                    $listingThumbUrl = vendorMediaStorageUrlFromPath((string) ($primaryPropertyMedia->file_path ?? '')) ?? '';
+                                                                }
+                                                            }
+                                                        @endphp
+                                                        <div class="listing-card-head">
+                                                            <div class="listing-card-thumb" aria-hidden="true">
+                                                                @if ($listingThumbUrl !== '')
+                                                                    <img src="{{ $listingThumbUrl }}" alt="{{ (string) ($property->name ?? 'Listing') }} thumbnail" loading="lazy" onerror="if(!this.dataset.fb && this.src !== '/images/placeholders/listing-fallback.svg' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='/images/placeholders/listing-fallback.svg';}else{this.onerror=null;}">
+                                                                @else
+                                                                    <i class="fa-solid fa-building"></i>
+                                                                @endif
+                                                            </div>
+                                                            <div class="listing-card-main">
+                                                                <div class="listing-summary-line">
+                                                                    <strong>{{ $property->name }}</strong>
+                                                                    <span class="ops-chip">ID {{ $propertyId }}</span>
+                                                                    <span class="ops-chip">{{ $listingType }}</span>
+                                                                    <span class="ops-chip listing-status-chip {{ $listingStatusClass }}">{{ $listingStatus }}</span>
+                                                                    <span class="ops-chip listing-status-chip {{ $moderationChipClass }}" title="Moderation status">{{ $moderationLabel }}</span>
+                                                                    @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true))
+                                                                        <span class="ops-chip">Rooms: {{ $propertyRooms->count() }}</span>
+                                                                    @elseif ($categoryKey === 'water_sports')
+                                                                        <span class="ops-chip">Equipment: {{ $propertyRentalItems->count() }}</span>
+                                                                    @endif
+                                                                </div>
+                                                                @if ($listingModerationStatus === 'rejected' && !empty($property->listing_admin_notes))
+                                                                    <p style="margin:6px 0 0;font-size:0.78rem;color:#7a2020;background:#fff0ef;border:1px solid #f0b7b3;border-radius:8px;padding:6px 9px;">Admin note: {{ $property->listing_admin_notes }}</p>
+                                                                @endif
+                                                            </div>
                                                         </div>
-                                                        @if ($listingModerationStatus === 'rejected' && !empty($property->listing_admin_notes))
-                                                            <p style="margin:6px 0 0;font-size:0.78rem;color:#7a2020;background:#fff0ef;border:1px solid #f0b7b3;border-radius:8px;padding:6px 9px;">Admin note: {{ $property->listing_admin_notes }}</p>
-                                                        @endif
                                                     </td>
                                                     <td class="listing-cell-actions-cell">
                                                         <div class="listing-cell-actions">

@@ -913,6 +913,21 @@
             flex-shrink: 0;
         }
 
+        .card-package-size-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            border: 1px solid #c7dbe6;
+            border-radius: 999px;
+            background: #f2f9fc;
+            color: #1f5f7d;
+            font-size: 0.66rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 6px 8px;
+            white-space: nowrap;
+        }
+
         .card-price {
             margin-top: 2px;
             color: #1a2f43;
@@ -2534,6 +2549,11 @@
         $customerLoggedIn = (bool) session('portal_customer_authenticated', false);
         $customerName = trim((string) session('portal_customer_user', 'Customer'));
         $customerContinueUrl = request()->fullUrl();
+        $retreatModeValue = strtolower(trim((string) request()->query('retreat_mode', '')));
+        $isCorporateRetreatMode = $categoryKey === 'excursion' && in_array($retreatModeValue, ['1', 'true', 'yes', 'on'], true);
+        $headerActiveCategoryKey = $isCorporateRetreatMode
+            ? 'corporate-retreats'
+            : str_replace('_', '-', (string) $categoryKey);
         $catalogCategoryLinks = collect([
             ['key' => 'accommodation', 'icon' => 'fa-solid fa-hotel', 'title' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas', 'url' => '/catalog/accommodation'],
             ['key' => 'resort-day-visit', 'icon' => 'fa-solid fa-umbrella-beach', 'title' => 'Resort Day Visit', 'subtitle' => 'Day-use resort offers', 'url' => '/catalog/resort_day_visit'],
@@ -2563,6 +2583,34 @@
             $views = (float) ($property->view_count ?? 0);
 
             return ($bookings * 6.0) + ($reviews * 3.0) + ($rating * 10.0) + ($views * 0.2);
+        };
+        $toBool = static function ($value): bool {
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_numeric($value)) {
+                return (int) $value === 1;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+            return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+        };
+        $retreatPackageBadgeFromPax = static function ($minPaxRaw, $maxPaxRaw): ?string {
+            $minPax = is_numeric($minPaxRaw) ? (int) $minPaxRaw : 0;
+            $maxPax = is_numeric($maxPaxRaw) ? (int) $maxPaxRaw : 0;
+            if ($minPax <= 0 || $maxPax <= 0 || $maxPax < $minPax) {
+                return null;
+            }
+
+            $packageName = match (true) {
+                $minPax === 1 && $maxPax === 10 => 'Getaway',
+                $minPax === 1 && $maxPax === 50 => 'Retreat',
+                $minPax === 1 && $maxPax === 150 => 'Summit',
+                default => 'Package',
+            };
+
+            return $packageName . ' ' . $minPax . '-' . $maxPax . ' pax';
         };
 
         $popularOverall = $catalogProperties
@@ -2635,7 +2683,7 @@
                     ])
                     ->values()
                     ->all(),
-                'headerActiveCategoryKey' => str_replace('_', '-', (string) $categoryKey),
+                'headerActiveCategoryKey' => $headerActiveCategoryKey,
                 'headerContinueUrl' => (string) $customerContinueUrl,
             ])
 
@@ -3318,6 +3366,23 @@
                             $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
                             $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
                             $reviewCount = (int) ($property->reviews_count ?? 0);
+                            $isRetreatPackageCard = $toBool($property->is_corporate_retreat ?? false)
+                                || $toBool($property->is_retreat_package ?? false)
+                                || $toBool($cardDetails['is_corporate_retreat'] ?? false)
+                                || $toBool($cardDetails['is_retreat_package'] ?? false);
+                            $cardMinPax = $cardDetails['excursion_min_pax']
+                                ?? $cardDetails['min_pax']
+                                ?? $property->excursion_min_pax
+                                ?? $property->min_pax
+                                ?? null;
+                            $cardMaxPax = $cardDetails['excursion_max_pax']
+                                ?? $cardDetails['max_pax']
+                                ?? $property->excursion_max_pax
+                                ?? $property->max_pax
+                                ?? null;
+                            $retreatPackageSizeBadge = ($isCorporateRetreatMode || $isRetreatPackageCard)
+                                ? $retreatPackageBadgeFromPax($cardMinPax, $cardMaxPax)
+                                : null;
                             $detailUrl = match ($categoryKey) {
                                 'accommodation' => '/property/' . $propertyId,
                                 default => '/category-booking/' . $categoryKey . '/' . $propertyId,
@@ -3771,6 +3836,9 @@
                                         <div class="card-review">
                                             <span class="card-rating-badge">{{ $reviewScore }}</span>
                                             <span>{{ number_format($reviewCount) }} reviews</span>
+                                            @if ($retreatPackageSizeBadge !== null)
+                                                <span class="card-package-size-badge"><i class="fa-solid fa-users" aria-hidden="true"></i> {{ $retreatPackageSizeBadge }}</span>
+                                            @endif
                                         </div>
                                         <div class="card-price">
                                             @if ($primaryDisplayPrice > 0)

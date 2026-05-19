@@ -143,6 +143,19 @@
             font-weight: 700;
         }
 
+        .service-package-size {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid #cfe1ec;
+            border-radius: 999px;
+            background: #eef8fc;
+            padding: 6px 10px;
+            color: #1f5f7d;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
         .share-card {
             margin-top: 8px;
             border: 0;
@@ -1005,6 +1018,47 @@
         $reviewScoreRaw = (float) ($property->rating ?? $property->average_rating ?? 0);
         $reviewScore = $reviewScoreRaw > 0 ? number_format($reviewScoreRaw, 1) : 'N/A';
         $reviewCount = (int) ($property->reviews_count ?? 0);
+        $toBool = static function ($value): bool {
+            if (is_bool($value)) {
+                return $value;
+            }
+
+            if (is_numeric($value)) {
+                return (int) $value === 1;
+            }
+
+            $normalized = strtolower(trim((string) $value));
+            return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+        };
+        $retreatPackageBadgeFromPax = static function ($minPaxRaw, $maxPaxRaw): ?string {
+            $minPax = is_numeric($minPaxRaw) ? (int) $minPaxRaw : 0;
+            $maxPax = is_numeric($maxPaxRaw) ? (int) $maxPaxRaw : 0;
+            if ($minPax <= 0 || $maxPax <= 0 || $maxPax < $minPax) {
+                return null;
+            }
+
+            $packageName = match (true) {
+                $minPax === 1 && $maxPax === 10 => 'Getaway',
+                $minPax === 1 && $maxPax === 50 => 'Retreat',
+                $minPax === 1 && $maxPax === 150 => 'Summit',
+                default => 'Package',
+            };
+
+            return $packageName . ' ' . $minPax . '-' . $maxPax . ' pax';
+        };
+        $isRetreatPackageListing = $categoryKey === 'excursion'
+            && (
+                $toBool($property->is_corporate_retreat ?? false)
+                || $toBool($property->is_retreat_package ?? false)
+                || $toBool($listingDetails['is_corporate_retreat'] ?? false)
+                || $toBool($listingDetails['is_retreat_package'] ?? false)
+            );
+        $heroRetreatPackageBadge = $isRetreatPackageListing
+            ? $retreatPackageBadgeFromPax(
+                $listingDetails['excursion_min_pax'] ?? $listingDetails['min_pax'] ?? $property->excursion_min_pax ?? $property->min_pax ?? null,
+                $listingDetails['excursion_max_pax'] ?? $listingDetails['max_pax'] ?? $property->excursion_max_pax ?? $property->max_pax ?? null
+            )
+            : null;
 
         $serviceTypeHint = match ($categoryKey) {
             'restaurant' => 'Dining Service',
@@ -1348,6 +1402,9 @@
                         @endif
                         @if ($hasReviewSection)
                             <span class="service-review"><i class="fa-solid fa-star" aria-hidden="true"></i> {{ $reviewScore }} ({{ number_format($reviewCount) }})</span>
+                        @endif
+                        @if ($heroRetreatPackageBadge !== null)
+                            <span class="service-package-size"><i class="fa-solid fa-users" aria-hidden="true"></i> {{ $heroRetreatPackageBadge }}</span>
                         @endif
                     </div>
                     <section class="share-card" aria-label="Share this listing">

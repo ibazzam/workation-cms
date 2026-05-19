@@ -578,141 +578,47 @@
                                                                                         </div>
                                                                                     </div>
                                                                                 </article>
-                                                                            @endforeach
-                                                                        </div>
-                                                                    </form>
-                                                                @endif
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                <tr class="listing-edit-stretch-row" data-property-edit-row="{{ $propertyId }}" hidden>
-                                                    <td colspan="2">
-                                                        <div class="listing-edit-stretch">
-                                                            @include($activeEditFormPartial)
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                @if ($categoryKey === 'sea_transport')
-                                                    @php
-                                                        $routeSchedules = is_array($propertyDetails['route_schedules'] ?? null)
-                                                            ? array_values($propertyDetails['route_schedules'])
-                                                            : [];
-                                                    @endphp
-                                                    <tr data-sea-route-table-row="{{ $propertyId }}" hidden>
-                                                        <td colspan="2">
-                                                            <div class="accommodation-room-stretch">
+                                                                            <!-- Row 1: Meta bar -->
+                                                                            <div class="booking-card-meta-bar">
+                                                                                <span class="booking-number-link">#{{ str_pad($propertyId, 6, '0', STR_PAD_LEFT) }}</span>
+                                                                                <span>{{ $property->created_at ? $property->created_at->format('M d, Y') : '' }}</span>
+                                                                                <span class="booking-status-badge bs-{{ strtolower($listingStatusClass) }}" style="margin-left:auto;">{{ $listingStatus }}</span>
+                                                                            </div>
+                                                                            <!-- Row 2: Body -->
+                                                                            <div class="booking-card-body">
+                                                                                <div class="booking-card-thumb-wrap">
+                                                                                    @if ($listingThumbUrl !== '')
+                                                                                        <img src="{{ $listingThumbUrl }}" alt="{{ (string) ($property->name ?? 'Listing') }} thumbnail" loading="lazy" onerror="if(!this.dataset.fb && this.src !== '/images/placeholders/listing-fallback.svg' && !this.src.startsWith('data:')){this.dataset.fb='1';this.src='/images/placeholders/listing-fallback.svg';}else{this.onerror=null;}">
+                                                                                    @else
+                                                                                        <i class="fa-solid fa-building"></i>
+                                                                                    @endif
+                                                                                </div>
+                                                                                <div class="booking-card-info">
+                                                                                    <div class="booking-card-title-row">
+                                                                                        <span class="booking-card-property">{{ $property->name }}</span>
+                                                                                    </div>
+                                                                                    <div class="booking-card-meta">
+                                                                                        {{ $listingType }}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
                                                                 <p class="property-subsection-head">Route Legs &amp; Fares ({{ count($routeSchedules) }})</p>
-                                                                @if (empty($routeSchedules))
-                                                                    <p class="ops-empty">No route legs added yet. Use Route &amp; Fares to create the first leg.</p>
-                                                                @else
-                                                                    <div class="ops-table-wrap">
-                                                                        <table class="ops-table is-compact room-management-table" aria-label="Route legs for sea transport listing {{ $propertyId }}">
-                                                                            <thead>
-                                                                                <tr>
-                                                                                    <th>Leg</th>
-                                                                                    <th>Timing</th>
-                                                                                    <th>Pricing</th>
-                                                                                    <th>Actions</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                @foreach ($routeSchedules as $legIndex => $routeLeg)
-                                                                                    @php
-                                                                                        $routeCode = trim((string) ($routeLeg['route_code'] ?? ''));
-                                                                                        $origin = trim((string) ($routeLeg['origin'] ?? ''));
-                                                                                        $destination = trim((string) ($routeLeg['destination'] ?? ''));
-                                                                                        $depTime = trim((string) ($routeLeg['dep_time'] ?? ''));
-                                                                                        $arrTime = trim((string) ($routeLeg['arr_time'] ?? ''));
-                                                                                        $daysArray = is_array($routeLeg['days'] ?? null) ? $routeLeg['days'] : [];
-                                                                                        $daysText = implode(', ', array_map(static fn ($d) => trim((string) $d), $daysArray));
-                                                                                    @endphp
-                                                                                    <tr>
-                                                                                        <td>
-                                                                                            <div class="listing-summary-line">
-                                                                                                <strong>{{ $origin !== '' ? $origin : 'Origin' }} &rarr; {{ $destination !== '' ? $destination : 'Destination' }}</strong>
-                                                                                                @if ($routeCode !== '')
-                                                                                                    <span class="ops-chip">{{ $routeCode }}</span>
-                                                                                                @endif
-                                                                                                <span class="ops-chip">Leg {{ $legIndex + 1 }}</span>
-                                                                                            </div>
-                                                                                            @if ($daysText !== '')
-                                                                                                <span class="room-summary-line">Days: {{ $daysText }}</span>
-                                                                                            @endif
-                                                                                        </td>
-                                                                                        <td>
-                                                                                            <span class="room-summary-line">{{ $depTime !== '' ? $depTime : '--:--' }} to {{ $arrTime !== '' ? $arrTime : '--:--' }}</span>
-                                                                                        </td>
-                                                                                        <td>
-                                                                                            <span class="room-summary-line">Local A/C/I: MVR {{ number_format((float) ($routeLeg['local_adult'] ?? 0), 2) }} / {{ number_format((float) ($routeLeg['local_child'] ?? 0), 2) }} / {{ number_format((float) ($routeLeg['local_infant'] ?? 0), 2) }}</span>
-                                                                                            <span class="room-summary-line">Foreign A/C/I: USD {{ number_format((float) ($routeLeg['foreign_adult'] ?? 0), 2) }} / {{ number_format((float) ($routeLeg['foreign_child'] ?? 0), 2) }} / {{ number_format((float) ($routeLeg['foreign_infant'] ?? 0), 2) }}</span>
-                                                                                        </td>
-                                                                                        <td>
-                                                                                            <div class="inline-actions listing-actions-inline listing-actions-compact">
-                                                                                                <div class="listing-actions-row">
-                                                                                                    <button class="btn btn-secondary" type="button" data-open-sea-leg-edit="{{ $propertyId }}-{{ $legIndex }}">Edit Leg</button>
-                                                                                                    <form method="POST" action="/portal/vendor/sea-transport/{{ $propertyId }}/route-leg/{{ $legIndex }}/delete" onsubmit="return confirm('Remove this route leg?');">
-                                                                                                        @csrf
-                                                                                                        <button class="btn btn-danger" type="submit">Remove Leg</button>
-                                                                                                    </form>
-                                                                                                </div>
-                                                                                            </div>
-                                                                                            <form class="inline-table-form update-row-form" method="POST" action="/portal/vendor/sea-transport/{{ $propertyId }}/route-leg/{{ $legIndex }}/update" data-sea-leg-edit-form="{{ $propertyId }}-{{ $legIndex }}" hidden>
-                                                                                                @csrf
-                                                                                                <input class="ops-input" name="route_code" type="text" maxlength="60" value="{{ $routeCode }}" placeholder="Route code (optional)">
-                                                                                                <input class="ops-input" name="origin" type="text" maxlength="190" value="{{ $origin }}" placeholder="Origin" required>
-                                                                                                <input class="ops-input" name="dep_time" type="time" value="{{ $depTime }}" required>
-                                                                                                <input class="ops-input" name="destination" type="text" maxlength="190" value="{{ $destination }}" placeholder="Destination" required>
-                                                                                                <input class="ops-input" name="arr_time" type="time" value="{{ $arrTime }}" required>
-                                                                                                <input class="ops-input" name="days" type="text" maxlength="200" value="{{ $daysText }}" placeholder="Mon, Tue, Wed">
-                                                                                                <input class="ops-input" name="local_adult" type="number" min="0" step="0.01" value="{{ isset($routeLeg['local_adult']) ? (float) $routeLeg['local_adult'] : '' }}" placeholder="Local adult (MVR)">
-                                                                                                <input class="ops-input" name="local_child" type="number" min="0" step="0.01" value="{{ isset($routeLeg['local_child']) ? (float) $routeLeg['local_child'] : '' }}" placeholder="Local child (MVR)">
-                                                                                                <input class="ops-input" name="local_infant" type="number" min="0" step="0.01" value="{{ isset($routeLeg['local_infant']) ? (float) $routeLeg['local_infant'] : '' }}" placeholder="Local infant (MVR)">
-                                                                                                <input class="ops-input" name="foreign_adult" type="number" min="0" step="0.01" value="{{ isset($routeLeg['foreign_adult']) ? (float) $routeLeg['foreign_adult'] : '' }}" placeholder="Foreign adult (USD)">
-                                                                                                <input class="ops-input" name="foreign_child" type="number" min="0" step="0.01" value="{{ isset($routeLeg['foreign_child']) ? (float) $routeLeg['foreign_child'] : '' }}" placeholder="Foreign child (USD)">
-                                                                                                <input class="ops-input" name="foreign_infant" type="number" min="0" step="0.01" value="{{ isset($routeLeg['foreign_infant']) ? (float) $routeLeg['foreign_infant'] : '' }}" placeholder="Foreign infant (USD)">
-                                                                                                <div class="inline-actions">
-                                                                                                    <button class="btn btn-secondary js-row-update" type="submit">Update Leg</button>
-                                                                                                    <button class="btn btn-secondary" type="button" data-close-sea-leg-edit="{{ $propertyId }}-{{ $legIndex }}">Cancel</button>
-                                                                                                </div>
-                                                                                            </form>
-                                                                                        </td>
-                                                                                    </tr>
-                                                                                @endforeach
-                                                                            </tbody>
-                                                                        </table>
-                                                                    </div>
-                                                                @endif
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                @endif
-                                                @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true))
-                                                    <tr class="accommodation-room-stretch-row">
-                                                        <td colspan="2">
-                                                            <div class="accommodation-room-stretch">
-                                                                <p class="property-subsection-head">Rooms Under This Property ({{ $propertyRooms->count() }})</p>
-                                                                @if ($propertyRooms->isEmpty())
-                                                                    <p class="ops-empty">No rooms for this listing yet. Add room types to start taking bookings.</p>
-                                                                @else
-                                                                    <div class="ops-table-wrap">
-                                                                        <table class="ops-table is-compact room-management-table" aria-label="Rooms for property {{ $propertyId }}">
-                                                                            <thead>
-                                                                                <tr>
-                                                                                    <th>Room</th>
-                                                                                    <th>Summary</th>
-                                                                                    <th>Actions</th>
-                                                                                </tr>
-                                                                            </thead>
-                                                                            <tbody>
-                                                                                @foreach ($propertyRooms as $room)
-                                                                                    @php
-                                                                                        $roomId = (int) ($room->id ?? 0);
-                                                                                        $roomMediaItems = $roomMediaByRoomId->get($roomId, collect());
-                                                                                        $roomAmenityValues = collect(explode(',', (string) ($room->amenities ?? '')))
-                                                                                            ->map(static fn ($token) => trim((string) $token))
-                                                                                            ->filter(static fn ($token) => $token !== '')
-                                                                                            ->values()
+                                                                    </td>
+                                                                    <td class="listing-cell-actions-cell">
+                                                                        <!-- Row 3: Actions -->
+                                                                        <div class="booking-card-actions" style="display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line);background:#fbfdff;">
+                                                                            <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit">Edit</a>
+                                                                            <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
+                                                                            @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true))
+                                                                                <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
+                                                                            @endif
+                                                                            <form method="POST" action="/portal/vendor/properties/{{ $propertyId }}/delete" onsubmit="return confirm('Delete this listing?');" style="display:inline;">
+                                                                                @csrf
+                                                                                <input type="hidden" name="portal_listing_mode" value="manage">
+                                                                                <input type="hidden" name="portal_listing_category" value="{{ $categoryKey }}">
+                                                                                <button class="btn btn-danger" type="submit">Delete Listing</button>
+                                                                            </form>
+                                                                        </div>
                                                                                             ->all();
                                                                                         $bathroomAmenityValues = collect(explode(',', (string) ($room->bathroom_amenities ?? '')))
                                                                                             ->map(static fn ($token) => trim((string) $token))

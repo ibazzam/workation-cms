@@ -581,7 +581,21 @@
                                                                             <!-- Row 1: Meta bar -->
                                                                             <div class="booking-card-meta-bar">
                                                                                 <span class="booking-number-link">#{{ str_pad($propertyId, 6, '0', STR_PAD_LEFT) }}</span>
-                                                                                <span>{{ $property->created_at ? $property->created_at->format('M d, Y') : '' }}</span>
+                                                                                @php
+                                                                                    $propertyCreatedAtLabel = '';
+                                                                                    $propertyCreatedAt = $property->created_at ?? null;
+
+                                                                                    if ($propertyCreatedAt instanceof \DateTimeInterface) {
+                                                                                        $propertyCreatedAtLabel = $propertyCreatedAt->format('M d, Y');
+                                                                                    } elseif (is_string($propertyCreatedAt) && trim($propertyCreatedAt) !== '') {
+                                                                                        try {
+                                                                                            $propertyCreatedAtLabel = \Illuminate\Support\Carbon::parse($propertyCreatedAt)->format('M d, Y');
+                                                                                        } catch (\Throwable $exception) {
+                                                                                            $propertyCreatedAtLabel = trim($propertyCreatedAt);
+                                                                                        }
+                                                                                    }
+                                                                                @endphp
+                                                                                <span>{{ $propertyCreatedAtLabel }}</span>
                                                                                 <span class="booking-status-badge bs-{{ strtolower($listingStatusClass) }}" style="margin-left:auto;">{{ $listingStatus }}</span>
                                                                             </div>
                                                                             <!-- Row 2: Body -->

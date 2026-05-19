@@ -2066,6 +2066,7 @@
             ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'url' => '/catalog/land-transport'],
             ['icon' => 'fa-solid fa-car-side', 'title' => 'Vehicle Rentals', 'url' => '/catalog/vehicle_rental', 'divider_after' => true],
             ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'url' => '/catalog/remote_workspace'],
+            ['icon' => 'fa-solid fa-briefcase', 'title' => 'Corporate Retreats', 'url' => '/catalog/corporate-retreats'],
             ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'url' => '/catalog/conference_room'],
             ['icon' => 'fa-solid fa-newspaper', 'title' => 'Blog', 'url' => '/blog', 'section_start' => true],
         ])->map(function (array $link) use ($homeSidebarLinkSourceByUrl) {

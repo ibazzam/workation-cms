@@ -1,7 +1,4 @@
 {{-- Corporate Retreat Packages Catalog --}}
-@extends('layouts.app')
-
-@section('content')
 <div class="corporate-retreats-container">
     {{-- ─── Header Section with Hero ─────────────────────────────── --}}
     <div class="corporate-retreats-hero">
@@ -681,4 +678,3 @@
         }
     }
 </style>
-@endsection

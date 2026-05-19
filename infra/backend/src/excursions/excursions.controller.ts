@@ -17,8 +17,12 @@ export class ExcursionsController {
     @Query('type') type?: string,
     @Query('q') q?: string,
     @Query('date') date?: string,
+    @Query('isCorporateRetreat') isCorporateRetreat?: string,
   ) {
     const parsedIslandId = islandId !== undefined ? Number(islandId) : undefined;
+    const parsedIsCorporateRetreat = isCorporateRetreat !== undefined 
+      ? isCorporateRetreat === 'true' 
+      : undefined;
 
     return this.excursionsService.list({
       islandId: Number.isFinite(parsedIslandId) ? parsedIslandId : undefined,
@@ -26,6 +30,7 @@ export class ExcursionsController {
       type,
       q,
       date,
+      isCorporateRetreat: parsedIsCorporateRetreat,
     });
   }
 

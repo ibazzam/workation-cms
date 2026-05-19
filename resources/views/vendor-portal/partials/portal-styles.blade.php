@@ -933,19 +933,17 @@
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
         }
 
+        /* Match customer card styles for vendor cards */
         .vendor-booking-card-list {
             display: grid;
             gap: 12px;
         }
-
         .vendor-booking-card {
-            background: #ffffff;
+            background: #fff;
             border: 1px solid var(--line);
             border-radius: 10px;
             overflow: hidden;
-            box-shadow: 0 1px 2px rgba(17, 41, 62, 0.04);
         }
-
         .vendor-booking-meta-bar {
             display: flex;
             align-items: center;
@@ -957,17 +955,14 @@
             gap: 8px;
             flex-wrap: wrap;
         }
-
         .vendor-booking-ref {
             color: #1a6abf;
             font-weight: 700;
         }
-
         .vendor-booking-body {
             display: grid;
             grid-template-columns: 104px 1fr;
         }
-
         .vendor-booking-thumb {
             width: 104px;
             border-right: 1px solid var(--line);
@@ -976,55 +971,37 @@
             align-items: center;
             justify-content: center;
             color: #7a9ab4;
-            font-size: 1.7rem;
+            font-size: 1.8rem;
             min-height: 90px;
         }
-
         .vendor-booking-thumb img {
-            width: 100%;
+            width: 104px;
             height: 100%;
-            min-height: 90px;
             object-fit: cover;
             display: block;
         }
-
         .vendor-booking-info {
             padding: 12px 16px;
-            display: grid;
+            display: flex;
+            flex-direction: column;
             gap: 4px;
         }
-
         .vendor-booking-title-row {
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
             gap: 8px;
         }
-
         .vendor-booking-title {
             font-size: 1rem;
             font-weight: 700;
             color: #16212e;
         }
-
-        .vendor-booking-price {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #16212e;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-
         .vendor-booking-line {
             font-size: 0.8rem;
             color: #5a6a7a;
             line-height: 1.45;
         }
-
-        .vendor-booking-line strong {
-            color: #2e495f;
-        }
-
         .vendor-booking-actions {
             border-top: 1px solid var(--line);
             padding: 10px 16px;
@@ -1034,50 +1011,15 @@
             gap: 8px;
             background: #fbfdff;
         }
-
-        .vendor-booking-actions .btn,
-        .vendor-booking-actions .ops-select,
-        .vendor-booking-actions .ops-input {
+        .vendor-booking-actions .btn {
             min-height: 34px;
             padding: 7px 11px;
             font-size: 0.78rem;
             line-height: 1.15;
             border-radius: 8px;
         }
-
         .vendor-booking-actions form {
             margin: 0;
-        }
-
-        .vendor-booking-actions .reservation-action--details {
-            order: 1;
-            min-width: 112px;
-            text-align: center;
-        }
-
-        .vendor-booking-actions .reservation-action--danger {
-            order: 2;
-            margin-left: auto;
-            min-width: 128px;
-        }
-
-        .vendor-booking-actions .reservation-action--danger .btn {
-            min-width: 128px;
-            justify-content: center;
-        }
-
-        .vendor-booking-actions .inline-status-form {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(170px, 1fr));
-            gap: 8px;
-            width: 100%;
-            align-items: stretch;
-        }
-
-        .vendor-booking-actions .inline-status-form .btn {
-            white-space: nowrap;
-            grid-column: 1 / -1;
-            justify-self: end;
         }
 
         .vendor-reservation-advanced {

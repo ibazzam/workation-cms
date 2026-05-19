@@ -107,85 +107,10 @@ $resolveReviewStats = static function (array $lookupIds, ?string $categoryKey = 
 };
 
 Route::get('/catalog/corporate-retreats', function (Request $request) {
-    // Corporate Retreats is a specialized view of excursion packages marked as corporate retreats
-    $apiBase = workationApiBase();
-    
-    $islandOptions = collect();
-    if (Schema::hasTable('islands')) {
-        $islandsQuery = DB::table('islands')->orderBy('name');
-        if (Schema::hasColumn('islands', 'active')) {
-            $islandsQuery->where('active', true);
-        }
+    $query = $request->query();
+    $query['retreat_mode'] = '1';
 
-        $islandOptions = $islandsQuery
-            ->get(['id', 'name'])
-            ->mapWithKeys(static fn ($island) => [
-                $island->id => [
-                    'value' => (string) $island->id,
-                    'label' => (string) $island->name,
-                ],
-            ]);
-    }
-
-    // Fetch corporate retreat packages from excursions API
-    $catalogProperties = collect();
-    $catalogPropertyMediaByProperty = collect();
-
-    try {
-        if (Schema::hasTable('excursions')) {
-            $excursionsQuery = DB::table('excursions')
-                ->orderByDesc('created_at')
-                ->limit(100);
-
-            if (Schema::hasColumn('excursions', 'active')) {
-                $excursionsQuery->where('active', true);
-            }
-            if (Schema::hasColumn('excursions', 'is_corporate_retreat')) {
-                $excursionsQuery->where('is_corporate_retreat', true);
-            }
-
-            $excursionsList = $excursionsQuery->get();
-
-            $catalogProperties = $excursionsList->map(static function ($excursion) use ($islandOptions) {
-                $islandId = (string) ($excursion->island_id ?? '');
-                $islandLabel = (string) (($islandOptions[$islandId]['label'] ?? $islandOptions[(int) $islandId]['label'] ?? 'Unknown Island'));
-
-                return (object) [
-                    'id' => $excursion->id,
-                    'vendor_property_id' => $excursion->id,
-                    'name' => $excursion->title,
-                    'short_description' => $excursion->description,
-                    'description' => $excursion->description,
-                    'price' => $excursion->price,
-                    'currency' => $excursion->currency ?? 'USD',
-                    'island_id' => $excursion->island_id,
-                    'island' => (object) ['name' => $islandLabel],
-                ];
-            });
-
-            if ($catalogProperties->isNotEmpty()) {
-                $excursionIds = $catalogProperties->pluck('id')->all();
-                $mediaRecords = DB::table('vendor_listing_media')
-                    ->whereIn('entity_id', $excursionIds)
-                    ->where('entity_type', 'excursion')
-                    ->orderByDesc('is_primary')
-                    ->orderByDesc('created_at')
-                    ->get();
-
-                $catalogPropertyMediaByProperty = $mediaRecords
-                    ->groupBy(static fn ($media) => (string) ($media->entity_id ?? ''));
-            }
-        }
-    } catch (\Throwable $e) {
-        Log::warning('Failed to fetch corporate retreat packages', ['error' => $e->getMessage()]);
-    }
-
-    return view('corporate-retreats-catalog', [
-        'apiBase' => $apiBase,
-        'catalogProperties' => $catalogProperties,
-        'catalogPropertyMediaByProperty' => $catalogPropertyMediaByProperty,
-        'islandOptions' => $islandOptions,
-    ]);
+    return redirect('/catalog/excursion?' . http_build_query($query));
 });
 
 Route::get('/catalog/{category}', function (Request $request, string $category) use ($resolveReviewStats) {
@@ -224,6 +149,13 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
 
     // Map URL slug (hyphens) to DB listing_category value (underscores)
     $dbCategoryKey = str_replace('-', '_', $categoryKey);
+    $retreatModeRaw = strtolower(trim((string) $request->query('retreat_mode', '')));
+    $isCorporateRetreatMode = $dbCategoryKey === 'excursion' && in_array($retreatModeRaw, ['1', 'true', 'yes', 'on'], true);
+
+    if ($isCorporateRetreatMode) {
+        $categoryMap[$categoryKey]['label'] = 'Corporate Retreat Packages';
+        $categoryMap[$categoryKey]['subtitle'] = 'Team offsites, strategy retreats, and corporate package experiences.';
+    }
 
     if (portalHeroStoredValueForSlot($categoryKey) !== '') {
         // Always use the slot proxy URL so category hero updates/removals are
@@ -330,6 +262,51 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
                     }
                 }
             });
+        }
+
+        if ($isCorporateRetreatMode) {
+            $retreatTagColumns = [];
+            foreach (['is_corporate_retreat', 'is_retreat_package'] as $candidateColumn) {
+                if (Schema::hasColumn($categoryTable, $candidateColumn)) {
+                    $retreatTagColumns[] = $candidateColumn;
+                }
+            }
+
+            $retreatKeywordColumns = [];
+            foreach (['activity_type', 'excursion_type', 'tour_type', 'name', 'listing_name', 'description', 'listing_details'] as $candidateColumn) {
+                if (Schema::hasColumn($categoryTable, $candidateColumn)) {
+                    $retreatKeywordColumns[] = $candidateColumn;
+                }
+            }
+
+            if (!empty($retreatTagColumns) || !empty($retreatKeywordColumns)) {
+                $retreatKeywords = ['corporate', 'retreat', 'team', 'offsite', 'summit', 'getaway'];
+
+                $propertiesQuery->where(function ($query) use ($retreatTagColumns, $retreatKeywordColumns, $retreatKeywords) {
+                    $hasCondition = false;
+
+                    foreach ($retreatTagColumns as $column) {
+                        if (!$hasCondition) {
+                            $query->where($column, 1);
+                            $hasCondition = true;
+                        } else {
+                            $query->orWhere($column, 1);
+                        }
+                    }
+
+                    foreach ($retreatKeywordColumns as $column) {
+                        foreach ($retreatKeywords as $keyword) {
+                            $pattern = '%' . strtolower($keyword) . '%';
+                            if (!$hasCondition) {
+                                $query->whereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                                $hasCondition = true;
+                            } else {
+                                $query->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$pattern]);
+                            }
+                        }
+                    }
+                });
+            }
         }
 
         if ($atollFilter !== '' && Schema::hasColumn($categoryTable, 'atoll')) {
@@ -1251,6 +1228,7 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
             'start_point' => $liveaboardStartPoint,
             'end_point' => $liveaboardEndPoint,
             'journey_date' => $liveaboardDate,
+            'retreat_mode' => $isCorporateRetreatMode ? '1' : '',
             'travel_date' => trim((string) $request->query('travel_date', '')),
             'return_date' => trim((string) $request->query('return_date', '')),
             'pickup_date' => trim((string) $request->query('pickup_date', '')),

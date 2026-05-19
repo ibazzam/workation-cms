@@ -890,7 +890,6 @@
                                                             </div>
                                                         </td>
                                                     </tr>
-                                                @endif
                                                 @if ($categoryKey === 'water_sports')
                                                     <tr class="water-sports-equipment-stretch-row">
                                                         <td colspan="2">

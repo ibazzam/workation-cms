@@ -106,6 +106,75 @@ $resolveReviewStats = static function (array $lookupIds, ?string $categoryKey = 
     });
 };
 
+Route::get('/catalog/corporate-retreats', function (Request $request) {
+    // Corporate Retreats is a specialized view of excursion packages marked as corporate retreats
+    $apiBase = workationApiBase();
+    
+    $islandOptions = collect();
+    if (Schema::hasTable('islands')) {
+        $islandOptions = DB::table('islands')
+            ->where('active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->mapWithKeys(static fn ($island) => [
+                $island->id => [
+                    'value' => (string) $island->id,
+                    'label' => (string) $island->name,
+                ],
+            ]);
+    }
+
+    // Fetch corporate retreat packages from excursions API
+    $catalogProperties = collect();
+    $catalogPropertyMediaByProperty = collect();
+
+    try {
+        if (Schema::hasTable('excursions')) {
+            $excursionsList = DB::table('excursions')
+                ->where('active', true)
+                ->where('is_corporate_retreat', true)
+                ->with(['vendor', 'island'])
+                ->orderByDesc('created_at')
+                ->limit(100)
+                ->get();
+
+            $catalogProperties = $excursionsList->map(static fn ($excursion) => (object) [
+                'id' => $excursion->id,
+                'vendor_property_id' => $excursion->id,
+                'name' => $excursion->title,
+                'short_description' => $excursion->description,
+                'description' => $excursion->description,
+                'price' => $excursion->price,
+                'currency' => $excursion->currency ?? 'USD',
+                'island_id' => $excursion->island_id,
+                'island' => (object) ['name' => $excursion->island->name ?? 'Unknown Island'],
+            ]);
+
+            if ($catalogProperties->isNotEmpty()) {
+                $excursionIds = $catalogProperties->pluck('id')->all();
+                $mediaRecords = DB::table('vendor_listing_media')
+                    ->whereIn('entity_id', $excursionIds)
+                    ->where('entity_type', 'excursion')
+                    ->orderByDesc('is_primary')
+                    ->orderByDesc('created_at')
+                    ->get();
+
+                $catalogPropertyMediaByProperty = $mediaRecords
+                    ->groupBy(static fn ($media) => (string) ($media->entity_id ?? ''));
+            }
+        }
+    } catch (\Throwable $e) {
+        Log::warning('Failed to fetch corporate retreat packages', ['error' => $e->getMessage()]);
+    }
+
+    return view('corporate-retreats-catalog', [
+        'apiBase' => $apiBase,
+        'catalogProperties' => $catalogProperties,
+        'catalogPropertyMediaByProperty' => $catalogPropertyMediaByProperty,
+        'islandOptions' => $islandOptions,
+    ]);
+});
+
 Route::get('/catalog/{category}', function (Request $request, string $category) use ($resolveReviewStats) {
     $categoryMap = [
         'accommodation' => ['label' => 'Accommodation', 'subtitle' => 'Hotels, resorts, villas, and guesthouses.', 'hero_image_url' => ''],

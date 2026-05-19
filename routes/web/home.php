@@ -51,6 +51,7 @@ Route::get('/', function (Request $request) {
         ['icon' => 'fa-solid fa-water', 'title' => 'Sea Transport', 'subtitle' => 'Speedboats, ferries & water transfers', 'url' => '/catalog/sea-transport'],
         ['icon' => 'fa-solid fa-van-shuttle', 'title' => 'Land Transport', 'subtitle' => 'Cars and ground transfers', 'url' => '/catalog/land-transport'],
         ['icon' => 'fa-solid fa-compass', 'title' => 'Excursion', 'subtitle' => 'Tours and activities', 'url' => '/catalog/excursion'],
+        ['icon' => 'fa-solid fa-briefcase', 'title' => 'Corporate Retreats', 'subtitle' => 'Team experiences & packages', 'url' => '/catalog/corporate-retreats'],
         ['icon' => 'fa-solid fa-map-location-dot', 'title' => 'Blog', 'subtitle' => 'Travel stories and island picks', 'url' => '/blog'],
         ['icon' => 'fa-solid fa-laptop', 'title' => 'Remote Workspace', 'subtitle' => 'Work-friendly spaces', 'url' => '/catalog/remote_workspace'],
         ['icon' => 'fa-solid fa-object-group', 'title' => 'Conference Rooms', 'subtitle' => 'Meeting & event spaces', 'url' => '/catalog/conference_room'],

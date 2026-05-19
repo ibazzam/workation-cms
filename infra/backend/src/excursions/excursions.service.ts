@@ -15,6 +15,7 @@ type ExcursionUpsertPayload = {
   price?: unknown;
   currency?: unknown;
   active?: unknown;
+  isCorporateRetreat?: unknown;
 };
 
 type ExcursionSlotUpsertPayload = {
@@ -41,6 +42,7 @@ export class ExcursionsService {
     type?: string;
     q?: string;
     date?: string;
+    isCorporateRetreat?: boolean;
   }) {
     const normalizedType = this.parseOptionalType(filters.type);
     const normalizedQ = typeof filters.q === 'string' && filters.q.trim().length > 0 ? filters.q.trim() : undefined;
@@ -52,6 +54,7 @@ export class ExcursionsService {
         islandId: filters.islandId,
         vendorId: filters.vendorId ? filters.vendorId.toString() : undefined,
         type: normalizedType ?? undefined,
+        isCorporateRetreat: filters.isCorporateRetreat !== undefined ? filters.isCorporateRetreat : undefined,
         ...(normalizedQ
           ? {
               OR: [
@@ -327,6 +330,8 @@ export class ExcursionsService {
     }
 
     const data: Record<string, unknown> = {};
+    const isCorporateRetreat = this.parseOptionalBoolean(payload.isCorporateRetreat, 'isCorporateRetreat');
+
     if (vendorId !== undefined) data.vendorId = vendorId;
     if (islandId !== undefined) data.islandId = islandId;
     if (type !== undefined) data.type = type;
@@ -339,6 +344,7 @@ export class ExcursionsService {
     if (price !== undefined) data.price = price;
     if (currency !== undefined) data.currency = currency;
     if (active !== undefined) data.active = active;
+    if (isCorporateRetreat !== undefined) data.isCorporateRetreat = isCorporateRetreat;
 
     return data;
   }

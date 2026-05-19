@@ -616,7 +616,7 @@
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
-                                                                <p class="property-subsection-head">Route Legs &amp; Fares ({{ count($routeSchedules) }})</p>
+                                                                <p class="property-subsection-head">Route Legs &amp; Fares ({{ is_countable($routeSchedules ?? null) ? count($routeSchedules) : 0 }})</p>
                                                                     </td>
                                                                     <td class="listing-cell-actions-cell">
                                                                         <!-- Row 3: Actions -->

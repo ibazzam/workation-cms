@@ -112,9 +112,12 @@ Route::get('/catalog/corporate-retreats', function (Request $request) {
     
     $islandOptions = collect();
     if (Schema::hasTable('islands')) {
-        $islandOptions = DB::table('islands')
-            ->where('active', true)
-            ->orderBy('name')
+        $islandsQuery = DB::table('islands')->orderBy('name');
+        if (Schema::hasColumn('islands', 'active')) {
+            $islandsQuery->where('active', true);
+        }
+
+        $islandOptions = $islandsQuery
             ->get(['id', 'name'])
             ->mapWithKeys(static fn ($island) => [
                 $island->id => [
@@ -130,25 +133,35 @@ Route::get('/catalog/corporate-retreats', function (Request $request) {
 
     try {
         if (Schema::hasTable('excursions')) {
-            $excursionsList = DB::table('excursions')
-                ->where('active', true)
-                ->where('is_corporate_retreat', true)
-                ->with(['vendor', 'island'])
+            $excursionsQuery = DB::table('excursions')
                 ->orderByDesc('created_at')
-                ->limit(100)
-                ->get();
+                ->limit(100);
 
-            $catalogProperties = $excursionsList->map(static fn ($excursion) => (object) [
-                'id' => $excursion->id,
-                'vendor_property_id' => $excursion->id,
-                'name' => $excursion->title,
-                'short_description' => $excursion->description,
-                'description' => $excursion->description,
-                'price' => $excursion->price,
-                'currency' => $excursion->currency ?? 'USD',
-                'island_id' => $excursion->island_id,
-                'island' => (object) ['name' => $excursion->island->name ?? 'Unknown Island'],
-            ]);
+            if (Schema::hasColumn('excursions', 'active')) {
+                $excursionsQuery->where('active', true);
+            }
+            if (Schema::hasColumn('excursions', 'is_corporate_retreat')) {
+                $excursionsQuery->where('is_corporate_retreat', true);
+            }
+
+            $excursionsList = $excursionsQuery->get();
+
+            $catalogProperties = $excursionsList->map(static function ($excursion) use ($islandOptions) {
+                $islandId = (string) ($excursion->island_id ?? '');
+                $islandLabel = (string) (($islandOptions[$islandId]['label'] ?? $islandOptions[(int) $islandId]['label'] ?? 'Unknown Island'));
+
+                return (object) [
+                    'id' => $excursion->id,
+                    'vendor_property_id' => $excursion->id,
+                    'name' => $excursion->title,
+                    'short_description' => $excursion->description,
+                    'description' => $excursion->description,
+                    'price' => $excursion->price,
+                    'currency' => $excursion->currency ?? 'USD',
+                    'island_id' => $excursion->island_id,
+                    'island' => (object) ['name' => $islandLabel],
+                ];
+            });
 
             if ($catalogProperties->isNotEmpty()) {
                 $excursionIds = $catalogProperties->pluck('id')->all();

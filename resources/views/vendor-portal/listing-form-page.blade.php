@@ -10,6 +10,12 @@
     @include('vendor-portal.partials.portal-styles')
 </head>
 <body>
+    @php
+        $backCategoryRoute = ($category ?? '') === 'corporate_retreat' ? 'excursion' : (string) ($category ?? 'excursion');
+        $backCategoryLabel = ($category ?? '') === 'corporate_retreat'
+            ? 'Excursions'
+            : (string) ($categoryLabel ?? ucwords(str_replace('_', ' ', (string) ($category ?? 'listing'))));
+    @endphp
     <main class="page page-listing-form">
         <section class="hero">
             <div class="hero-top">
@@ -18,7 +24,7 @@
                     <h1>{{ $pageTitle ?? (($formType === 'edit' ? 'Edit ' : 'New ') . ($categoryLabel ?? ucwords(str_replace('_', ' ', $category)))) }}</h1>
                     <p>{{ $pageSubtitle ?? 'Fill in the required fields and save your listing. Fields shown are specific to this category.' }}</p>
                     <div class="hero-links">
-                        <a class="hero-link" href="/vendor/listings/{{ $category }}">← Back to {{ $categoryLabel ?? ucwords(str_replace('_', ' ', $category)) }} Listings</a>
+                        <a class="hero-link" href="/vendor/listings/{{ $backCategoryRoute }}">← Back to {{ $backCategoryLabel }} Listings</a>
                         <a class="hero-link" href="/vendor">Portal Home</a>
                     </div>
                 </div>

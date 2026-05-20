@@ -1474,6 +1474,96 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
     })->name('vendor.listings.category.create.' . $listingCategoryAlias);
 }
 
+Route::get('/vendor/listings/corporate-retreat/create', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Complete compliance verification in My Account and wait for admin approval before creating listings.']);
+    }
+
+    $approvedCategories = vendorPortalApprovedCategories($vendorUser);
+    if (!in_array('excursion', $approvedCategories, true)) {
+        return redirect('/vendor/listings/excursion')
+            ->withErrors(['profile' => 'Corporate retreat packages are managed under Excursions. Contact admin to unlock excursion category for your account.']);
+    }
+
+    $vendorCategoryMap = vendorPortalCategoryMap();
+    $selectedVendorCategories = vendorPortalSelectedCategories($vendorUser);
+    $listingCategoryViewOrder = ['accommodation','sea_transport','land_transport','water_sports','excursion','remote_workspace','conference_room','resort_day_visit','restaurant','vehicle_rental','liveaboard'];
+    $listingCategoryLabelMap = array_merge($vendorCategoryMap, ['sea_transport' => 'Sea Transport & Ferries', 'land_transport' => 'Land Transport', 'conference_room' => 'Conference Rooms', 'liveaboard' => 'Liveaboard / Safari']);
+
+    $vendorProfileRow = null;
+    if (Schema::hasTable('vendor_profiles')) {
+        $vendorProfileRow = DB::table('vendor_profiles')
+            ->where('vendor_user_id', $vendorUserId)
+            ->first(['business_name', 'contact_email']);
+    }
+    $vendorProfile = [
+        'name' => (string) ($vendorProfileRow->business_name ?? ($vendorUser->name ?? '')),
+        'email' => (string) ($vendorProfileRow->contact_email ?? ($vendorUser->email ?? '')),
+        'approved_categories' => $approvedCategories,
+    ];
+
+    $transferOptionCatalog = vendorPortalTransferOptionLabelMap();
+    $workspaceAmenityCatalog = [
+        'workdesk' => 'Workdesk',
+        'wifi' => 'WiFi',
+        'printing' => 'Printing',
+        'water_bottles' => 'Water Bottles',
+        'coffee' => 'Coffee',
+        'tea' => 'Tea',
+        'snacks' => 'Snacks',
+    ];
+
+    VendorPortalAuditLogger::log('vendor_listing.create_form_opened', [
+        'severity' => 'info',
+        'target_identifier' => 'listing-category:corporate_retreat',
+        'category' => 'corporate_retreat',
+    ]);
+
+    return view('vendor-portal.listing-form-page', [
+        'category' => 'corporate_retreat',
+        'categoryLabel' => 'Corporate Retreat Packages',
+        'formType' => 'create',
+        'pageTitle' => 'New Corporate Retreat Package',
+        'pageSubtitle' => 'Create a corporate retreat package. This is published to the dedicated Corporate Retreat category.',
+        'portalUser' => session('portal_vendor_user_email', $vendorUser->email ?? ''),
+        'vendorProfile' => $vendorProfile,
+        'vendorCategoryMap' => $vendorCategoryMap,
+        'selectedVendorCategories' => $selectedVendorCategories,
+        'listingCategoryViewOrder' => $listingCategoryViewOrder,
+        'listingCategoryLabelMap' => $listingCategoryLabelMap,
+        'activePortalPage' => 'listings',
+        'forcedListingCategory' => 'excursion',
+        'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
+        'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
+        'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),
+        'propertyAmenityOptionsCollection' => collect(vendorPortalListingOptions('property_amenity')),
+        'propertyFeatureOptions' => vendorPortalListingOptions('property_feature'),
+        'propertyFeatureOptionsCollection' => collect(vendorPortalListingOptions('property_feature')),
+        'excursionTypeOptions' => vendorPortalListingOptions('excursion_type'),
+        'excursionTypeOptionsCollection' => collect(vendorPortalListingOptions('excursion_type')),
+        'restaurantMealServiceOptions' => vendorPortalListingOptions('restaurant_meal_service'),
+        'restaurantMealServiceOptionsCollection' => collect(vendorPortalListingOptions('restaurant_meal_service')),
+        'vehicleRentalTypeOptions' => vendorPortalListingOptions('vehicle_rental_type'),
+        'vehicleRentalTypeOptionsCollection' => collect(vendorPortalListingOptions('vehicle_rental_type')),
+        'vendorTaxComponents' => collect([]),
+        'transferOptionCatalog' => $transferOptionCatalog,
+        'workspaceAmenityCatalog' => $workspaceAmenityCatalog,
+        'oldTransferOptions' => old('transfer_options', []),
+        'oldTransferRatesInput' => [],
+        'oldPropertyAmenities' => old('property_amenities', []),
+        'oldPropertyFeatures' => old('property_features', []),
+        'oldWorkspaceAmenityStatus' => [],
+    ]);
+})->name('vendor.listings.corporate_retreat.create');
+
 foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
     Route::get('/vendor/listings/' . $listingCategoryAlias . '/{propertyId}/edit', function (int $propertyId) use ($listingCategoryAlias) {
         if (!session()->get('portal_vendor_authenticated', false)) {

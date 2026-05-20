@@ -21,6 +21,9 @@
             <label for="property_description">Full Description <span style="color:#c0392b;">*</span></label>
             <textarea id="property_description" name="description" class="ops-textarea" maxlength="3000" rows="5" required>{{ old('description', $property->description ?? '') }}</textarea>
         </div>
+        @include('vendor-portal.partials.forms.fields.corporate-retreat-toggle', [
+            'checked' => (bool) old('is_corporate_retreat', (int) ($property->is_corporate_retreat ?? ($propertyDetails['is_corporate_retreat'] ?? 0)) === 1),
+        ])
 
         {{-- ── Activity Details ──────────────────────────────────────────── --}}
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
@@ -119,6 +122,28 @@
         <div class="ops-field ops-field-wide" style="grid-column:1/-1; border-bottom:1px solid #cfe0eb; padding-bottom:4px; margin-top:8px; margin-bottom:2px;">
             <p style="margin:0; font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.07em; color:#1d4b66;">Participants & Capacity</p>
         </div>
+        @php
+            $currentMinPax = (int) old('excursion_min_pax', $propertyDetails['excursion_min_pax'] ?? 1);
+            $currentMaxPax = (int) old('excursion_max_pax', $propertyDetails['excursion_max_pax'] ?? 0);
+            $derivedRetreatPackageSize = '';
+            if ($currentMinPax === 1 && $currentMaxPax === 10) {
+                $derivedRetreatPackageSize = 'getaway';
+            } elseif ($currentMinPax === 1 && $currentMaxPax === 50) {
+                $derivedRetreatPackageSize = 'retreat';
+            } elseif ($currentMinPax === 1 && $currentMaxPax === 150) {
+                $derivedRetreatPackageSize = 'summit';
+            }
+        @endphp
+        <div class="ops-field ops-field-wide" data-retreat-package-size-block hidden>
+            <label for="property_retreat_package_size">Corporate Package Size Preset</label>
+            <select id="property_retreat_package_size" name="retreat_package_size_preset" class="ops-select">
+                <option value="" @selected(old('retreat_package_size_preset', $derivedRetreatPackageSize) === '')>Custom</option>
+                <option value="getaway" @selected(old('retreat_package_size_preset', $derivedRetreatPackageSize) === 'getaway')>Getaway (1-10 pax)</option>
+                <option value="retreat" @selected(old('retreat_package_size_preset', $derivedRetreatPackageSize) === 'retreat')>Retreat (1-50 pax)</option>
+                <option value="summit" @selected(old('retreat_package_size_preset', $derivedRetreatPackageSize) === 'summit')>Summit (1-150 pax)</option>
+            </select>
+            <p class="map-help">Selecting a preset auto-fills min/max participants and overall capacity.</p>
+        </div>
         <div class="ops-field">
             <label for="property_excursion_min_pax">Min Participants</label>
             <input id="property_excursion_min_pax" name="excursion_min_pax" class="ops-input" type="number" min="1" value="{{ old('excursion_min_pax', $propertyDetails['excursion_min_pax'] ?? 1) }}">
@@ -184,6 +209,14 @@
         <div class="ops-field ops-field-wide">
             <label for="property_inclusions">What's Included</label>
             <textarea id="property_inclusions" name="inclusions" class="ops-textarea" rows="4" maxlength="2000" placeholder="e.g. Snorkelling gear, guide, refreshments, boat transfer">{{ old('inclusions', $propertyDetails['inclusions'] ?? '') }}</textarea>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;">
+                <span class="ops-chip"><i class="fa-solid fa-bed" aria-hidden="true" style="margin-right:6px;"></i>Room</span>
+                <span class="ops-chip"><i class="fa-solid fa-van-shuttle" aria-hidden="true" style="margin-right:6px;"></i>Transport</span>
+                <span class="ops-chip"><i class="fa-solid fa-utensils" aria-hidden="true" style="margin-right:6px;"></i>Meals</span>
+                <span class="ops-chip"><i class="fa-solid fa-compass" aria-hidden="true" style="margin-right:6px;"></i>Activities</span>
+                <span class="ops-chip"><i class="fa-solid fa-circle-check" aria-hidden="true" style="margin-right:6px;"></i>Etc</span>
+            </div>
+            <p class="map-help" style="margin-top:6px;">For corporate retreat packages, list inclusions one per line.</p>
         </div>
         <div class="ops-field ops-field-wide">
             <label for="property_exclusions">What's Not Included</label>
@@ -280,9 +313,18 @@
     const startInput = document.getElementById('property_activity_start_time');
     const endInput = document.getElementById('property_activity_end_time');
     const durationInput = document.getElementById('property_excursion_duration_minutes');
-    if (!startInput || !endInput || !durationInput) {
-        return;
-    }
+    const retreatToggle = document.getElementById('property_is_corporate_retreat');
+    const retreatSizeBlock = document.querySelector('[data-retreat-package-size-block]');
+    const retreatSizeSelect = document.getElementById('property_retreat_package_size');
+    const minPaxInput = document.getElementById('property_excursion_min_pax');
+    const maxPaxInput = document.getElementById('property_excursion_max_pax');
+    const maxGuestsInput = document.getElementById('property_max_guests');
+
+    const presetMap = {
+        getaway: { min: 1, max: 10 },
+        retreat: { min: 1, max: 50 },
+        summit: { min: 1, max: 150 },
+    };
 
     const parseMinutes = (value) => {
         const match = /^(\d{2}):(\d{2})$/.exec(String(value || '').trim());
@@ -313,10 +355,46 @@
         }
     };
 
-    startInput.addEventListener('change', syncDuration);
-    endInput.addEventListener('change', syncDuration);
-    startInput.addEventListener('input', syncDuration);
-    endInput.addEventListener('input', syncDuration);
-    syncDuration();
+    if (startInput && endInput && durationInput) {
+        startInput.addEventListener('change', syncDuration);
+        endInput.addEventListener('change', syncDuration);
+        startInput.addEventListener('input', syncDuration);
+        endInput.addEventListener('input', syncDuration);
+        syncDuration();
+    }
+
+    const syncRetreatPackageControls = () => {
+        if (!retreatToggle || !retreatSizeBlock) {
+            return;
+        }
+
+        const isEnabled = !!retreatToggle.checked;
+        retreatSizeBlock.hidden = !isEnabled;
+    };
+
+    const applyPreset = () => {
+        if (!retreatSizeSelect || !minPaxInput || !maxPaxInput || !maxGuestsInput) {
+            return;
+        }
+
+        const key = String(retreatSizeSelect.value || '').trim().toLowerCase();
+        const preset = presetMap[key];
+        if (!preset) {
+            return;
+        }
+
+        minPaxInput.value = String(preset.min);
+        maxPaxInput.value = String(preset.max);
+        maxGuestsInput.value = String(preset.max);
+    };
+
+    if (retreatToggle && retreatSizeBlock) {
+        retreatToggle.addEventListener('change', syncRetreatPackageControls);
+        syncRetreatPackageControls();
+    }
+
+    if (retreatSizeSelect) {
+        retreatSizeSelect.addEventListener('change', applyPreset);
+    }
 })();
 </script>

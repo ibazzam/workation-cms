@@ -2173,17 +2173,23 @@
                 </div>
                 <p class="sidebar-title">Browse Categories</p>
                 <section class="top-links" aria-label="Top categories">
+                    @php
+                        $retreatMode = strtolower(request()->query('retreat_mode', ''));
+                        $isRetreatMode = in_array($retreatMode, ['1', 'true', 'yes', 'on'], true);
+                        $activeCategoryKey = $isRetreatMode ? 'corporate-retreats' : ($homeDefaultCategoryKey ?? 'accommodation');
+                    @endphp
                     @foreach ($homeSidebarLinks as $link)
                         @php
                             $linkUrl = (string) ($link['url'] ?? '/catalog/accommodation');
                             $categoryKeyFromUrl = preg_match('#/catalog/([a-z_-]+)#', $linkUrl, $categoryMatch) ? (string) ($categoryMatch[1] ?? '') : '';
+                            $isActiveSidebar = $categoryKeyFromUrl === $activeCategoryKey;
                         @endphp
                         @if (!empty($link['section_start']))
                             <div class="top-link-section-break" aria-hidden="true"></div>
                         @elseif (!empty($link['divider_before']))
                             <div class="top-link-divider" aria-hidden="true"></div>
                         @endif
-                        <a class="top-link floating-link" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span></a>
+                        <a class="top-link floating-link{{ $isActiveSidebar ? ' is-active' : '' }}" data-category-key="{{ $categoryKeyFromUrl }}" href="{{ $linkUrl }}"><span class="top-link-head"><i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}"></i>{{ $link['title'] ?? 'Category' }}</span></a>
                         @if (!empty($link['section_end']))
                             <div class="top-link-section-break" aria-hidden="true"></div>
                         @elseif (!empty($link['divider_after']))
@@ -2229,6 +2235,11 @@
                             <input id="categorySelect" name="category" type="hidden" value="{{ $homeDefaultCategoryKey }}">
                             
                             <div class="search-category-tabs" aria-label="Travel search categories" role="tablist">
+                                @php
+                                    $retreatMode = strtolower(request()->query('retreat_mode', ''));
+                                    $isRetreatMode = in_array($retreatMode, ['1', 'true', 'yes', 'on'], true);
+                                    $activeCategoryKey = $isRetreatMode ? 'corporate-retreats' : ($homeDefaultCategoryKey ?? 'accommodation');
+                                @endphp
                                 @foreach ($homeCatalogCategoryLinks as $index => $link)
                                     @php
                                         $tabUrl = (string) ($link['url'] ?? '/catalog/accommodation');
@@ -2250,10 +2261,12 @@
                                             'resort_day_visit' => 'resortDayVisitFields',
                                             'restaurant' => 'restaurantFields',
                                             'vehicle_rental' => 'vehicleRentalFields',
+                                            'corporate-retreats' => 'excursionFields',
                                         ];
                                         $tabPanelId = (string) ($tabPanelMap[$tabCategoryKey] ?? 'accommodationFields');
+                                        $isActiveTab = $tabCategoryKey === $activeCategoryKey;
                                     @endphp
-                                    <button id="{{ $tabId }}" class="search-category-tab{{ $index === 0 ? ' is-active' : '' }}" type="button" role="tab" aria-selected="{{ $index === 0 ? 'true' : 'false' }}" aria-controls="{{ $tabPanelId }}" tabindex="{{ $index === 0 ? '0' : '-1' }}" data-home-category-tab="{{ $tabCategoryKey }}">
+                                    <button id="{{ $tabId }}" class="search-category-tab{{ $isActiveTab ? ' is-active' : '' }}" type="button" role="tab" aria-selected="{{ $isActiveTab ? 'true' : 'false' }}" aria-controls="{{ $tabPanelId }}" tabindex="{{ $isActiveTab ? '0' : '-1' }}" data-home-category-tab="{{ $tabCategoryKey }}">
                                         <i class="{{ $link['icon'] ?? 'fa-solid fa-location-dot' }}" aria-hidden="true"></i>
                                         <span>{{ $link['title'] ?? 'Category' }}</span>
                                     </button>

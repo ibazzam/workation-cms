@@ -3220,8 +3220,7 @@
             display: block;
             width: 100%;
             border-radius: 0;
-            padding-left: 12px;
-            padding-right: 12px;
+            padding: 9px 12px 8px;
         }
 
         .category-listing-section .listing-management-table tbody tr[data-property-row] > td:last-child {
@@ -3229,7 +3228,36 @@
             width: 100%;
             border-top: 1px solid #d8e2eb;
             border-radius: 0;
-            padding: 10px 12px;
+            padding: 7px 10px;
+        }
+
+        .listing-card-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            padding: 0 2px 6px;
+            border-bottom: 1px solid #e6eef5;
+            font-size: 0.78rem;
+            color: #4b647b;
+            line-height: 1.25;
+        }
+
+        .listing-card-meta-main {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .listing-card-meta-side {
+            flex-shrink: 0;
+            font-weight: 700;
+            color: #2d4b64;
+            border: 1px solid #d7e4ef;
+            background: #f5fafe;
+            border-radius: 999px;
+            padding: 3px 8px;
         }
 
         .category-listing-section .listing-cell-actions {
@@ -3243,21 +3271,30 @@
         .category-listing-section .listing-actions-row {
             justify-content: flex-end;
             gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            padding-bottom: 1px;
+        }
+
+        .listing-actions-break {
+            display: none;
         }
 
         .category-listing-section .listing-actions-compact .btn,
         .category-listing-section .listing-actions-compact form .btn,
         .category-listing-section .listing-actions-row > .btn,
         .category-listing-section .listing-actions-row > form .btn {
-            padding: 7px 11px;
-            min-height: 34px;
-            min-width: 118px;
+            padding: 7px 10px;
+            min-height: 33px;
+            min-width: 108px;
             font-size: 0.77rem;
             line-height: 1.15;
             border-radius: 8px;
             white-space: nowrap;
             text-align: center;
             justify-content: center;
+            flex: 0 0 auto;
         }
 
         .category-listing-section .listing-actions-row > form .btn.btn-danger {
@@ -3276,6 +3313,103 @@
         .category-listing-section .listing-card-main .listing-summary-line strong {
             font-size: 1rem;
             color: #16212e;
+        }
+
+        .listing-subcard-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 6px;
+        }
+
+        .listing-subcard {
+            border: 1px solid #d8e2eb;
+            border-radius: 10px;
+            background: #ffffff;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(17, 41, 62, 0.04);
+        }
+
+        .listing-subcard-meta-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 10px;
+            border-bottom: 1px solid #e6eef5;
+            color: #4b647b;
+            font-size: 0.77rem;
+            line-height: 1.25;
+        }
+
+        .listing-subcard-meta-main {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .listing-subcard-meta-side {
+            flex-shrink: 0;
+            border: 1px solid #d7e4ef;
+            background: #f5fafe;
+            color: #2d4b64;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 0.74rem;
+            font-weight: 700;
+        }
+
+        .listing-subcard-body {
+            padding: 9px 10px;
+            display: grid;
+            gap: 5px;
+        }
+
+        .listing-subcard-title-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .listing-subcard-title-row strong {
+            font-size: 0.98rem;
+            color: #16212e;
+        }
+
+        .listing-subcard-summary {
+            margin: 0;
+            color: #3a5166;
+            font-size: 0.82rem;
+            line-height: 1.35;
+        }
+
+        .listing-subcard-actions {
+            border-top: 1px solid #e6eef5;
+            padding: 7px 10px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            scrollbar-width: thin;
+        }
+
+        .listing-subcard-actions form {
+            margin: 0;
+        }
+
+        .listing-subcard-actions .btn,
+        .listing-subcard-actions form .btn {
+            padding: 7px 10px;
+            min-height: 33px;
+            min-width: 108px;
+            font-size: 0.77rem;
+            line-height: 1.15;
+            border-radius: 8px;
+            white-space: nowrap;
+            text-align: center;
+            justify-content: center;
+            flex: 0 0 auto;
         }
 
         .update-row-form,
@@ -4204,6 +4338,28 @@
 
             .room-summary-line {
                 white-space: normal;
+            }
+
+            .listing-subcard-meta-bar {
+                flex-wrap: wrap;
+            }
+
+            .listing-subcard-meta-main {
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+            }
+
+            .listing-subcard-actions {
+                justify-content: stretch;
+                flex-wrap: wrap;
+                overflow-x: visible;
+            }
+
+            .listing-subcard-actions .btn,
+            .listing-subcard-actions form,
+            .listing-subcard-actions form .btn {
+                width: 100%;
             }
 
             .listing-management-table .inline-actions,

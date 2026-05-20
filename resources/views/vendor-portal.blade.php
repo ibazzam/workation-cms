@@ -426,6 +426,8 @@
             'action_required' => 'is-err',
             default => 'is-neutral',
         };
+        $hideWorkspaceCommandBar = $showWorkspaceTabs
+            || in_array($activePortalPage, ['reservations', 'operations', 'availability', 'messages', 'reports', 'billing'], true);
     @endphp
     <main class="page" data-api-base="{{ $apiBase }}">
         <section class="hero">
@@ -485,7 +487,7 @@
 
         <div class="portal-content">
 
-        @if (!($showOverviewPage && $portalMode === 'simple'))
+        @if (!$hideWorkspaceCommandBar && !($showOverviewPage && $portalMode === 'simple'))
         <section class="workspace-command-bar" aria-label="Workspace command bar">
             <div class="workspace-command-main">
                 <p class="workspace-command-eyebrow">Workspace</p>
@@ -555,16 +557,7 @@
 
         @if ($showWorkspaceTabs)
             <section class="vendor-workspace-nav" aria-label="Vendor workspace navigation">
-                <div class="workspace-tabs" role="tablist" aria-label="Vendor workspace tabs">
-                    @foreach ($workspacePrimaryTabs as $workspaceTab)
-                        <a
-                            class="workspace-tab {{ $workspaceTab['active'] ? 'is-active' : '' }}"
-                            href="{{ $workspaceTab['href'] }}"
-                            role="tab"
-                            aria-selected="{{ $workspaceTab['active'] ? 'true' : 'false' }}"
-                        >{{ $workspaceTab['label'] }}</a>
-                    @endforeach
-                </div>
+                <h2 class="workspace-command-title workspace-section-title">{{ $currentPageMeta['title'] }}</h2>
                 @if ($workspaceCategoryTabKeys->isNotEmpty())
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
                         <a

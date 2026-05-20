@@ -18,6 +18,7 @@ if (!function_exists('vendorPortalCategoryMap')) {
             'sea_transport' => 'Sea Transport & Ferries',
             'land_transport' => 'Land Transport',
             'excursion' => 'Excursions',
+            'corporate_retreat' => 'Corporate Retreat',
             'remote_workspace' => 'Remote Workspaces',
             'resort_day_visit' => 'Resort Day Visits',
             'restaurant' => 'Restaurants',
@@ -52,6 +53,12 @@ if (!function_exists('vendorPortalCategoryAliases')) {
             'landtransports' => 'land_transport',
             'excursion' => 'excursion',
             'excursions' => 'excursion',
+            'corporate_retreat' => 'corporate_retreat',
+            'corporate_retreats' => 'corporate_retreat',
+            'corporate-retreat' => 'corporate_retreat',
+            'corporate-retreats' => 'corporate_retreat',
+            'corporateretreat' => 'corporate_retreat',
+            'corporateretreats' => 'corporate_retreat',
             'remote_workspace' => 'remote_workspace',
             'remote_workspaces' => 'remote_workspace',
             'remoteworkspace' => 'remote_workspace',
@@ -95,6 +102,7 @@ if (!function_exists('vendorPortalCategoryRequiredDocumentChecklist')) {
             'land_transport' => ['Valid transport operator license', 'Vehicle registration/commercial permit'],
             'water_sports' => ['Activity safety/compliance certification', 'Operator or instructor certification'],
             'excursion' => ['Tour/excursion operator permit', 'Public liability or compliance certificate'],
+            'corporate_retreat' => ['Tour/excursion operator permit', 'Public liability or compliance certificate'],
             'remote_workspace' => ['Business/trade registration for workspace operations'],
             'conference_room' => ['Venue operation approval or business permit'],
             'resort_day_visit' => ['Resort partnership authorization or operating permit'],
@@ -256,6 +264,7 @@ if (!function_exists('vendorPortalCategoryStorageTableMap')) {
             'sea_transport' => 'vendor_sea_transport_listings',
             'land_transport' => 'vendor_land_transport_listings',
             'excursion' => 'vendor_excursion_listings',
+            'corporate_retreat' => 'vendor_corporate_retreat_listings',
             'remote_workspace' => 'vendor_remote_workspace_listings',
             'resort_day_visit' => 'vendor_resort_day_visit_listings',
             'restaurant' => 'vendor_restaurant_listings',
@@ -1318,11 +1327,11 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['vendor_tax_overrides'] = $vendorTaxOverrides;
         }
 
-        if (in_array($listingCategory, ['transport', 'excursion', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
+        if (in_array($listingCategory, ['transport', 'excursion', 'corporate_retreat', 'water_sports', 'remote_workspace', 'conference_room', 'resort_day_visit', 'restaurant', 'vehicle_rental'], true)) {
             $details['capacity_value'] = isset($validated['capacity_value']) ? (int) $validated['capacity_value'] : null;
         }
 
-        if (in_array($listingCategory, ['excursion', 'water_sports'], true)) {
+        if (in_array($listingCategory, ['excursion', 'corporate_retreat', 'water_sports'], true)) {
             $details['service_radius_km'] = vendorPortalNormalizedNumeric($validated['service_radius_km'] ?? null);
         }
 
@@ -1377,7 +1386,7 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             }
         }
 
-        if (in_array($listingCategory, ['excursion', 'water_sports'], true)) {
+        if (in_array($listingCategory, ['excursion', 'corporate_retreat', 'water_sports'], true)) {
             $departurePoint = trim((string) ($validated['departure_point'] ?? $validated['meeting_point'] ?? ''));
             $rawWaiverRequired = strtolower(trim((string) ($validated['safety_waiver_required'] ?? '')));
             $waiverRequired = in_array($rawWaiverRequired, ['1', 'yes', 'true', 'on'], true)
@@ -1432,6 +1441,10 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             $details['adult_price_foreign'] = isset($validated['adult_price_foreign']) && $validated['adult_price_foreign'] !== '' ? max(0, (float) $validated['adult_price_foreign']) : null;
             $details['child_price_local'] = isset($validated['child_price_local']) && $validated['child_price_local'] !== '' ? max(0, (float) $validated['child_price_local']) : null;
             $details['child_price_foreign'] = isset($validated['child_price_foreign']) && $validated['child_price_foreign'] !== '' ? max(0, (float) $validated['child_price_foreign']) : null;
+            if ($listingCategory === 'corporate_retreat') {
+                $details['is_corporate_retreat'] = true;
+                $details['is_retreat_package'] = true;
+            }
         }
 
         if ($listingCategory === 'remote_workspace') {

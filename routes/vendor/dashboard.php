@@ -1540,7 +1540,7 @@ Route::get('/vendor/listings/corporate-retreat/create', function () {
         'listingCategoryViewOrder' => $listingCategoryViewOrder,
         'listingCategoryLabelMap' => $listingCategoryLabelMap,
         'activePortalPage' => 'listings',
-        'forcedListingCategory' => 'excursion',
+        'forcedListingCategory' => 'corporate_retreat',
         'transportModeOptions' => vendorPortalListingOptions('transport_mode'),
         'transportModeOptionsCollection' => collect(vendorPortalListingOptions('transport_mode')),
         'propertyAmenityOptions' => vendorPortalListingOptions('property_amenity'),

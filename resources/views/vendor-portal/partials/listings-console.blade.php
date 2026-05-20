@@ -44,7 +44,7 @@
                 <p class="ops-title">{{ $consoleTitleLabel }}</p>
                 @if ($forcedListingCategory !== '')
                     <div class="inline-actions">
-                        <a class="btn btn-primary" href="/vendor/listings/{{ $forcedListingCategory }}/create">Add {{ $consoleCategoryLabel }}</a>
+                        <a class="btn btn-primary" href="{{ $forcedListingCategory === 'corporate_retreat' ? '/vendor/listings/corporate-retreat/create' : ('/vendor/listings/' . $forcedListingCategory . '/create') }}">Add {{ $consoleCategoryLabel }}</a>
                     </div>
                 @endif
             </div>
@@ -117,13 +117,11 @@
                         <div class="listing-setup-wizard-head">
                             <div>
                                 <p class="listing-setup-wizard-label">Corporate Retreat Packages</p>
-                                <h3>Create a package template in one click</h3>
-                                <p>Start with a predefined corporate retreat size and edit details in the create form.</p>
+                                <h3>Create a dedicated corporate retreat listing</h3>
+                                <p>Corporate retreats are stored separately from standard excursions. Choose package type in the form: getaway, retreat, or summit.</p>
                             </div>
                             <div class="inline-actions" style="gap:8px;">
-                                <a class="btn btn-secondary" href="/vendor/listings/corporate-retreat/create?retreat_package_size_preset=getaway">Add Getaway (1-10)</a>
-                                <a class="btn btn-secondary" href="/vendor/listings/corporate-retreat/create?retreat_package_size_preset=retreat">Add Retreat (1-50)</a>
-                                <a class="btn btn-secondary" href="/vendor/listings/corporate-retreat/create?retreat_package_size_preset=summit">Add Summit (1-150)</a>
+                                <a class="btn btn-secondary" href="/vendor/listings/corporate-retreat/create">Add Corporate Retreat</a>
                             </div>
                         </div>
                     </article>
@@ -287,6 +285,7 @@
                         'land_transport' => 'vendor-portal.partials.forms.create.land_transport',
                         'water_sports' => 'vendor-portal.partials.forms.create.water_sports',
                         'excursion' => 'vendor-portal.partials.forms.create.excursion',
+                        'corporate_retreat' => 'vendor-portal.partials.forms.create.corporate_retreat',
                         'remote_workspace' => 'vendor-portal.partials.forms.create.remote_workspace',
                         'conference_room' => 'vendor-portal.partials.forms.create.conference_room',
                         'resort_day_visit' => 'vendor-portal.partials.forms.create.resort_day_visit',
@@ -297,9 +296,16 @@
                         ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
                         ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
                         ->values();
+                    if ($allowedCategoryKeys->contains('excursion')) {
+                        $allowedCategoryKeys->push('corporate_retreat');
+                    }
+                    $allowedCategoryKeys = $allowedCategoryKeys->unique()->values();
                     $canManageAnyCategory = $allowedCategoryKeys->isNotEmpty();
                     $createCategoryFallback = vendorPortalCanonicalCategory((string) ($allowedCategoryKeys->first() ?? 'accommodation'));
                     $activeCreateCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory !== '' ? $forcedListingCategory : $createCategoryFallback));
+                    if (($forcedListingCategory ?? '') === 'corporate_retreat') {
+                        $activeCreateCategory = 'corporate_retreat';
+                    }
                     if (!$allowedCategoryKeys->contains($activeCreateCategory)) {
                         $activeCreateCategory = $createCategoryFallback;
                     }
@@ -326,7 +332,33 @@
                 <div class="category-listings-stack" aria-label="Category listing views" @if (!$canManageAnyCategory) hidden @endif>
                     @foreach ($allowedCategoryKeys as $categoryKey)
                         @php
+                            $retreatDetector = static function ($property): bool {
+                                $propertyDetails = [];
+                                if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                                    $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+                                    if (is_array($decodedPropertyDetails)) {
+                                        $propertyDetails = $decodedPropertyDetails;
+                                    }
+                                }
+
+                                return (int) ($property->is_corporate_retreat ?? 0) === 1
+                                    || (int) ($property->is_retreat_package ?? 0) === 1
+                                    || in_array(strtolower(trim((string) ($propertyDetails['is_corporate_retreat'] ?? '0'))), ['1', 'true', 'yes', 'on'], true)
+                                    || in_array(strtolower(trim((string) ($propertyDetails['is_retreat_package'] ?? '0'))), ['1', 'true', 'yes', 'on'], true);
+                            };
+
                             $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
+                            if ($categoryKey === 'excursion') {
+                                $categoryProperties = $categoryProperties->reject(static fn ($property) => $retreatDetector($property))->values();
+                            } elseif ($categoryKey === 'corporate_retreat') {
+                                $legacyRetreatRows = $propertiesByCategory
+                                    ->get('excursion', collect())
+                                    ->filter(static fn ($property) => $retreatDetector($property));
+                                $categoryProperties = $categoryProperties
+                                    ->merge($legacyRetreatRows)
+                                    ->unique(static fn ($property) => (int) ($property->id ?? 0))
+                                    ->values();
+                            }
                             $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
                         @endphp
                         <article class="category-listing-section" id="category-view-{{ $categoryKey }}" data-category-view="{{ $categoryKey }}">

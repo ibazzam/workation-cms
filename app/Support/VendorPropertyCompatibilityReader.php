@@ -862,6 +862,7 @@ class VendorPropertyCompatibilityReader
             'conference_room' => 'vendor_conference_room_listings',
             'land_transport' => 'vendor_land_transport_listings',
             'excursion' => 'vendor_excursion_listings',
+            'corporate_retreat' => 'vendor_corporate_retreat_listings',
             'remote_workspace' => 'vendor_remote_workspace_listings',
             'resort_day_visit' => 'vendor_resort_day_visit_listings',
             'restaurant' => 'vendor_restaurant_listings',

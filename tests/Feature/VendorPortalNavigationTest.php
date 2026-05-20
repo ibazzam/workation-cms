@@ -40,7 +40,7 @@ class VendorPortalNavigationTest extends TestCase
         $pricingResponse->assertRedirect('/vendor?page=billing&category=accommodation');
     }
 
-    public function test_vendor_listings_console_links_keep_forced_category_scope(): void
+    public function test_vendor_listings_console_uses_minimal_header_with_category_scope(): void
     {
         $vendor = User::factory()->create();
         $vendor->forceFill([
@@ -91,8 +91,10 @@ class VendorPortalNavigationTest extends TestCase
             ->get('/vendor?page=listings&category=accommodation');
 
         $response->assertOk();
-        $response->assertSee('/vendor/reservations?category=accommodation#vendorAvailabilitySection', false);
-        $response->assertSee('/vendor/pricing?category=accommodation#vendorPricingSection', false);
+        $response->assertDontSee('aria-label="Vendor workspace tabs"', false);
+        $response->assertDontSee('class="workspace-tab', false);
+        $response->assertSee('aria-label="Vendor category filter"', false);
+        $response->assertSee('/vendor/listings/accommodation/create', false);
         $response->assertSee('Accommodation Listings');
     }
 }

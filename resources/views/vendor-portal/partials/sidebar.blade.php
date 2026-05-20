@@ -13,7 +13,8 @@
         ->values();
     $sidebarHasServiceAccess = $sidebarCategoryLinks->isNotEmpty();
     $sidebarCategoryQuery = trim((string) ($forcedListingCategory ?? '')) !== '' ? ('?category=' . urlencode((string) $forcedListingCategory)) : '';
-    $portalMode = in_array(($portalMode ?? 'simple'), ['simple', 'advanced'], true) ? $portalMode : 'simple';
+    $portalModeValue = (string) ($portalMode ?? 'simple');
+    $portalMode = in_array($portalModeValue, ['simple', 'advanced'], true) ? $portalModeValue : 'simple';
     $sidebarOverviewOpen = in_array($activePortalPage ?? 'overview', ['overview', 'setup'], true);
     $sidebarListingsOpen = in_array($activePortalPage ?? '', ['listings', 'availability'], true);
     $sidebarOperationsOpen = in_array($activePortalPage ?? '', ['reservations', 'operations'], true);

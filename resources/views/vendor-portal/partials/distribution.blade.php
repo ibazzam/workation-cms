@@ -1,5 +1,6 @@
 @php
-    $portalMode = in_array(($portalMode ?? 'simple'), ['simple', 'advanced'], true) ? $portalMode : 'simple';
+    $portalModeValue = (string) ($portalMode ?? 'simple');
+    $portalMode = in_array($portalModeValue, ['simple', 'advanced'], true) ? $portalModeValue : 'simple';
     $distributionTab = in_array(($distributionTab ?? 'overview'), ['overview', 'connections', 'mapping', 'issues', 'logs'], true)
         ? $distributionTab
         : 'overview';

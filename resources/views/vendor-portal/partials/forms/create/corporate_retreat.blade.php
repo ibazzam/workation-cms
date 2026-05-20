@@ -12,6 +12,7 @@
 (() => {
     const retreatToggle = document.getElementById('property_is_corporate_retreat');
     const retreatPresetSelect = document.getElementById('property_retreat_package_size');
+    const retreatSizeBlock = document.querySelector('[data-retreat-package-size-block]');
     const minPaxInput = document.getElementById('property_excursion_min_pax');
     const maxPaxInput = document.getElementById('property_excursion_max_pax');
     const maxGuestsInput = document.getElementById('property_max_guests');
@@ -23,6 +24,10 @@
 
     retreatToggle.checked = true;
     retreatToggle.disabled = true;
+    const retreatToggleField = retreatToggle.closest('.ops-field');
+    if (retreatToggleField) {
+        retreatToggleField.style.display = 'none';
+    }
 
     let hiddenRetreatInput = form.querySelector('input[name="is_corporate_retreat"][type="hidden"]');
     if (!hiddenRetreatInput) {
@@ -33,25 +38,41 @@
     }
     hiddenRetreatInput.value = '1';
 
-    const preset = String(new URLSearchParams(window.location.search).get('retreat_package_size_preset') || '').trim().toLowerCase();
+    const listingCategoryInput = form.querySelector('input[name="listing_category"]');
+    if (listingCategoryInput) {
+        listingCategoryInput.value = 'corporate_retreat';
+    }
+
     const presetMap = {
         getaway: { min: 1, max: 10 },
         retreat: { min: 1, max: 50 },
         summit: { min: 1, max: 150 },
     };
 
-    if (retreatPresetSelect) {
-        if (preset && Object.prototype.hasOwnProperty.call(presetMap, preset)) {
-            retreatPresetSelect.value = preset;
-        }
-        retreatPresetSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    if (retreatSizeBlock) {
+        retreatSizeBlock.hidden = false;
     }
 
-    if (preset && Object.prototype.hasOwnProperty.call(presetMap, preset)) {
-        const cfg = presetMap[preset];
-        if (minPaxInput) minPaxInput.value = String(cfg.min);
-        if (maxPaxInput) maxPaxInput.value = String(cfg.max);
-        if (maxGuestsInput) maxGuestsInput.value = String(cfg.max);
+    if (retreatPresetSelect) {
+        const preferred = String(retreatPresetSelect.value || '').trim().toLowerCase();
+        retreatPresetSelect.innerHTML = [
+            '<option value="getaway">Getaway (1-10 pax)</option>',
+            '<option value="retreat">Retreat (1-50 pax)</option>',
+            '<option value="summit">Summit (1-150 pax)</option>'
+        ].join('');
+
+        retreatPresetSelect.value = Object.prototype.hasOwnProperty.call(presetMap, preferred) ? preferred : 'getaway';
+
+        const applyPreset = () => {
+            const key = String(retreatPresetSelect.value || '').trim().toLowerCase();
+            const cfg = presetMap[key] || presetMap.getaway;
+            if (minPaxInput) minPaxInput.value = String(cfg.min);
+            if (maxPaxInput) maxPaxInput.value = String(cfg.max);
+            if (maxGuestsInput) maxGuestsInput.value = String(cfg.max);
+        };
+
+        retreatPresetSelect.addEventListener('change', applyPreset);
+        applyPreset();
     }
 })();
 </script>

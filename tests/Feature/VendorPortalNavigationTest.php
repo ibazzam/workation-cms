@@ -97,4 +97,57 @@ class VendorPortalNavigationTest extends TestCase
         $response->assertSee('/vendor/listings/accommodation/create', false);
         $response->assertSee('Accommodation Listings');
     }
+
+    public function test_vendor_listings_console_separates_corporate_retreat_scope_from_excursions(): void
+    {
+        $vendor = User::factory()->create();
+        $vendor->forceFill([
+            'vendor_verification_status' => 'approved',
+            'vendor_approved_service_categories' => json_encode(['excursion']),
+        ])->save();
+
+        $excursionId = (int) DB::table('vendor_excursion_listings')->insertGetId([
+            'vendor_user_id' => $vendor->id,
+            'vendor_property_id' => 0,
+            'name' => 'Standard Snorkelling Trip',
+            'location' => 'Male',
+            'status' => 'active',
+            'listing_moderation_status' => 'approved',
+            'max_guests' => 12,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('vendor_excursion_listings')
+            ->where('id', $excursionId)
+            ->update(['vendor_property_id' => $excursionId]);
+
+        $retreatId = (int) DB::table('vendor_corporate_retreat_listings')->insertGetId([
+            'vendor_user_id' => $vendor->id,
+            'vendor_property_id' => 0,
+            'name' => 'Team Summit Retreat',
+            'location' => 'Hulhumale',
+            'status' => 'active',
+            'listing_moderation_status' => 'approved',
+            'max_guests' => 50,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('vendor_corporate_retreat_listings')
+            ->where('id', $retreatId)
+            ->update(['vendor_property_id' => $retreatId]);
+
+        $response = $this
+            ->withSession([
+                'portal_vendor_authenticated' => true,
+                'portal_vendor_user_id' => $vendor->id,
+                'portal_vendor_user' => $vendor->name,
+                'portal_listing_category' => 'corporate_retreat',
+            ])
+            ->get('/vendor?page=listings&category=corporate_retreat');
+
+        $response->assertOk();
+        $response->assertSee('Corporate Retreat Listings');
+        $response->assertSee('Team Summit Retreat');
+        $response->assertSee('/vendor/listings/corporate-retreat/create', false);
+    }
 }

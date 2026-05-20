@@ -20,7 +20,27 @@
         ->unique()
         ->values()
         ->all();
-    $forcedOperationsCategory = vendorPortalCanonicalCategory((string) ($forcedListingCategory ?? ''));
+    $isCorporateRetreatProperty = static function ($property): bool {
+        $propertyDetails = [];
+        if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+            $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+            if (is_array($decodedPropertyDetails)) {
+                $propertyDetails = $decodedPropertyDetails;
+            }
+        }
+
+        return (int) ($property->is_corporate_retreat ?? 0) === 1
+            || (int) ($property->is_retreat_package ?? 0) === 1
+            || in_array(strtolower(trim((string) ($propertyDetails['is_corporate_retreat'] ?? '0'))), ['1', 'true', 'yes', 'on'], true)
+            || in_array(strtolower(trim((string) ($propertyDetails['is_retreat_package'] ?? '0'))), ['1', 'true', 'yes', 'on'], true);
+    };
+    $forcedOperationsCategoryToken = vendorPortalNormalizeCategoryToken((string) ($forcedListingCategory ?? ''));
+    $forcedOperationsCategory = $forcedOperationsCategoryToken === 'corporate_retreat'
+        ? 'corporate_retreat'
+        : vendorPortalCanonicalCategory((string) ($forcedListingCategory ?? ''));
+    if ($forcedOperationsCategory === 'corporate_retreat' && in_array('excursion', $allVendorCategoryKeys, true)) {
+        $allVendorCategoryKeys = ['corporate_retreat'];
+    }
     if (is_string($forcedOperationsCategory) && $forcedOperationsCategory !== '' && in_array($forcedOperationsCategory, $allVendorCategoryKeys, true)) {
         $allVendorCategoryKeys = [$forcedOperationsCategory];
     }
@@ -159,6 +179,9 @@
                         continue;
                     }
                     $categoryKey = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+                    if ($categoryKey === 'excursion' && $isCorporateRetreatProperty($property)) {
+                        $categoryKey = 'corporate_retreat';
+                    }
                     if (!is_string($categoryKey) || $categoryKey === '' || !in_array($categoryKey, $allVendorCategoryKeys, true)) {
                         continue;
                     }
@@ -305,6 +328,9 @@
                         $slotProperty = $propertyById->get($slotPropertyId);
                         if ($slotProperty instanceof \stdClass) {
                             $slotCategory = vendorPortalCanonicalCategory((string) ($slotProperty->listing_category ?? ''));
+                            if ($slotCategory === 'excursion' && $isCorporateRetreatProperty($slotProperty)) {
+                                $slotCategory = 'corporate_retreat';
+                            }
                         }
                     }
                     if ($slotCategory === null && $slotServiceId > 0) {
@@ -393,6 +419,9 @@
                         $reservationProperty = $propertyById->get($reservationPropertyId);
                         if ($reservationProperty instanceof \stdClass) {
                             $reservationCategory = vendorPortalCanonicalCategory((string) ($reservationProperty->listing_category ?? ''));
+                            if ($reservationCategory === 'excursion' && $isCorporateRetreatProperty($reservationProperty)) {
+                                $reservationCategory = 'corporate_retreat';
+                            }
                         }
                     }
                     if ($reservationCategory === null && $reservationServiceId > 0) {

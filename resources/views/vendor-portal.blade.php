@@ -148,7 +148,25 @@
         ];
         $forcedPanelKey = (string) session('portal_active_panel', $panelFromPageQuery);
         $forcedListingMode = strtolower(trim((string) session('portal_listing_mode', '')));
-        $forcedListingCategory = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '';
+        $requestedListingCategoryToken = vendorPortalNormalizeCategoryToken((string) request()->query('category', session('portal_listing_category', '')));
+        $forceCorporateRetreatScope = $requestedListingCategoryToken === 'corporate_retreat';
+        $forcedListingCategory = $forceCorporateRetreatScope
+            ? 'corporate_retreat'
+            : (vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', ''))) ?? '');
+        $isCorporateRetreatProperty = static function ($property): bool {
+            $propertyDetails = [];
+            if (isset($property->listing_details) && is_string($property->listing_details) && trim((string) $property->listing_details) !== '') {
+                $decodedPropertyDetails = json_decode((string) $property->listing_details, true);
+                if (is_array($decodedPropertyDetails)) {
+                    $propertyDetails = $decodedPropertyDetails;
+                }
+            }
+
+            return (int) ($property->is_corporate_retreat ?? 0) === 1
+                || (int) ($property->is_retreat_package ?? 0) === 1
+                || in_array(strtolower(trim((string) ($propertyDetails['is_corporate_retreat'] ?? '0'))), ['1', 'true', 'yes', 'on'], true)
+                || in_array(strtolower(trim((string) ($propertyDetails['is_retreat_package'] ?? '0'))), ['1', 'true', 'yes', 'on'], true);
+        };
         $showWorkspaceTabs = $showListingsPage || $showReservationsPage || $showAvailabilityPage || $showBillingPage || $showMessagesPage;
         $workspacePrimaryPage = match (true) {
             $showListingsPage => 'listings',
@@ -160,7 +178,13 @@
         $workspaceRelevantCategoryKeys = collect();
         $propertyCategoryById = $vendorProperties
             ->keyBy(static fn ($property) => (int) ($property->id ?? 0))
-            ->map(static fn ($property) => vendorPortalCanonicalCategory((string) ($property->listing_category ?? '')));
+            ->map(static function ($property) use ($isCorporateRetreatProperty) {
+                $baseCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+                if ($baseCategory === 'excursion' && $isCorporateRetreatProperty($property)) {
+                    return 'corporate_retreat';
+                }
+                return $baseCategory;
+            });
 
         $listingCorrectionItems = $vendorProperties
             ->filter(static function ($property): bool {
@@ -173,6 +197,9 @@
 
         foreach ($vendorProperties as $property) {
             $categoryKey = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+            if ($categoryKey === 'excursion' && $isCorporateRetreatProperty($property)) {
+                $categoryKey = 'corporate_retreat';
+            }
             if (is_string($categoryKey) && $categoryKey !== '') {
                 $workspaceRelevantCategoryKeys->push($categoryKey);
             }
@@ -200,6 +227,10 @@
             ->map(static fn ($categoryKey) => vendorPortalCanonicalCategory((string) $categoryKey))
             ->filter(static fn ($categoryKey) => is_string($categoryKey) && $categoryKey !== '')
             ->values();
+        if ($workspaceCategoryTabKeys->contains('excursion')) {
+            $workspaceCategoryTabKeys->push('corporate_retreat');
+        }
+        $workspaceCategoryTabKeys = $workspaceCategoryTabKeys->unique()->values();
         $workspaceCategoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
         $workspacePrimaryTabs = [
             [
@@ -263,6 +294,7 @@
             'land_transport' => 'Land Transport',
             'conference_room' => 'Conference Rooms',
             'liveaboard' => 'Liveaboard / Safari',
+            'corporate_retreat' => 'Corporate Retreat',
         ]);
         $roomsByPropertyId = $vendorRooms->groupBy(static function ($room) {
             return (int) ($room->vendor_property_id ?? 0);
@@ -319,6 +351,14 @@
 
                 $reservationCategory = vendorPortalCanonicalCategory((string) ($notes['category_key'] ?? $notes['listing_category'] ?? ''));
                 if (is_string($reservationCategory) && $reservationCategory !== '') {
+                    if (
+                        $forcedListingCategory === 'corporate_retreat'
+                        && $reservationCategory === 'excursion'
+                        && (in_array(strtolower(trim((string) ($notes['is_corporate_retreat'] ?? '0'))), ['1', 'true', 'yes', 'on'], true)
+                            || in_array(strtolower(trim((string) ($notes['is_retreat_package'] ?? '0'))), ['1', 'true', 'yes', 'on'], true))
+                    ) {
+                        return true;
+                    }
                     return $reservationCategory === $forcedListingCategory;
                 }
 
@@ -326,6 +366,9 @@
                 $property = $propertyId > 0 ? $propertyLookupById->get($propertyId) : null;
                 if ($property) {
                     $propertyCategory = vendorPortalCanonicalCategory((string) ($property->listing_category ?? ''));
+                    if ($propertyCategory === 'excursion' && $isCorporateRetreatProperty($property)) {
+                        $propertyCategory = 'corporate_retreat';
+                    }
                     if (is_string($propertyCategory) && $propertyCategory !== '') {
                         return $propertyCategory === $forcedListingCategory;
                     }
@@ -570,7 +613,9 @@
                             @php
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
                                 $categoryHref = match ($workspacePrimaryPage) {
-                                    'listings' => '/vendor/listings/' . $categoryKey,
+                                    'listings' => $categoryKey === 'corporate_retreat'
+                                        ? '/vendor/listings/excursion?category=corporate_retreat'
+                                        : '/vendor/listings/' . $categoryKey,
                                     'availability' => '/vendor/availability?category=' . urlencode($categoryKey),
                                     'billing' => '/vendor/billing?category=' . urlencode($categoryKey),
                                     'messages' => '/vendor/messages?category=' . urlencode($categoryKey),

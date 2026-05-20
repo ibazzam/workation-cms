@@ -1093,7 +1093,8 @@ Route::post('/portal/vendor/properties/create', function (Request $request) {
     }
 
     $approvedCategories = vendorPortalApprovedCategories($vendorUser);
-    if (!in_array($canonicalListingCategory, $approvedCategories, true)) {
+    $approvalCategoryKey = $canonicalListingCategory === 'corporate_retreat' ? 'excursion' : $canonicalListingCategory;
+    if (!in_array($approvalCategoryKey, $approvedCategories, true)) {
         return back()->withErrors([
             'profile' => 'This category is not yet approved for your vendor account. Request admin category approval before creating listings.',
         ])->withInput();

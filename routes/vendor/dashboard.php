@@ -40,7 +40,10 @@ Route::get('/vendor', function () {
     $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing'], true);
     $vendorPortalCacheTtlSeconds = 900;
     $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
-    $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
+    $requestedCategoryToken = vendorPortalNormalizeCategoryToken((string) request()->query('category', session('portal_listing_category', '')));
+    $requestedCategoryScope = $requestedCategoryToken === 'corporate_retreat'
+        ? 'corporate_retreat'
+        : vendorPortalCanonicalCategory($requestedCategoryToken);
     if (!in_array($requestedCategoryScope, $categoryRouteTokens, true)) {
         $requestedCategoryScope = '';
     }
@@ -543,8 +546,8 @@ Route::get('/vendor', function () {
 
         if ($loadReservationsData && Schema::hasTable('vendor_reservations')) {
             $reservationLimit = $loadEngagementData
-                ? 220
-                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 260 : 120);
+                ? 120
+                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 90 : 60);
             $reservationsPage = max(1, (int) request()->query('reservations_page', 1));
             $reservationsOffset = ($reservationsPage - 1) * $reservationLimit;
             $reservationCountCacheKey = 'vendor:portal:reservations-count:v3:' . $vendorUserId . ':' . $vendorReservationVersion;
@@ -1605,6 +1608,26 @@ Route::get('/vendor/listings/corporate-retreat/create', function () {
         'oldWorkspaceAmenityStatus' => [],
     ]);
 })->name('vendor.listings.corporate_retreat.create');
+
+Route::get('/vendor/listings/corporate-retreat', function () {
+    if (!session()->get('portal_vendor_authenticated', false)) {
+        return redirect('/portal/vendor/login');
+    }
+
+    $vendorUserId = (int) session('portal_vendor_user_id', 0);
+    $vendorUser = $vendorUserId > 0 ? User::query()->find($vendorUserId) : null;
+    if (!vendorPortalCanManageListings($vendorUser)) {
+        return redirect('/vendor?page=profile')
+            ->with('portal_active_panel', 'profile')
+            ->withErrors(['profile' => 'Listings are locked until your vendor profile is verified by admin.']);
+    }
+
+    return redirect('/vendor?page=listings&category=corporate_retreat&listings_page=1&reservations_page=1')
+        ->with('portal_active_panel', 'listings')
+        ->with('listing_wizard_step', 1)
+        ->with('portal_listing_mode', 'manage')
+        ->with('portal_listing_category', 'corporate_retreat');
+})->name('vendor.listings.corporate-retreat');
 
 foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
     Route::get('/vendor/listings/' . $listingCategoryAlias . '/{propertyId}/edit', function (int $propertyId) use ($listingCategoryAlias) {

@@ -513,7 +513,18 @@ class VendorPropertyCompatibilityReader
     {
         $normalizedPerPage = max(1, min(200, $perPage));
         $normalizedPage = max(1, $page);
-        $total = self::countVendorListings($vendorUserId, $categoryFilter);
+        $listingReferenceQuery = self::vendorListingReferenceUnionQuery($vendorUserId, $categoryFilter);
+        if ($listingReferenceQuery === null) {
+            return [
+                'items' => collect(),
+                'total' => 0,
+                'page' => 1,
+                'per_page' => $normalizedPerPage,
+                'last_page' => 1,
+            ];
+        }
+
+        $total = (int) DB::query()->fromSub($listingReferenceQuery, 'listing_refs')->count();
 
         if ($total === 0) {
             return [
@@ -527,11 +538,55 @@ class VendorPropertyCompatibilityReader
 
         $lastPage = max(1, (int) ceil($total / $normalizedPerPage));
         $normalizedPage = min($normalizedPage, $lastPage);
-        $neededRows = $normalizedPage * $normalizedPerPage;
         $offset = ($normalizedPage - 1) * $normalizedPerPage;
+        $referenceRows = DB::query()
+            ->fromSub($listingReferenceQuery, 'listing_refs')
+            ->orderByDesc('updated_at')
+            ->orderByDesc('dedicated_row_id')
+            ->offset($offset)
+            ->limit($normalizedPerPage)
+            ->get();
 
-        $items = self::loadVendorListings($vendorUserId, $neededRows, $categoryFilter)
-            ->slice($offset, $normalizedPerPage)
+        $referencesByTable = $referenceRows
+            ->groupBy(static fn ($row): string => (string) ($row->table_name ?? ''))
+            ->map(static function ($rowsByTable): Collection {
+                return collect($rowsByTable)
+                    ->pluck('dedicated_row_id')
+                    ->map(static fn ($id): int => (int) $id)
+                    ->filter(static fn (int $id): bool => $id > 0)
+                    ->values();
+            });
+
+        $hydratedByReferenceKey = collect();
+        foreach (self::categoryTableMap() as $categoryKey => $tableName) {
+            $dedicatedIds = $referencesByTable->get($tableName, collect());
+            if (!$dedicatedIds instanceof Collection || $dedicatedIds->isEmpty()) {
+                continue;
+            }
+
+            if (!self::hasTable($tableName)) {
+                continue;
+            }
+
+            $selectCols = self::dedicatedTableSelectColumns($tableName);
+            $rows = DB::table($tableName)
+                ->whereIn('id', $dedicatedIds->all())
+                ->get($selectCols)
+                ->map(static fn ($row) => self::shapeDedicatedRow($row, $categoryKey));
+
+            foreach ($rows as $row) {
+                $referenceKey = $tableName . ':' . (int) ($row->dedicated_row_id ?? 0);
+                $hydratedByReferenceKey->put($referenceKey, $row);
+            }
+        }
+
+        $items = collect($referenceRows)
+            ->map(static function ($referenceRow) use ($hydratedByReferenceKey) {
+                $referenceKey = (string) ($referenceRow->table_name ?? '') . ':' . (int) ($referenceRow->dedicated_row_id ?? 0);
+
+                return $hydratedByReferenceKey->get($referenceKey);
+            })
+            ->filter()
             ->values();
 
         return [
@@ -541,6 +596,42 @@ class VendorPropertyCompatibilityReader
             'per_page' => $normalizedPerPage,
             'last_page' => $lastPage,
         ];
+    }
+
+    private static function vendorListingReferenceUnionQuery(int $vendorUserId, ?string $categoryFilter = null)
+    {
+        $normalizedCategoryFilter = $categoryFilter !== null
+            ? strtolower(trim((string) $categoryFilter))
+            : null;
+
+        $unionQuery = null;
+        foreach (self::categoryTableMap() as $categoryKey => $tableName) {
+            if ($normalizedCategoryFilter !== null && $normalizedCategoryFilter !== '' && $categoryKey !== $normalizedCategoryFilter) {
+                continue;
+            }
+
+            if (!self::hasTable($tableName)) {
+                continue;
+            }
+
+            $updatedAtSelect = self::hasColumn($tableName, 'updated_at')
+                ? 'updated_at'
+                : 'created_at';
+
+            $tableQuery = DB::table($tableName)
+                ->where('vendor_user_id', $vendorUserId)
+                ->selectRaw('? as table_name', [$tableName])
+                ->selectRaw('? as listing_category', [$categoryKey])
+                ->selectRaw('id as dedicated_row_id')
+                ->selectRaw('COALESCE(NULLIF(vendor_property_id, 0), id) as listing_id')
+                ->selectRaw($updatedAtSelect . ' as updated_at');
+
+            $unionQuery = $unionQuery === null
+                ? $tableQuery
+                : $unionQuery->unionAll($tableQuery);
+        }
+
+        return $unionQuery;
     }
 
     /**

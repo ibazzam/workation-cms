@@ -1106,7 +1106,16 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         ],
     ];
 
-    $categoryKey = strtolower(trim($category));
+    $requestedCategoryKey = strtolower(trim($category));
+    $categoryAliases = [
+        'corporate-retreat' => 'excursion',
+        'corporate-retreats' => 'excursion',
+        'corporate_retreat' => 'excursion',
+    ];
+    $categoryKey = $categoryAliases[$requestedCategoryKey] ?? $requestedCategoryKey;
+    $retreatModeRaw = strtolower(trim((string) $request->query('retreat_mode', '')));
+    $isCorporateRetreatMode = in_array($requestedCategoryKey, ['corporate-retreat', 'corporate-retreats', 'corporate_retreat'], true)
+        || in_array($retreatModeRaw, ['1', 'true', 'yes', 'on'], true);
     if (!array_key_exists($categoryKey, $categoryMap)) {
         abort(404);
     }
@@ -1128,6 +1137,12 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $listingCategory = strtolower(trim(str_replace('-', '_', (string) ($propertyRow->listing_category ?? ''))));
     if ($listingCategory !== '' && $listingCategory !== $dbCategoryKey) {
+        if (!($isCorporateRetreatMode && $dbCategoryKey === 'excursion' && $listingCategory === 'corporate_retreat')) {
+            abort(404);
+        }
+    }
+
+    if ($isCorporateRetreatMode && $listingCategory !== '' && !in_array($listingCategory, ['excursion', 'corporate_retreat'], true)) {
         abort(404);
     }
 
@@ -1535,8 +1550,13 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
         ));
     }
 
-    return view('category-booking', [
+    $bookingViewName = $isCorporateRetreatMode
+        ? 'corporate-retreat-detail'
+        : 'category-booking';
+
+    return view($bookingViewName, [
         'categoryKey' => $categoryKey,
+        'isCorporateRetreatMode' => $isCorporateRetreatMode,
         'categoryLabel' => (string) ($categoryMap[$categoryKey]['label'] ?? 'Category'),
         'categoryFields' => $categoryFields,
         'dateLabels' => [

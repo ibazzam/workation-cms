@@ -111,13 +111,6 @@
             </div>
 
             @if ($vendorCanManageListings && $hasSelectedCategories)
-                @php
-                    $isPackageListingConsole = in_array($forcedListingCategory, ['excursion', 'corporate_retreat'], true);
-                    $wizardStepTwoTitle = $isPackageListingConsole ? 'Define Package Inclusions' : 'Add Rooms Or Inventory';
-                    $wizardStepTwoCopy = $isPackageListingConsole
-                        ? 'Set exactly what is included in the package: room, transport, meals, and add-ons.'
-                        : 'Define sellable units, capacities, and rate context.';
-                @endphp
                 @if ($forcedListingCategory === 'corporate_retreat')
                     <article class="listing-setup-wizard" aria-label="Corporate retreat package quick start" style="margin-bottom:10px;">
                         <div class="listing-setup-wizard-head">
@@ -126,51 +119,9 @@
                                 <h3>Create a dedicated corporate retreat listing</h3>
                                 <p>Corporate retreats are stored separately from standard excursions. Choose package type in the form: getaway, retreat, or summit.</p>
                             </div>
-                            <div class="inline-actions" style="gap:8px;">
-                                <a class="btn btn-secondary" href="/vendor/listings/corporate-retreat/create">Add Corporate Retreat</a>
-                            </div>
                         </div>
                     </article>
                 @endif
-                <article class="listing-setup-wizard" aria-label="New listing setup wizard">
-                    <div class="listing-setup-wizard-head">
-                        <div>
-                            <p class="listing-setup-wizard-label">New Listing Wizard</p>
-                            <h3>Build your listing in 4 clear steps</h3>
-                            <p>Follow the same booking-engine flow every time: create listing, define package items or inventory, upload media, then submit for approval.</p>
-                        </div>
-                    </div>
-                    <div class="listing-setup-steps" role="list" aria-label="Listing creation steps">
-                        <div class="listing-setup-step" role="listitem">
-                            <span class="listing-setup-step-index">1</span>
-                            <div>
-                                <p class="listing-setup-step-title">Create Listing Basics</p>
-                                <p class="listing-setup-step-copy">Select category, pricing model, and core listing details.</p>
-                            </div>
-                        </div>
-                        <div class="listing-setup-step" role="listitem">
-                            <span class="listing-setup-step-index">2</span>
-                            <div>
-                                <p class="listing-setup-step-title">{{ $wizardStepTwoTitle }}</p>
-                                <p class="listing-setup-step-copy">{{ $wizardStepTwoCopy }}</p>
-                            </div>
-                        </div>
-                        <div class="listing-setup-step" role="listitem">
-                            <span class="listing-setup-step-index">3</span>
-                            <div>
-                                <p class="listing-setup-step-title">Upload Professional Media</p>
-                                <p class="listing-setup-step-copy">Attach photos or videos that match each listing and room.</p>
-                            </div>
-                        </div>
-                        <div class="listing-setup-step" role="listitem">
-                            <span class="listing-setup-step-index">4</span>
-                            <div>
-                                <p class="listing-setup-step-title">Submit For Approval</p>
-                                <p class="listing-setup-step-copy">Send the listing for moderation and publish when approved.</p>
-                            </div>
-                        </div>
-                    </div>
-                </article>
             @endif
         </section>
 

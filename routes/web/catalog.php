@@ -1171,7 +1171,11 @@ Route::get('/catalog/{category}', function (Request $request, string $category) 
         }
     }
 
-    return view('customer-category-catalog', [
+    $catalogViewName = $isCorporateRetreatMode
+        ? 'corporate-retreat-catalog'
+        : 'customer-category-catalog';
+
+    return view($catalogViewName, [
         'apiBase' => workationApiBase(),
         'categoryKey' => $categoryKey,
         'categoryMeta' => $categoryMap[$categoryKey],

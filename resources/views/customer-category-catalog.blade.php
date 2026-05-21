@@ -2551,6 +2551,9 @@
         $customerContinueUrl = request()->fullUrl();
         $retreatModeValue = strtolower(trim((string) request()->query('retreat_mode', '')));
         $isCorporateRetreatMode = $categoryKey === 'excursion' && in_array($retreatModeValue, ['1', 'true', 'yes', 'on'], true);
+        $catalogBaseUrl = $isCorporateRetreatMode
+            ? '/catalog/corporate-retreats'
+            : ('/catalog/' . (string) $categoryKey);
         $headerActiveCategoryKey = $isCorporateRetreatMode
             ? 'corporate-retreats'
             : str_replace('_', '-', (string) $categoryKey);
@@ -2673,7 +2676,7 @@
                 'headerNeedsSpacer' => false,
                 'headerHideOnScroll' => true,
                 'headerShowSearch' => false,
-                'headerSearchAction' => '/catalog/' . (string) $categoryKey,
+                'headerSearchAction' => $catalogBaseUrl,
                 'headerSearchValue' => (string) ($filters['q'] ?? ''),
                 'headerCategoryLinks' => $catalogCategoryLinks
                     ->map(static fn (array $item) => [
@@ -2691,7 +2694,10 @@
                 <img class="hero-banner-image" src="{{ $categoryHeroImageUrl }}" alt="{{ (string) ($categoryMeta['label'] ?? 'Category') }} banner" loading="eager" fetchpriority="high" decoding="async" onerror="this.onerror=null;this.src='{{ $categoryHeroFallback }}';">
                 <div class="hero-banner-content">
                     <div class="search-sticky-wrap">
-                        <form class="search-box" method="GET" action="/catalog/{{ $categoryKey }}" id="categorySearchForm">
+                        <form class="search-box" method="GET" action="{{ $catalogBaseUrl }}" id="categorySearchForm">
+            @if ($isCorporateRetreatMode)
+                <input type="hidden" name="retreat_mode" value="1">
+            @endif
             @if ($categoryKey === 'accommodation')
                 <div class="search-primary-row">
                     <div class="grid search-primary-grid">
@@ -2750,7 +2756,7 @@
                     </div>
                     <div class="filter-actions-inline">
                         <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
-                        <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                        <a href="{{ $catalogBaseUrl }}">Clear all filters</a>
                     </div>
                 </div>
             @elseif (!in_array($categoryKey, ['marine-transport', 'land-transport', 'sea_transport', 'liveaboard'], true))
@@ -3144,7 +3150,7 @@
                 <div class="actions">
                     <button class="filter-popup-toggle" type="button" id="openFilterPopup"><i class="fa-solid fa-sliders" aria-hidden="true"></i> Filters</button>
                     <button class="primary" type="submit">Apply Filters</button>
-                    <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                    <a href="{{ $catalogBaseUrl }}">Clear all filters</a>
                 </div>
             @endif
 
@@ -3212,7 +3218,7 @@
                         </div>
                     </div>
                     <div class="filter-popup-actions">
-                        <a href="/catalog/{{ $categoryKey }}">Clear all filters</a>
+                        <a href="{{ $catalogBaseUrl }}">Clear all filters</a>
                         <button class="primary" type="submit">Apply Filters</button>
                     </div>
                 </div>
@@ -3387,6 +3393,9 @@
                                 'accommodation' => '/property/' . $propertyId,
                                 default => '/category-booking/' . $categoryKey . '/' . $propertyId,
                             };
+                            if ($categoryKey === 'excursion' && ($isCorporateRetreatMode || $isRetreatPackageCard)) {
+                                $detailUrl .= (str_contains($detailUrl, '?') ? '&' : '?') . 'retreat_mode=1';
+                            }
                             $includesBreakfast = (bool) (
                                 $property->breakfast_included
                                 ?? $property->includes_breakfast

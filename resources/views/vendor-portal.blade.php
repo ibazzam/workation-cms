@@ -613,13 +613,11 @@
                             @php
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
                                 $categoryHref = match ($workspacePrimaryPage) {
-                                    'listings' => $categoryKey === 'corporate_retreat'
-                                        ? '/vendor/listings/excursion?category=corporate_retreat'
-                                        : '/vendor/listings/' . $categoryKey,
-                                    'availability' => '/vendor/availability?category=' . urlencode($categoryKey),
-                                    'billing' => '/vendor/billing?category=' . urlencode($categoryKey),
-                                    'messages' => '/vendor/messages?category=' . urlencode($categoryKey),
-                                    default => '/vendor/reservations?category=' . urlencode($categoryKey),
+                                    'listings' => '/vendor/listings/' . $categoryKey,
+                                    'availability' => '/vendor/availability?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
+                                    'billing' => '/vendor/billing?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
+                                    'messages' => '/vendor/messages?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
+                                    default => '/vendor/reservations?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
                                 };
                                 $categoryIsActive = $forcedListingCategory === $categoryKey;
                             @endphp

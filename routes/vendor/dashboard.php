@@ -30,14 +30,14 @@ Route::get('/vendor', function () {
 
     $isOverviewPage = in_array($activePortalPage, ['overview', 'reports'], true);
     $loadListingsHeavyData = $activePortalPage === 'listings';
-    $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'distribution', 'setup'], true);
+    $loadRoomInventoryData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability'], true);
     $loadEngagementData = in_array($activePortalPage, ['engagement', 'promotions'], true);
     $loadReservationsData = in_array($activePortalPage, ['reservations', 'operations', 'availability', 'billing'], true) || $loadEngagementData;
     $loadAvailabilityData = in_array($activePortalPage, ['availability', 'operations'], true);
     $loadPricingData = $loadEngagementData;
     $loadBillingData = $activePortalPage === 'billing';
     $loadDistributionData = in_array($activePortalPage, ['distribution', 'setup', 'overview', 'operations', 'availability'], true);
-    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'engagement', 'promotions', 'distribution', 'setup'], true);
+    $loadListingsContextData = in_array($activePortalPage, ['listings', 'reservations', 'operations', 'availability', 'billing'], true);
     $vendorPortalCacheTtlSeconds = 900;
     $categoryRouteTokens = array_merge(array_keys(vendorPortalCategoryMap()), ['sea_transport', 'land_transport']);
     $requestedCategoryScope = vendorPortalCanonicalCategory((string) request()->query('category', session('portal_listing_category', '')));
@@ -66,6 +66,18 @@ Route::get('/vendor', function () {
     $vendorMediaAssets = collect();
     $payoutStatusRows = collect();
     $vendorReservationSummaryByProperty = collect();
+    $listingsPagination = [
+        'page' => 1,
+        'per_page' => 40,
+        'last_page' => 1,
+        'total' => 0,
+    ];
+    $reservationsPagination = [
+        'page' => 1,
+        'per_page' => 120,
+        'last_page' => 1,
+        'total' => 0,
+    ];
     $vendorDistribution = [
         'accounts' => collect(),
         'room_mappings' => collect(),
@@ -185,16 +197,25 @@ Route::get('/vendor', function () {
         }
 
         if ($loadListingsContextData) {
+            $listingsLimit = $loadListingsHeavyData
+                ? 140
+                : (in_array($activePortalPage, ['reservations', 'operations', 'availability', 'billing'], true) ? 80 : 50);
+            $listingsPage = max(1, (int) request()->query('listings_page', 1));
+            $listingsPerPage = $activePortalPage === 'listings' ? 32 : min(24, $listingsLimit);
+            $listingsPaginationPayload = \App\Support\VendorPropertyCompatibilityReader::loadVendorListingsPaginated(
+                $vendorUserId,
+                $listingsPerPage,
+                $listingsPage,
+                $requestedCategoryScope !== '' ? $requestedCategoryScope : null
+            );
             // Load vendor listings from dedicated category tables only for pages that render listing-level data.
-            $vendorProperties = collect(Cache::remember(
-                'vendor:portal:listings:v4:' . $vendorUserId . ':' . ($requestedCategoryScope !== '' ? $requestedCategoryScope : 'all'),
-                now()->addSeconds($vendorPortalCacheTtlSeconds),
-                static function () use ($vendorUserId, $requestedCategoryScope) {
-                    return \App\Support\VendorPropertyCompatibilityReader::loadVendorListings($vendorUserId, 200, $requestedCategoryScope !== '' ? $requestedCategoryScope : null)
-                        ->values()
-                        ->all();
-                }
-            ));
+            $vendorProperties = collect($listingsPaginationPayload['items'] ?? collect())->values();
+            $listingsPagination = [
+                'page' => (int) ($listingsPaginationPayload['page'] ?? 1),
+                'per_page' => (int) ($listingsPaginationPayload['per_page'] ?? $listingsPerPage),
+                'last_page' => (int) ($listingsPaginationPayload['last_page'] ?? 1),
+                'total' => (int) ($listingsPaginationPayload['total'] ?? $vendorProperties->count()),
+            ];
         }
 
         $accommodationPropertyIds = $vendorProperties
@@ -505,7 +526,7 @@ Route::get('/vendor', function () {
         }
 
         if ($loadAvailabilityData && Schema::hasTable('vendor_availability_slots')) {
-            $availabilityLimit = $activePortalPage === 'availability' ? 365 : 60;
+            $availabilityLimit = $activePortalPage === 'availability' ? 180 : 45;
             $vendorAvailability = collect(Cache::remember(
                 'vendor:portal:availability:v2:' . $vendorUserId . ':' . $availabilityLimit,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
@@ -522,12 +543,24 @@ Route::get('/vendor', function () {
 
         if ($loadReservationsData && Schema::hasTable('vendor_reservations')) {
             $reservationLimit = $loadEngagementData
-                ? 300
-                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 600 : 120);
-            $vendorReservations = collect(Cache::remember(
-                'vendor:portal:reservations:v2:' . $vendorUserId . ':' . $reservationLimit . ':' . $vendorReservationVersion,
+                ? 220
+                : (($activePortalPage === 'billing' || $activePortalPage === 'reservations' || $activePortalPage === 'operations') ? 260 : 120);
+            $reservationsPage = max(1, (int) request()->query('reservations_page', 1));
+            $reservationsOffset = ($reservationsPage - 1) * $reservationLimit;
+            $reservationCountCacheKey = 'vendor:portal:reservations-count:v3:' . $vendorUserId . ':' . $vendorReservationVersion;
+            $totalReservations = (int) Cache::remember(
+                $reservationCountCacheKey,
                 now()->addSeconds($vendorPortalCacheTtlSeconds),
-                static function () use ($vendorUserId, $reservationLimit) {
+                static function () use ($vendorUserId) {
+                    return (int) DB::table('vendor_reservations')
+                        ->where('vendor_user_id', $vendorUserId)
+                        ->count();
+                }
+            );
+            $vendorReservations = collect(Cache::remember(
+                'vendor:portal:reservations:v3:' . $vendorUserId . ':' . $reservationLimit . ':' . $reservationsPage . ':' . $vendorReservationVersion,
+                now()->addSeconds($vendorPortalCacheTtlSeconds),
+                static function () use ($vendorUserId, $reservationLimit, $reservationsOffset) {
                     $reservationQuery = DB::table('vendor_reservations')
                         ->where(static function ($ownershipQuery) use ($vendorUserId) {
                             $ownershipQuery->where('vendor_user_id', $vendorUserId);
@@ -548,6 +581,7 @@ Route::get('/vendor', function () {
                         })
                         ->orderByDesc('start_at')
                         ->orderByDesc('id')
+                        ->offset($reservationsOffset)
                         ->limit($reservationLimit);
 
                     return $reservationQuery
@@ -555,6 +589,12 @@ Route::get('/vendor', function () {
                         ->all();
                 }
             ));
+            $reservationsPagination = [
+                'page' => $reservationsPage,
+                'per_page' => $reservationLimit,
+                'last_page' => max(1, (int) ceil(max(1, $totalReservations) / max(1, $reservationLimit))),
+                'total' => $totalReservations,
+            ];
 
             $latestRefundCaseByReservation = collect();
             $reservationIds = $vendorReservations
@@ -1190,6 +1230,8 @@ Route::get('/vendor', function () {
         'vendorServices' => $vendorServices,
         'vendorAvailability' => $vendorAvailability,
         'vendorReservations' => $vendorReservations,
+        'listingsPagination' => $listingsPagination,
+        'reservationsPagination' => $reservationsPagination,
         'vendorPricingRules' => $vendorPricingRules,
         'vendorBilling' => $vendorBilling,
         'vendorPayoutAccounts' => $vendorPayoutAccounts,

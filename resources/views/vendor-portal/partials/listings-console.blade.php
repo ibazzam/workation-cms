@@ -39,6 +39,12 @@
                 }
 
                 $categoryQuery = $forcedListingCategory !== '' ? ('?category=' . urlencode($forcedListingCategory)) : '';
+                $listingsPager = is_array($listingsPagination ?? null) ? $listingsPagination : [
+                    'page' => 1,
+                    'per_page' => max(1, (int) $vendorProperties->count()),
+                    'last_page' => 1,
+                    'total' => (int) $vendorProperties->count(),
+                ];
             @endphp
             <div class="ops-header">
                 <p class="ops-title">{{ $consoleTitleLabel }}</p>
@@ -1268,5 +1274,49 @@
                         </article>
                     @endforeach
                 </div>
+                @if (($listingsPager['last_page'] ?? 1) > 1)
+                    @php
+                        $listingsPage = max(1, (int) ($listingsPager['page'] ?? 1));
+                        $listingsLastPage = max(1, (int) ($listingsPager['last_page'] ?? 1));
+                        $listingsPrevPage = max(1, $listingsPage - 1);
+                        $listingsNextPage = min($listingsLastPage, $listingsPage + 1);
+                        $listingsPrevHref = request()->fullUrlWithQuery(['listings_page' => $listingsPrevPage]);
+                        $listingsNextHref = request()->fullUrlWithQuery(['listings_page' => $listingsNextPage]);
+                        $listingsVisiblePages = collect([1, $listingsLastPage, $listingsPage - 1, $listingsPage, $listingsPage + 1])
+                            ->filter(static fn ($pageNum) => is_int($pageNum) && $pageNum >= 1 && $pageNum <= $listingsLastPage)
+                            ->unique()
+                            ->sort()
+                            ->values();
+                    @endphp
+                    <div class="panel-links" aria-label="Listings pagination" style="margin-top:10px; justify-content:space-between; align-items:center;">
+                        <span class="small">Page {{ $listingsPage }} of {{ $listingsLastPage }} | Total {{ (int) ($listingsPager['total'] ?? 0) }} listings</span>
+                        <div style="display:flex; gap:8px;">
+                            @if ($listingsPage > 1)
+                                <a href="{{ $listingsPrevHref }}">Previous</a>
+                            @else
+                                <span class="small" style="opacity:.55;">Previous</span>
+                            @endif
+                            @if ($listingsPage < $listingsLastPage)
+                                <a href="{{ $listingsNextHref }}">Next</a>
+                            @else
+                                <span class="small" style="opacity:.55;">Next</span>
+                            @endif
+                        </div>
+                    </div>
+                    <div class="panel-links" aria-label="Listings page numbers" style="margin-top:6px; gap:6px; align-items:center;">
+                        @php $listingsPreviousRenderedPage = 0; @endphp
+                        @foreach ($listingsVisiblePages as $listingsPageNum)
+                            @if ($listingsPreviousRenderedPage > 0 && ($listingsPageNum - $listingsPreviousRenderedPage) > 1)
+                                <span class="small" style="opacity:.65;">...</span>
+                            @endif
+                            @if ($listingsPageNum === $listingsPage)
+                                <span class="ops-chip" aria-current="page">{{ $listingsPageNum }}</span>
+                            @else
+                                <a href="{{ request()->fullUrlWithQuery(['listings_page' => $listingsPageNum]) }}">{{ $listingsPageNum }}</a>
+                            @endif
+                            @php $listingsPreviousRenderedPage = $listingsPageNum; @endphp
+                        @endforeach
+                    </div>
+                @endif
             </div>
         </section>

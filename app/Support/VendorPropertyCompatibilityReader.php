@@ -485,6 +485,64 @@ class VendorPropertyCompatibilityReader
         return $all->sortByDesc('updated_at')->take($limit)->values();
     }
 
+    public static function countVendorListings(int $vendorUserId, ?string $categoryFilter = null): int
+    {
+        $normalizedCategoryFilter = $categoryFilter !== null
+            ? strtolower(trim((string) $categoryFilter))
+            : null;
+
+        $total = 0;
+        foreach (self::categoryTableMap() as $categoryKey => $tableName) {
+            if ($normalizedCategoryFilter !== null && $normalizedCategoryFilter !== '' && $categoryKey !== $normalizedCategoryFilter) {
+                continue;
+            }
+
+            if (!self::hasTable($tableName)) {
+                continue;
+            }
+
+            $total += (int) DB::table($tableName)
+                ->where('vendor_user_id', $vendorUserId)
+                ->count();
+        }
+
+        return max(0, $total);
+    }
+
+    public static function loadVendorListingsPaginated(int $vendorUserId, int $perPage = 40, int $page = 1, ?string $categoryFilter = null): array
+    {
+        $normalizedPerPage = max(1, min(200, $perPage));
+        $normalizedPage = max(1, $page);
+        $total = self::countVendorListings($vendorUserId, $categoryFilter);
+
+        if ($total === 0) {
+            return [
+                'items' => collect(),
+                'total' => 0,
+                'page' => 1,
+                'per_page' => $normalizedPerPage,
+                'last_page' => 1,
+            ];
+        }
+
+        $lastPage = max(1, (int) ceil($total / $normalizedPerPage));
+        $normalizedPage = min($normalizedPage, $lastPage);
+        $neededRows = $normalizedPage * $normalizedPerPage;
+        $offset = ($normalizedPage - 1) * $normalizedPerPage;
+
+        $items = self::loadVendorListings($vendorUserId, $neededRows, $categoryFilter)
+            ->slice($offset, $normalizedPerPage)
+            ->values();
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $normalizedPage,
+            'per_page' => $normalizedPerPage,
+            'last_page' => $lastPage,
+        ];
+    }
+
     /**
      * Query the pending moderation listings from all dedicated tables.
      * Returns a collection shaped like the legacy vendor_properties join result.

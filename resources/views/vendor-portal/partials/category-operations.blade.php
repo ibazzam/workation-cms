@@ -8,6 +8,12 @@
     }
     $showAvailabilityPanel = $operationsViewMode === 'availability';
     $showReservationsPanel = $operationsViewMode === 'reservations';
+    $reservationsPager = is_array($reservationsPagination ?? null) ? $reservationsPagination : [
+        'page' => 1,
+        'per_page' => max(1, (int) collect($vendorReservations ?? [])->count()),
+        'last_page' => 1,
+        'total' => (int) collect($vendorReservations ?? [])->count(),
+    ];
     $distributionSummary = is_array($distributionSummary ?? null) ? $distributionSummary : [];
     $distributionEvents = collect($distributionEvents ?? []);
     $vendorOperationalHealth = is_array($vendorOperationalHealth ?? null) ? $vendorOperationalHealth : [];
@@ -56,12 +62,56 @@
             @if ($showReservationsPanel)
             <div class="panel-links" aria-label="Category operations actions">
                 @if ($showReservationsPanel)
-                    <a class="{{ $reservationScope === 'active' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active') : '?scope=active') }}">Active</a>
-                    <a class="{{ $reservationScope === 'pending' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending') : '?scope=pending') }}">Pending</a>
-                    <a class="{{ $reservationScope === 'history' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history') : '?scope=history') }}">History</a>
-                    <a class="{{ $reservationScope === 'all' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=all') : '?scope=all') }}">All</a>
+                    <a class="{{ $reservationScope === 'active' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=active&reservations_page=1') : '?scope=active&reservations_page=1') }}">Active</a>
+                    <a class="{{ $reservationScope === 'pending' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=pending&reservations_page=1') : '?scope=pending&reservations_page=1') }}">Pending</a>
+                    <a class="{{ $reservationScope === 'history' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=history&reservations_page=1') : '?scope=history&reservations_page=1') }}">History</a>
+                    <a class="{{ $reservationScope === 'all' ? 'is-active' : '' }}" href="{{ '/vendor/reservations' . ($forcedListingCategory !== '' ? ('?category=' . urlencode((string) $forcedListingCategory) . '&scope=all&reservations_page=1') : '?scope=all&reservations_page=1') }}">All</a>
                 @endif
             </div>
+            @if (($reservationsPager['last_page'] ?? 1) > 1)
+                @php
+                    $reservationsPage = max(1, (int) ($reservationsPager['page'] ?? 1));
+                    $reservationsLastPage = max(1, (int) ($reservationsPager['last_page'] ?? 1));
+                    $reservationsPrevPage = max(1, $reservationsPage - 1);
+                    $reservationsNextPage = min($reservationsLastPage, $reservationsPage + 1);
+                    $reservationsPrevHref = request()->fullUrlWithQuery(['reservations_page' => $reservationsPrevPage]);
+                    $reservationsNextHref = request()->fullUrlWithQuery(['reservations_page' => $reservationsNextPage]);
+                    $reservationsVisiblePages = collect([1, $reservationsLastPage, $reservationsPage - 1, $reservationsPage, $reservationsPage + 1])
+                        ->filter(static fn ($pageNum) => is_int($pageNum) && $pageNum >= 1 && $pageNum <= $reservationsLastPage)
+                        ->unique()
+                        ->sort()
+                        ->values();
+                @endphp
+                <div class="panel-links" aria-label="Reservations pagination" style="justify-content:space-between; align-items:center; margin-top:8px;">
+                    <span class="small">Page {{ $reservationsPage }} of {{ $reservationsLastPage }} | Total {{ (int) ($reservationsPager['total'] ?? 0) }} reservations</span>
+                    <div style="display:flex; gap:8px;">
+                        @if ($reservationsPage > 1)
+                            <a href="{{ $reservationsPrevHref }}">Previous</a>
+                        @else
+                            <span class="small" style="opacity:.55;">Previous</span>
+                        @endif
+                        @if ($reservationsPage < $reservationsLastPage)
+                            <a href="{{ $reservationsNextHref }}">Next</a>
+                        @else
+                            <span class="small" style="opacity:.55;">Next</span>
+                        @endif
+                    </div>
+                </div>
+                <div class="panel-links" aria-label="Reservations page numbers" style="margin-top:6px; gap:6px; align-items:center;">
+                    @php $reservationsPreviousRenderedPage = 0; @endphp
+                    @foreach ($reservationsVisiblePages as $reservationsPageNum)
+                        @if ($reservationsPreviousRenderedPage > 0 && ($reservationsPageNum - $reservationsPreviousRenderedPage) > 1)
+                            <span class="small" style="opacity:.65;">...</span>
+                        @endif
+                        @if ($reservationsPageNum === $reservationsPage)
+                            <span class="ops-chip" aria-current="page">{{ $reservationsPageNum }}</span>
+                        @else
+                            <a href="{{ request()->fullUrlWithQuery(['reservations_page' => $reservationsPageNum]) }}">{{ $reservationsPageNum }}</a>
+                        @endif
+                        @php $reservationsPreviousRenderedPage = $reservationsPageNum; @endphp
+                    @endforeach
+                </div>
+            @endif
             @endif
             @php
                 $propertyById = $vendorProperties->keyBy(static fn ($property) => (int) ($property->id ?? 0));

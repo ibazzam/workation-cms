@@ -1444,6 +1444,19 @@ if (!function_exists('vendorPortalBuildPropertyDetails')) {
             if ($listingCategory === 'corporate_retreat') {
                 $details['is_corporate_retreat'] = true;
                 $details['is_retreat_package'] = true;
+                $details['total_package_price'] = isset($validated['total_package_price']) && $validated['total_package_price'] !== ''
+                    ? max(0, (float) $validated['total_package_price'])
+                    : null;
+                $details['allow_specific_date_booking'] = in_array(strtolower(trim((string) ($validated['allow_specific_date_booking'] ?? '1'))), ['1', 'yes', 'true', 'on'], true);
+                $details['package_included_pax'] = isset($validated['package_included_pax']) && $validated['package_included_pax'] !== ''
+                    ? max(1, (int) $validated['package_included_pax'])
+                    : null;
+                $details['extra_person_price'] = isset($validated['extra_person_price']) && $validated['extra_person_price'] !== ''
+                    ? max(0, (float) $validated['extra_person_price'])
+                    : null;
+                $details['extra_person_policy'] = trim((string) ($validated['extra_person_policy'] ?? ''));
+                $details['included_services'] = vendorPortalNormalizedStringList($validated['included_services'] ?? []);
+                $details['program_customization_mode'] = trim((string) ($validated['program_customization_mode'] ?? 'customer_defined_vendor_arranged'));
             }
         }
 

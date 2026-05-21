@@ -112,13 +112,13 @@
 
             @if ($vendorCanManageListings && $hasSelectedCategories)
                 @php
-                    $isExcursionListingConsole = $forcedListingCategory === 'excursion';
-                    $wizardStepTwoTitle = $isExcursionListingConsole ? 'Define Package Inclusions' : 'Add Rooms Or Inventory';
-                    $wizardStepTwoCopy = $isExcursionListingConsole
+                    $isPackageListingConsole = in_array($forcedListingCategory, ['excursion', 'corporate_retreat'], true);
+                    $wizardStepTwoTitle = $isPackageListingConsole ? 'Define Package Inclusions' : 'Add Rooms Or Inventory';
+                    $wizardStepTwoCopy = $isPackageListingConsole
                         ? 'Set exactly what is included in the package: room, transport, meals, and add-ons.'
                         : 'Define sellable units, capacities, and rate context.';
                 @endphp
-                @if ($isExcursionListingConsole)
+                @if ($forcedListingCategory === 'corporate_retreat')
                     <article class="listing-setup-wizard" aria-label="Corporate retreat package quick start" style="margin-bottom:10px;">
                         <div class="listing-setup-wizard-head">
                             <div>
@@ -356,14 +356,6 @@
                             $categoryProperties = $propertiesByCategory->get($categoryKey, collect());
                             if ($categoryKey === 'excursion') {
                                 $categoryProperties = $categoryProperties->reject(static fn ($property) => $retreatDetector($property))->values();
-                            } elseif ($categoryKey === 'corporate_retreat') {
-                                $legacyRetreatRows = $propertiesByCategory
-                                    ->get('excursion', collect())
-                                    ->filter(static fn ($property) => $retreatDetector($property));
-                                $categoryProperties = $categoryProperties
-                                    ->merge($legacyRetreatRows)
-                                    ->unique(static fn ($property) => (int) ($property->id ?? 0))
-                                    ->values();
                             }
                             $categoryLabel = $listingCategoryLabelMap[$categoryKey] ?? strtoupper(str_replace('_', ' ', $categoryKey));
                         @endphp

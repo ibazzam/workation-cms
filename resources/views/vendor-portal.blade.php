@@ -605,7 +605,7 @@
                     <div class="workspace-category-tabs" role="tablist" aria-label="Vendor category filter">
                         <a
                             class="workspace-category-tab {{ $forcedListingCategory === '' ? 'is-active' : '' }}"
-                            href="{{ match ($workspacePrimaryPage) { 'listings' => '/vendor/listings', 'availability' => '/vendor/availability', 'billing' => '/vendor/billing', 'messages' => '/vendor/messages', default => '/vendor/reservations' } }}"
+                            href="{{ match ($workspacePrimaryPage) { 'listings' => '/vendor/listings?listings_page=1&reservations_page=1', 'availability' => '/vendor/availability?listings_page=1&reservations_page=1', 'billing' => '/vendor/billing?listings_page=1&reservations_page=1', 'messages' => '/vendor/messages?listings_page=1&reservations_page=1', default => '/vendor/reservations?listings_page=1&reservations_page=1' } }}"
                             role="tab"
                             aria-selected="{{ $forcedListingCategory === '' ? 'true' : 'false' }}"
                         >All</a>
@@ -613,7 +613,9 @@
                             @php
                                 $categoryLabel = (string) ($listingCategoryLabelMap[$categoryKey] ?? ucwords(str_replace('_', ' ', $categoryKey)));
                                 $categoryHref = match ($workspacePrimaryPage) {
-                                    'listings' => '/vendor/listings/' . $categoryKey,
+                                    'listings' => $categoryKey === 'corporate_retreat'
+                                        ? '/vendor/listings/corporate-retreat?listings_page=1&reservations_page=1'
+                                        : '/vendor/listings/' . $categoryKey . '?listings_page=1&reservations_page=1',
                                     'availability' => '/vendor/availability?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
                                     'billing' => '/vendor/billing?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',
                                     'messages' => '/vendor/messages?category=' . urlencode($categoryKey) . '&reservations_page=1&listings_page=1',

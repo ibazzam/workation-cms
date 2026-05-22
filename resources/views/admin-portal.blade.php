@@ -2902,6 +2902,11 @@
                                     $listingRouteId = (int) ($listing->dedicated_row_id ?? 0) > 0
                                         ? (int) ($listing->dedicated_row_id ?? 0)
                                         : (int) ($listing->id ?? 0);
+                                    $listingCategoryToken = strtolower(trim((string) ($listing->listing_category ?: '')));
+                                    $isCorporateRetreatListing = in_array($listingCategoryToken, ['corporate_retreat', 'corporate-retreat', 'corporate-retreats'], true);
+                                    $previewHref = $isCorporateRetreatListing
+                                        ? ('/category-booking/corporate-retreats/' . ((int) ($listing->id ?? 0)) . '?preview=admin&retreat_mode=1')
+                                        : ('/portal/admin/listings/' . $listingRouteId . '/preview?category=' . urlencode((string) ($listing->listing_category ?: '')) . '&row_id=' . $listingRouteId);
                                 @endphp
                                 <div class="registration-row">
                                     <div class="registration-head">
@@ -2914,7 +2919,7 @@
                                         <div class="small">Submitted: {{ \Illuminate\Support\Carbon::parse($listing->listing_submitted_for_review_at)->format('Y-m-d H:i') }}</div>
                                     @endif
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listingRouteId }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}&row_id={{ $listingRouteId }}" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
+                                        <a href="{{ $previewHref }}" target="_blank" rel="noopener">Open Pre-Approval Preview</a>
                                     </div>
                                     <div class="registration-actions">
                                         <form method="POST" action="/portal/admin/listings/{{ $listingRouteId }}/approve">
@@ -2951,6 +2956,11 @@
                                     $listingRouteId = (int) ($listing->dedicated_row_id ?? 0) > 0
                                         ? (int) ($listing->dedicated_row_id ?? 0)
                                         : (int) ($listing->id ?? 0);
+                                    $listingCategoryToken = strtolower(trim((string) ($listing->listing_category ?: '')));
+                                    $isCorporateRetreatListing = in_array($listingCategoryToken, ['corporate_retreat', 'corporate-retreat', 'corporate-retreats'], true);
+                                    $previewHref = $isCorporateRetreatListing
+                                        ? ('/category-booking/corporate-retreats/' . ((int) ($listing->id ?? 0)) . '?preview=admin&retreat_mode=1')
+                                        : ('/portal/admin/listings/' . $listingRouteId . '/preview?category=' . urlencode((string) ($listing->listing_category ?: '')) . '&row_id=' . $listingRouteId);
                                 @endphp
                                 <div class="registration-row">
                                     <div class="registration-head">
@@ -2967,7 +2977,7 @@
                                     </div>
                                     <div class="small">Category: {{ ucwords(str_replace('_', ' ', (string) ($listing->listing_category ?: 'general'))) }}</div>
                                     <div class="small" style="margin-top:4px;">
-                                        <a href="/portal/admin/listings/{{ $listingRouteId }}/preview?category={{ urlencode((string) ($listing->listing_category ?: '')) }}&row_id={{ $listingRouteId }}" target="_blank" rel="noopener">Open Listing Preview</a>
+                                        <a href="{{ $previewHref }}" target="_blank" rel="noopener">Open Listing Preview</a>
                                     </div>
                                     @if (strtolower((string) ($listing->listing_moderation_status ?? '')) === 'approved')
                                         <div class="registration-actions" style="margin-top:8px;">

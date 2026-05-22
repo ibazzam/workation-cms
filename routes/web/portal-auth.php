@@ -2879,10 +2879,15 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
 
     $bookingSlugMap = [
         'land_transport' => 'land-transport',
+        'corporate_retreat' => 'corporate-retreats',
     ];
     $bookingCategory = $bookingSlugMap[$resolvedCategory] ?? $resolvedCategory;
+    $query = ['preview' => 'admin'];
+    if ($resolvedCategory === 'corporate_retreat') {
+        $query['retreat_mode'] = '1';
+    }
 
-    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?preview=admin');
+    return redirect('/category-booking/' . rawurlencode($bookingCategory) . '/' . $listingId . '?' . http_build_query($query));
 });
 
 Route::post('/portal/admin/listings/{listing}/reject', function (Request $request, int $listing) {

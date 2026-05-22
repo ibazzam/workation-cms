@@ -520,7 +520,7 @@
                                                                         <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit#route-fares-section">Route &amp; Fares</a>
                                                                         <button class="btn btn-secondary" type="button" data-toggle-sea-route-table="{{ $propertyId }}">Route/Fare Table</button>
                                                                     @endif
-                                                                    <button class="btn btn-secondary" type="button" data-toggle-property-media="{{ $propertyId }}">Manage Media</button>
+                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit#listing-media-gallery">Manage Media</a>
                                                                     @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true) && !$isCorporateRetreatPackage)
                                                                         <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                     @endif

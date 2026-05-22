@@ -338,6 +338,9 @@
                                                     $editCategoryRaw = strtolower((string) ($property->listing_category ?? $categoryKey));
                                                     $editCategory = preg_replace('/[^a-z0-9]+/', '_', $editCategoryRaw) ?? $editCategoryRaw;
                                                     $editCategory = trim((string) preg_replace('/_+/', '_', $editCategory), '_');
+                                                    $editCategoryRoute = $editCategory === 'corporate_retreat'
+                                                        ? 'corporate-retreat'
+                                                        : $editCategory;
                                                     $propertyAmenityValues = [];
                                                     $propertyFeatureValues = [];
                                                     if (isset($propertyDetails['property_amenities']) && is_array($propertyDetails['property_amenities'])) {
@@ -423,9 +426,20 @@
                                                 <tr data-property-row="{{ $propertyId }}" data-listing-category="{{ $categoryKey }}">
                                                     <td class="listing-cell-main">
                                                         @php
-                                                            $primaryPropertyMedia = $propertyMediaItems->firstWhere('is_primary', true);
+                                                            $thumbnailMediaCandidates = collect($propertyMediaItems)->filter(static function ($media) use ($categoryKey): bool {
+                                                                $mediaEntityType = strtolower(trim((string) ($media->entity_type ?? 'property')));
+                                                                $allowedEntityTypes = ['property'];
+                                                                if ($categoryKey === 'sea_transport') {
+                                                                    $allowedEntityTypes = ['sea_transport', 'transport', 'property'];
+                                                                } elseif ($categoryKey === 'land_transport') {
+                                                                    $allowedEntityTypes = ['transport', 'property'];
+                                                                }
+
+                                                                return in_array($mediaEntityType, $allowedEntityTypes, true);
+                                                            });
+                                                            $primaryPropertyMedia = $thumbnailMediaCandidates->firstWhere('is_primary', true);
                                                             if (!$primaryPropertyMedia) {
-                                                                $primaryPropertyMedia = $propertyMediaItems->first();
+                                                                $primaryPropertyMedia = $thumbnailMediaCandidates->first();
                                                             }
                                                             $listingThumbUrl = '';
                                                             if ($primaryPropertyMedia) {
@@ -514,13 +528,13 @@
                                                         <div class="listing-cell-actions">
                                                             <div class="listing-actions-compact">
                                                                 <div class="listing-actions-row">
-                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit">Edit</a>
+                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategoryRoute }}/{{ $propertyId }}/edit">Edit</a>
                                                                     @if ($categoryKey === 'sea_transport')
-                                                                        <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit#vessel-details-section">Vessel Details</a>
-                                                                        <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit#route-fares-section">Route &amp; Fares</a>
+                                                                        <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategoryRoute }}/{{ $propertyId }}/edit#vessel-details-section">Vessel Details</a>
+                                                                        <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategoryRoute }}/{{ $propertyId }}/edit#route-fares-section">Route &amp; Fares</a>
                                                                         <button class="btn btn-secondary" type="button" data-toggle-sea-route-table="{{ $propertyId }}">Route/Fare Table</button>
                                                                     @endif
-                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategory }}/{{ $propertyId }}/edit#listing-media-gallery">Manage Media</a>
+                                                                    <a class="btn btn-secondary" href="/vendor/listings/{{ $editCategoryRoute }}/{{ $propertyId }}/edit#listing-media-gallery">Manage Media</a>
                                                                     @if (in_array($categoryKey, ['accommodation', 'liveaboard'], true) && !$isCorporateRetreatPackage)
                                                                         <button class="btn btn-secondary" type="button" data-open-room-form data-property-id="{{ $propertyId }}">Add Room</button>
                                                                     @endif

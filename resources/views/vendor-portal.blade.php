@@ -307,12 +307,10 @@
         });
         $propertyMediaByPropertyId = $vendorProperties->mapWithKeys(static function ($property) use ($propertyMediaByEntityId) {
             $canonicalId = (int) ($property->id ?? 0);
-            $dedicatedId = (int) ($property->dedicated_row_id ?? 0);
-
+            // Media uploads are validated against canonical vendor_property_id, so
+            // binding by dedicated_row_id can leak thumbnails across categories when
+            // dedicated table IDs overlap.
             $mediaItems = collect($propertyMediaByEntityId->get($canonicalId, collect()));
-            if ($mediaItems->isEmpty() && $dedicatedId > 0) {
-                $mediaItems = collect($propertyMediaByEntityId->get($dedicatedId, collect()));
-            }
 
             return [$canonicalId => $mediaItems];
         });

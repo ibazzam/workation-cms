@@ -1391,6 +1391,7 @@ $vendorListingCategoryAliases = [
     'land_transport',
     'water_sports',
     'excursion',
+    'corporate_retreat',
     'remote_workspace',
     'conference_room',
     'resort_day_visit',

@@ -2867,6 +2867,24 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     }
 
     $resolvedCategory = vendorPortalCanonicalCategory((string) ($listingRow->listing_category ?? '')) ?? $categoryHint;
+    $listingDetails = json_decode((string) ($listingRow->listing_details ?? $listingRow->details ?? ''), true);
+    if (!is_array($listingDetails)) {
+        $listingDetails = [];
+    }
+    $isRetreatFlagEnabled = static function ($value): bool {
+        $normalized = strtolower(trim((string) $value));
+        return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+    };
+    if ($resolvedCategory === 'excursion') {
+        $rowRetreatFlag = $isRetreatFlagEnabled($listingRow->is_corporate_retreat ?? '0')
+            || $isRetreatFlagEnabled($listingRow->is_retreat_package ?? '0');
+        $detailsRetreatFlag = $isRetreatFlagEnabled($listingDetails['is_corporate_retreat'] ?? '0')
+            || $isRetreatFlagEnabled($listingDetails['is_retreat_package'] ?? '0')
+            || strtolower(trim((string) ($listingDetails['listing_category'] ?? ''))) === 'corporate_retreat';
+        if ($rowRetreatFlag || $detailsRetreatFlag) {
+            $resolvedCategory = 'corporate_retreat';
+        }
+    }
     $listingId = (int) ($listingRow->id ?? $listing);
 
     if ($resolvedCategory === 'accommodation') {

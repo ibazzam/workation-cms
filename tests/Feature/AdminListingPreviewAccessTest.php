@@ -34,6 +34,31 @@ class AdminListingPreviewAccessTest extends TestCase
         DB::table($table)->insert($payload);
     }
 
+    private function insertPendingRetreatListingInExcursion(int $vendorPropertyId): void
+    {
+        $table = 'vendor_excursion_listings';
+        $columns = Schema::getColumnListing($table);
+
+        $payload = [
+            'vendor_property_id' => $vendorPropertyId,
+            'vendor_user_id' => 1,
+            'name' => 'Corporate Retreat Preview Listing',
+            'status' => 'pending_review',
+            'listing_moderation_status' => 'pending_review',
+            'location' => 'Maldives',
+            'description' => 'Corporate retreat listing saved in excursion table.',
+            'details' => json_encode([
+                'is_corporate_retreat' => true,
+                'listing_category' => 'corporate_retreat',
+            ], JSON_THROW_ON_ERROR),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        $payload = array_intersect_key($payload, array_flip($columns));
+        DB::table($table)->insert($payload);
+    }
+
     public function test_listing_preview_route_is_forbidden_without_admin_moderation_role(): void
     {
         $this->insertPendingAccommodationListing(9201);
@@ -68,5 +93,24 @@ class AdminListingPreviewAccessTest extends TestCase
             ->get('/property/9202?preview=admin')
             ->assertOk()
             ->assertSeeText('Admin moderation preview mode');
+    }
+
+    public function test_admin_preview_redirects_retreat_flagged_excursion_to_corporate_retreat_mode(): void
+    {
+        $adminCare = User::factory()->create([
+            'portal_role' => 'ADMIN_CARE',
+            'portal_enabled' => true,
+        ]);
+
+        $this->insertPendingRetreatListingInExcursion(9301);
+
+        $this->withSession([
+            'portal_admin_authenticated' => true,
+            'portal_admin_user_id' => $adminCare->id,
+            'portal_admin_role' => 'ADMIN_CARE',
+        ])
+            ->get('/portal/admin/listings/9301/preview?category=excursion')
+            ->assertStatus(302)
+            ->assertRedirect('/category-booking/corporate-retreats/9301?preview=admin&retreat_mode=1');
     }
 }

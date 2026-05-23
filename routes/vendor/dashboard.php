@@ -1442,7 +1442,10 @@ foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
         }
 
         $approvedCategories = vendorPortalApprovedCategories($vendorUser);
-        if (!in_array($listingCategoryAlias, $approvedCategories, true)) {
+        $approvalCategoryKey = $listingCategoryAlias === 'corporate_retreat'
+            ? 'excursion'
+            : $listingCategoryAlias;
+        if (!in_array($approvalCategoryKey, $approvedCategories, true)) {
             return redirect('/vendor/listings/' . $listingCategoryAlias)
                 ->withErrors(['profile' => 'This listing category is locked. Contact admin to unlock ' . $listingCategoryAlias . ' for your account.']);
         }

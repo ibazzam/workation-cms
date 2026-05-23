@@ -2894,6 +2894,32 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
     }
     $listingId = (int) ($listingRow->id ?? $listing);
 
+    if ($resolvedCategory === 'excursion' && $listingId > 0) {
+        $canonicalRow = \App\Support\VendorPropertyCompatibilityReader::loadPropertyById($listingId);
+        if ($canonicalRow) {
+            $canonicalDetails = json_decode((string) ($canonicalRow->listing_details ?? $canonicalRow->details ?? ''), true);
+            if (!is_array($canonicalDetails)) {
+                $canonicalDetails = [];
+            }
+            $canonicalMode = strtolower(trim(str_replace('-', '_', (string) ($canonicalDetails['program_customization_mode'] ?? ''))));
+            $canonicalListingCategory = strtolower(trim(str_replace('-', '_', (string) ($canonicalDetails['listing_category'] ?? ($canonicalRow->listing_category ?? '')))));
+            $canonicalRetreatShape = array_key_exists('total_package_price', $canonicalDetails)
+                || array_key_exists('package_included_pax', $canonicalDetails)
+                || array_key_exists('included_services', $canonicalDetails);
+            $canonicalRetreatFlag = $isRetreatFlagEnabled($canonicalRow->is_corporate_retreat ?? '0')
+                || $isRetreatFlagEnabled($canonicalRow->is_retreat_package ?? '0')
+                || $isRetreatFlagEnabled($canonicalDetails['is_corporate_retreat'] ?? '0')
+                || $isRetreatFlagEnabled($canonicalDetails['is_retreat_package'] ?? '0')
+                || $canonicalListingCategory === 'corporate_retreat'
+                || $canonicalMode === 'corporate_retreat'
+                || $canonicalRetreatShape;
+
+            if ($canonicalRetreatFlag) {
+                $resolvedCategory = 'corporate_retreat';
+            }
+        }
+    }
+
     if ($resolvedCategory === 'accommodation') {
         return redirect('/property/' . $listingId . '?preview=admin');
     }

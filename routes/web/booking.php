@@ -1125,7 +1125,14 @@ Route::get('/category-booking/{category}/{property}', function (Request $request
 
     $categoryFields = collect($categoryFieldMap[$categoryKey] ?? [])->values();
 
-    $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, $dbCategoryKey);
+    if ($isCorporateRetreatMode) {
+        $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, 'corporate_retreat');
+        if (!$propertyRow) {
+            $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, 'excursion');
+        }
+    } else {
+        $propertyRow = VendorPropertyCompatibilityReader::loadPropertyById($property, $dbCategoryKey);
+    }
     if (!$propertyRow) {
         abort(404);
     }

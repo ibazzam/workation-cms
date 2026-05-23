@@ -1630,6 +1630,10 @@ Route::get('/vendor/listings/corporate-retreat', function () {
         ->with('portal_listing_category', 'corporate_retreat');
 })->name('vendor.listings.corporate-retreat');
 
+Route::get('/vendor/listings/corporate-retreat/{propertyId}/edit', function (int $propertyId) {
+    return redirect('/vendor/listings/corporate_retreat/' . $propertyId . '/edit');
+})->name('vendor.listings.corporate-retreat.edit');
+
 foreach ($vendorListingCategoryAliases as $listingCategoryAlias) {
     Route::get('/vendor/listings/' . $listingCategoryAlias . '/{propertyId}/edit', function (int $propertyId) use ($listingCategoryAlias) {
         if (!session()->get('portal_vendor_authenticated', false)) {

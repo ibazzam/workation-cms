@@ -650,26 +650,69 @@ class VendorPropertyCompatibilityReader
                 continue;
             }
 
+            $selectColumns = [
+                DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
+                't.id as dedicated_row_id',
+                't.vendor_user_id',
+                't.name as listing_name',
+                't.listing_moderation_status',
+                't.listing_admin_notes',
+                't.listing_submitted_for_review_at',
+                't.created_at',
+                'vu.name as vendor_name',
+                'vu.email as vendor_email',
+                'vu.portal_vendor_id',
+            ];
+            if (self::hasColumn($tableName, 'details')) {
+                $selectColumns[] = 't.details';
+            }
+            if (self::hasColumn($tableName, 'listing_details')) {
+                $selectColumns[] = 't.listing_details';
+            }
+            if (self::hasColumn($tableName, 'is_corporate_retreat')) {
+                $selectColumns[] = 't.is_corporate_retreat';
+            }
+            if (self::hasColumn($tableName, 'is_retreat_package')) {
+                $selectColumns[] = 't.is_retreat_package';
+            }
+            if (self::hasColumn($tableName, 'program_customization_mode')) {
+                $selectColumns[] = 't.program_customization_mode';
+            }
+
             $rows = DB::table($tableName . ' as t')
                 ->leftJoin('users as vu', 'vu.id', '=', 't.vendor_user_id')
                 ->where('t.listing_moderation_status', 'pending_review')
                 ->orderBy('t.listing_submitted_for_review_at')
                 ->limit($limit)
-                ->get([
-                    DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
-                    't.id as dedicated_row_id',
-                    't.vendor_user_id',
-                    't.name as listing_name',
-                    't.listing_moderation_status',
-                    't.listing_admin_notes',
-                    't.listing_submitted_for_review_at',
-                    't.created_at',
-                    'vu.name as vendor_name',
-                    'vu.email as vendor_email',
-                    'vu.portal_vendor_id',
-                ])
+                ->get($selectColumns)
                 ->map(static function ($row) use ($categoryKey) {
-                    $row->listing_category = $categoryKey;
+                    $resolvedCategory = $categoryKey;
+                    if ($categoryKey === 'excursion') {
+                        $listingDetails = json_decode((string) ($row->listing_details ?? $row->details ?? ''), true);
+                        if (!is_array($listingDetails)) {
+                            $listingDetails = [];
+                        }
+                        $toBool = static function ($value): bool {
+                            $normalized = strtolower(trim((string) $value));
+                            return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+                        };
+                        $detailsMode = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['program_customization_mode'] ?? $row->program_customization_mode ?? ''))));
+                        $detailsListingCategory = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['listing_category'] ?? ''))));
+                        $hasRetreatPackageShape = array_key_exists('total_package_price', $listingDetails)
+                            || array_key_exists('package_included_pax', $listingDetails)
+                            || array_key_exists('included_services', $listingDetails);
+                        $isRetreat = $toBool($row->is_corporate_retreat ?? '0')
+                            || $toBool($row->is_retreat_package ?? '0')
+                            || $toBool($listingDetails['is_corporate_retreat'] ?? '0')
+                            || $toBool($listingDetails['is_retreat_package'] ?? '0')
+                            || $detailsListingCategory === 'corporate_retreat'
+                            || $detailsMode === 'corporate_retreat'
+                            || $hasRetreatPackageShape;
+                        if ($isRetreat) {
+                            $resolvedCategory = 'corporate_retreat';
+                        }
+                    }
+                    $row->listing_category = $resolvedCategory;
 
                     return $row;
                 });
@@ -695,29 +738,72 @@ class VendorPropertyCompatibilityReader
                 continue;
             }
 
+            $selectColumns = [
+                DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
+                't.id as dedicated_row_id',
+                't.vendor_user_id',
+                't.name as listing_name',
+                't.listing_moderation_status',
+                't.listing_admin_notes',
+                't.listing_approved_at',
+                't.created_at',
+                'vu.name as vendor_name',
+                'vu.email as vendor_email',
+                'vu.portal_vendor_id',
+                'approver.name as approved_by_name',
+                'approver.portal_role as approved_by_role',
+            ];
+            if (self::hasColumn($tableName, 'details')) {
+                $selectColumns[] = 't.details';
+            }
+            if (self::hasColumn($tableName, 'listing_details')) {
+                $selectColumns[] = 't.listing_details';
+            }
+            if (self::hasColumn($tableName, 'is_corporate_retreat')) {
+                $selectColumns[] = 't.is_corporate_retreat';
+            }
+            if (self::hasColumn($tableName, 'is_retreat_package')) {
+                $selectColumns[] = 't.is_retreat_package';
+            }
+            if (self::hasColumn($tableName, 'program_customization_mode')) {
+                $selectColumns[] = 't.program_customization_mode';
+            }
+
             $rows = DB::table($tableName . ' as t')
                 ->leftJoin('users as vu', 'vu.id', '=', 't.vendor_user_id')
                 ->leftJoin('users as approver', 'approver.id', '=', 't.listing_approved_by_user_id')
                 ->whereIn('t.listing_moderation_status', ['approved', 'rejected', 'suspended'])
                 ->orderByDesc('t.listing_approved_at')
                 ->limit($limit)
-                ->get([
-                    DB::raw('COALESCE(NULLIF(t.vendor_property_id, 0), t.id) as id'),
-                    't.id as dedicated_row_id',
-                    't.vendor_user_id',
-                    't.name as listing_name',
-                    't.listing_moderation_status',
-                    't.listing_admin_notes',
-                    't.listing_approved_at',
-                    't.created_at',
-                    'vu.name as vendor_name',
-                    'vu.email as vendor_email',
-                    'vu.portal_vendor_id',
-                    'approver.name as approved_by_name',
-                    'approver.portal_role as approved_by_role',
-                ])
+                ->get($selectColumns)
                 ->map(static function ($row) use ($categoryKey) {
-                    $row->listing_category = $categoryKey;
+                    $resolvedCategory = $categoryKey;
+                    if ($categoryKey === 'excursion') {
+                        $listingDetails = json_decode((string) ($row->listing_details ?? $row->details ?? ''), true);
+                        if (!is_array($listingDetails)) {
+                            $listingDetails = [];
+                        }
+                        $toBool = static function ($value): bool {
+                            $normalized = strtolower(trim((string) $value));
+                            return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
+                        };
+                        $detailsMode = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['program_customization_mode'] ?? $row->program_customization_mode ?? ''))));
+                        $detailsListingCategory = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['listing_category'] ?? ''))));
+                        $hasRetreatPackageShape = array_key_exists('total_package_price', $listingDetails)
+                            || array_key_exists('package_included_pax', $listingDetails)
+                            || array_key_exists('included_services', $listingDetails);
+                        $isRetreat = $toBool($row->is_corporate_retreat ?? '0')
+                            || $toBool($row->is_retreat_package ?? '0')
+                            || $toBool($listingDetails['is_corporate_retreat'] ?? '0')
+                            || $toBool($listingDetails['is_retreat_package'] ?? '0')
+                            || $detailsListingCategory === 'corporate_retreat'
+                            || $detailsMode === 'corporate_retreat'
+                            || $hasRetreatPackageShape;
+                        if ($isRetreat) {
+                            $resolvedCategory = 'corporate_retreat';
+                        }
+                    }
+                    $row->listing_category = $resolvedCategory;
 
                     return $row;
                 });
@@ -1068,6 +1154,13 @@ class VendorPropertyCompatibilityReader
         foreach (self::commonPriceColumns() as $priceColumn) {
             if (self::hasColumn($tableName, $priceColumn)) {
                 $base[] = $priceColumn;
+            }
+        }
+
+        // Retreat/package flags used by preview and listing routing heuristics.
+        foreach (['is_corporate_retreat', 'is_retreat_package', 'program_customization_mode'] as $col) {
+            if (self::hasColumn($tableName, $col)) {
+                $base[] = $col;
             }
         }
 

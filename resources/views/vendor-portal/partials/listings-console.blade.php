@@ -338,9 +338,7 @@
                                                     $editCategoryRaw = strtolower((string) ($property->listing_category ?? $categoryKey));
                                                     $editCategory = preg_replace('/[^a-z0-9]+/', '_', $editCategoryRaw) ?? $editCategoryRaw;
                                                     $editCategory = trim((string) preg_replace('/_+/', '_', $editCategory), '_');
-                                                    $editCategoryRoute = $editCategory === 'corporate_retreat'
-                                                        ? 'corporate-retreat'
-                                                        : $editCategory;
+                                                    $editCategoryRoute = $editCategory;
                                                     $propertyAmenityValues = [];
                                                     $propertyFeatureValues = [];
                                                     if (isset($propertyDetails['property_amenities']) && is_array($propertyDetails['property_amenities'])) {
@@ -437,6 +435,18 @@
 
                                                                 return in_array($mediaEntityType, $allowedEntityTypes, true);
                                                             });
+                                                            if ($categoryKey === 'corporate_retreat') {
+                                                                $normalizedPropertyName = strtolower(trim((string) ($property->name ?? '')));
+                                                                if ($normalizedPropertyName !== '') {
+                                                                    $nameMatchedCandidates = $thumbnailMediaCandidates->filter(static function ($media) use ($normalizedPropertyName): bool {
+                                                                        $altText = strtolower(trim((string) ($media->alt_text ?? '')));
+                                                                        return $altText !== '' && str_contains($altText, $normalizedPropertyName);
+                                                                    });
+                                                                    $thumbnailMediaCandidates = $nameMatchedCandidates->isNotEmpty()
+                                                                        ? $nameMatchedCandidates
+                                                                        : collect();
+                                                                }
+                                                            }
                                                             $primaryPropertyMedia = $thumbnailMediaCandidates->firstWhere('is_primary', true);
                                                             if (!$primaryPropertyMedia) {
                                                                 $primaryPropertyMedia = $thumbnailMediaCandidates->first();
@@ -449,6 +459,9 @@
                                                                 } else {
                                                                     $listingThumbUrl = vendorMediaStorageUrlFromPath((string) ($primaryPropertyMedia->file_path ?? '')) ?? '';
                                                                 }
+                                                            }
+                                                            if ($categoryKey === 'corporate_retreat') {
+                                                                $listingThumbUrl = '';
                                                             }
                                                             $listingCreatedRaw = trim((string) ($property->created_at ?? ''));
                                                             $listingCreatedLabel = 'n/a';

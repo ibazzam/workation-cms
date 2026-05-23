@@ -2876,11 +2876,18 @@ Route::get('/portal/admin/listings/{listing}/preview', function (Request $reques
         return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
     };
     if ($resolvedCategory === 'excursion') {
+        $detailsMode = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['program_customization_mode'] ?? ''))));
+        $detailsListingCategory = strtolower(trim(str_replace('-', '_', (string) ($listingDetails['listing_category'] ?? ''))));
+        $hasRetreatPackageShape = array_key_exists('total_package_price', $listingDetails)
+            || array_key_exists('package_included_pax', $listingDetails)
+            || array_key_exists('included_services', $listingDetails);
         $rowRetreatFlag = $isRetreatFlagEnabled($listingRow->is_corporate_retreat ?? '0')
             || $isRetreatFlagEnabled($listingRow->is_retreat_package ?? '0');
         $detailsRetreatFlag = $isRetreatFlagEnabled($listingDetails['is_corporate_retreat'] ?? '0')
             || $isRetreatFlagEnabled($listingDetails['is_retreat_package'] ?? '0')
-            || strtolower(trim((string) ($listingDetails['listing_category'] ?? ''))) === 'corporate_retreat';
+            || $detailsListingCategory === 'corporate_retreat'
+            || $detailsMode === 'corporate_retreat'
+            || $hasRetreatPackageShape;
         if ($rowRetreatFlag || $detailsRetreatFlag) {
             $resolvedCategory = 'corporate_retreat';
         }
